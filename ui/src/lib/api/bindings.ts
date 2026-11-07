@@ -162,7 +162,8 @@ export const commands = {
 	transfersSubscribe: (onEvent: Channel<TransferEvent>) => typedError<null, ApiError>(__TAURI_INVOKE("transfers_subscribe", { onEvent })),
 	/**
 	 *  One-shot sample of the remote Linux host over the session's existing SSH connection
-	 *  (exec channel, independent of the shell). Takes ~1 s. Passive for auto-lock.
+	 *  (exec channel, independent of the shell). Takes ~1 s. Passive for auto-lock. Slow fields
+	 *  are re-read every 15 s and reused from the last full sample in between.
 	 */
 	statsSample: (sessionId: SessionId) => typedError<HostStats, ApiError>(__TAURI_INVOKE("stats_sample", { sessionId })),
 	/**  Checks a saved host's SSH port without using credentials or modifying host-key trust. */
@@ -666,6 +667,8 @@ export type HostStats = {
 	mem_used: number,
 	/**  Page cache. */
 	mem_cached: number,
+	/**  Completely unused RAM (`MemFree`). */
+	mem_free: number,
 	/**  Swap total. */
 	swap_total: number,
 	/**  Swap used. */
@@ -678,6 +681,8 @@ export type HostStats = {
 	net_rx_bps: number,
 	/**  Network transmit rate. */
 	net_tx_bps: number,
+	/**  Per-interface throughput (non-loopback, at most 8, busiest first). */
+	ifaces: NetIface[],
 	/**  Disk read rate (whole disks). */
 	disk_read_bps: number,
 	/**  Disk write rate (whole disks). */
@@ -690,6 +695,11 @@ export type HostStats = {
 	temp_c: number | null,
 	/**  Top 8 processes by CPU. */
 	procs: ProcRow[],
+	/**
+	 *  True when this sample carries the slow fields (disk usage, OS, cores, processes);
+	 *  otherwise they are left empty and the caller reuses the previous full sample.
+	 */
+	full: boolean,
 };
 
 /**  Identity as seen by the UI: no secrets, no secret ids. */
@@ -811,6 +821,20 @@ export type KnownHostSummary = {
 	fingerprint: string,
 	/**  Unix millis. */
 	added_at: number,
+};
+
+/**  Throughput of one network interface. */
+export type NetIface = {
+	/**  Interface name (sanitized). */
+	name: string,
+	/**  Receive rate, bytes/s. */
+	rx_bps: number,
+	/**  Transmit rate, bytes/s. */
+	tx_bps: number,
+	/**  Received since boot, bytes. */
+	rx_total: number,
+	/**  Transmitted since boot, bytes. */
+	tx_total: number,
 };
 
 /**  Reference to a tree node, used as the "insert after" anchor for moves. TS: `{kind, id}`. */

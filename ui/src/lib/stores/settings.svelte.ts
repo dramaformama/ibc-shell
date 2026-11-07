@@ -9,6 +9,7 @@ export type ThemeChoice = 'light' | 'dark' | 'system';
 
 const LS_THEME = 'ibc.theme';
 const LS_ACCENT = 'ibc.accent';
+const PROBE_KEY = 'fleet.probe';
 
 /** Apple system accent colours offered in Settings (CSS in app.css). */
 export const ACCENTS = [
@@ -59,6 +60,8 @@ class SettingsStore {
   autolockMinutes = $state(AUTOLOCK_DEFAULT);
   /** Whether to look for a newer release on GitHub at start. */
   updateCheck = $state(true);
+  /** TCP availability checks of saved servers on the overview (ADR-010). */
+  probe = $state(true);
   /** A newer release, once found. */
   update = $state.raw<UpdateInfo | null>(null);
 
@@ -74,12 +77,14 @@ class SettingsStore {
   }
 
   async load(): Promise<void> {
-    const [width, recent, autolock, upd] = await Promise.all([
+    const [width, recent, autolock, upd, probe] = await Promise.all([
       api.settingsGet('ui.sidebar_width'),
       api.settingsGet('ui.flag_recent'),
       api.settingsGet(AUTOLOCK_KEY),
-      api.settingsGet(UPDATE_CHECK_KEY)
+      api.settingsGet(UPDATE_CHECK_KEY),
+      api.settingsGet(PROBE_KEY)
     ]);
+    if (probe.status === 'ok' && probe.data === false) this.probe = false;
     if (upd.status === 'ok' && upd.data === false) this.updateCheck = false;
     if (autolock.status === 'ok')
       this.autolockMinutes = parseAutolock(autolock.data ?? AUTOLOCK_DEFAULT);
@@ -133,6 +138,11 @@ class SettingsStore {
     const info = await api.appInfo();
     if (info.status !== 'ok') return;
     this.update = await checkForUpdate(info.data.version);
+  }
+
+  setProbe(on: boolean): void {
+    this.probe = on;
+    void api.settingsSet(PROBE_KEY, on);
   }
 
   setAutolock(minutes: number): void {

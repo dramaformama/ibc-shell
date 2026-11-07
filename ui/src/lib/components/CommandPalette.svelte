@@ -1,11 +1,12 @@
 <script lang="ts">
   import { Dialog } from 'bits-ui';
   import { Folder as FolderIcon, Search, Terminal, Zap } from '@lucide/svelte';
-  import { api, type Snippet } from '$lib/api';
   import Flag from '$lib/flags/Flag.svelte';
   import * as m from '$lib/paraglide/messages.js';
   import { connectAdhoc, connectHost } from '$lib/stores/actions';
+  import { recent } from '$lib/stores/recent.svelte';
   import { sessions } from '$lib/stores/sessions.svelte';
+  import { snippets as library } from '$lib/snippets/snippets.svelte';
   import { settings } from '$lib/stores/settings.svelte';
   import { tree } from '$lib/stores/tree.svelte';
   import { ui } from '$lib/stores/ui.svelte';
@@ -26,14 +27,12 @@
 
   let query = $state('');
   let active = $state(0);
-  let snippets = $state.raw<Snippet[]>([]);
   let listEl = $state<HTMLDivElement>();
 
   $effect(() => {
     if (ui.paletteOpen) {
       query = '';
       active = 0;
-      void api.snippetList(null).then((r) => r.status === 'ok' && (snippets = r.data));
     }
   });
 
@@ -91,19 +90,16 @@
       icon: 'folder',
       run: () => reveal(f.id)
     })),
-    ...snippets.map<Item>((s) => ({
+    ...library.items.map<Item>((s) => ({
       id: 's:' + s.id,
       group: 'snippet',
       label: s.name,
       hint: s.body.split('\n')[0],
       icon: 'snippet',
-      run: () => {
-        if (sessions.active)
-          window.dispatchEvent(
-            new CustomEvent('ibc:paste', {
-              detail: { tabId: sessions.activeId, text: s.body }
-            })
-          );
+      // Shift = choose servers ("Run on…").
+      run: (shift) => {
+        if (shift) library.run(s, 'many');
+        else if (sessions.active) library.run(s);
         else ui.toast(m.palette_no_terminal());
       }
     })),
@@ -124,11 +120,13 @@
           }
         ]
       : [];
-    if (!q)
-      return [
-        ...(tree.data.hosts.length ? all.filter((i) => i.group === 'host').slice(0, 8) : []),
-        ...actions
-      ];
+    if (!q) {
+      // Recently opened servers first, then the rest of the catalog.
+      const hosts = all.filter((i) => i.group === 'host');
+      const order = new Map(recent.items.map((e, i) => [`h:${e.id}`, i]));
+      const sorted = [...hosts].sort((a, b) => (order.get(a.id) ?? 99) - (order.get(b.id) ?? 99));
+      return [...sorted.slice(0, 8), ...actions];
+    }
     const hits = rank(q, all, (i) => [i.label, i.hint ?? '']).slice(0, 40);
     return [...head, ...hits];
   });

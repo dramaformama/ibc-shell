@@ -4,7 +4,8 @@
  */
 import type { HostId, QuickConnect } from '$lib/api';
 
-export type TabKind = 'terminal' | 'sftp';
+/** `status` is the server's metrics page; it has no connection of its own (it reads the terminal's). */
+export type TabKind = 'terminal' | 'sftp' | 'status';
 
 /** Connection state shown next to a tab (sidebar dot, tab dot). */
 export type TabPhase = 'connecting' | 'connected' | 'failed' | 'disconnected';
@@ -65,10 +66,12 @@ class SessionsStore {
 
   /** One dot for a server: connected wins, then connecting, then the current view's state. */
   groupPhase(g: TabGroup): TabPhase {
-    const ps = g.tabs.map((t) => this.phase(t.id));
+    const views = g.tabs.filter((t) => t.kind !== 'status');
+    const ps = views.map((t) => this.phase(t.id));
     if (ps.includes('connected')) return 'connected';
     if (ps.includes('connecting')) return 'connecting';
-    return this.phase(g.current.id);
+    const cur = views.find((t) => t.id === g.current.id) ?? views[0];
+    return cur ? this.phase(cur.id) : 'disconnected';
   }
 
   /** Selects a group (its last used view). */
@@ -98,6 +101,11 @@ class SessionsStore {
     else delete this.sessionIds[tabId];
   }
 
+  /** The group a tab belongs to. */
+  groupOf(tabId: string): TabGroup | null {
+    return this.groups.find((g) => g.tabs.some((t) => t.id === tabId)) ?? null;
+  }
+
   /** Session id of a server group's terminal (metrics run over it). */
   groupSession(g: TabGroup): string | null {
     const t = g.tabs.find((x) => x.kind === 'terminal' && this.sessionIds[x.id]);
@@ -118,10 +126,11 @@ class SessionsStore {
     return this.tabs.find((t) => t.id === this.activeId) ?? null;
   }
 
-  open(tab: Omit<Tab, 'id'>): Tab {
+  /** Adds a tab; `focus = false` opens it in the background (e.g. a terminal behind Status). */
+  open(tab: Omit<Tab, 'id'>, focus = true): Tab {
     const t: Tab = { ...tab, id: `tab-${++this.#seq}` };
     this.tabs = [...this.tabs, t];
-    this.select(t.id);
+    if (focus) this.select(t.id);
     return t;
   }
 

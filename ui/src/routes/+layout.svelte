@@ -7,6 +7,9 @@
   import { tree } from '$lib/stores/tree.svelte';
   import { settings } from '$lib/stores/settings.svelte';
   import { sessions } from '$lib/stores/sessions.svelte';
+  import { recent } from '$lib/stores/recent.svelte';
+  import { snippets } from '$lib/snippets/snippets.svelte';
+  import { stats } from '$lib/stores/stats.svelte';
   import { vault } from '$lib/stores/vault.svelte';
   import { watchIdle } from '$lib/util/autolock';
 
@@ -19,10 +22,14 @@
     if (vault.state === 'Unlocked') {
       void settings.load().then(() => settings.checkUpdate());
       void tree.load();
+      void recent.load();
+      void snippets.load();
     } else if (vault.state === 'Locked') {
       tree.data = { folders: [], hosts: [] };
       tree.loaded = false;
       sessions.clear();
+      stats.clear();
+      snippets.clear();
     }
   });
 

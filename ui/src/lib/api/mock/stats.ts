@@ -46,12 +46,29 @@ export const statsSample: Commands['statsSample'] = async () => {
     mem_total: 16 * GIB,
     mem_used: Math.round(wave(6.2, 7.4, 120) * GIB),
     mem_cached: Math.round(wave(3.8, 4.4, 150, 1) * GIB),
+    mem_free: Math.round(wave(2.1, 2.9, 170) * GIB),
     swap_total: 2 * GIB,
     swap_used: Math.round(wave(0.1, 0.3, 300) * GIB),
     disk_total: 240 * GIB,
     disk_used: 96 * GIB,
     net_rx_bps: Math.round(wave(0.1, 6, 23) * MIB),
     net_tx_bps: Math.round(wave(0.05, 2, 31, 2) * MIB),
+    ifaces: [
+      {
+        name: 'eth0',
+        rx_bps: Math.round(wave(0.1, 5.6, 23) * MIB),
+        tx_bps: Math.round(wave(0.05, 1.8, 31, 2) * MIB),
+        rx_total: 812 * GIB,
+        tx_total: 96 * GIB
+      },
+      {
+        name: 'docker0',
+        rx_bps: Math.round(wave(0, 0.4, 41) * MIB),
+        tx_bps: Math.round(wave(0, 0.2, 47, 1) * MIB),
+        rx_total: 3.4 * GIB,
+        tx_total: 2.1 * GIB
+      }
+    ],
     disk_read_bps: Math.round(wave(0, 12, 29) * MIB),
     disk_write_bps: Math.round(wave(0.1, 8, 37, 1) * MIB),
     uptime_s: 3 * 86400 + 4 * 3600 + Math.floor((Date.now() - t0) / 1000),
@@ -63,7 +80,8 @@ export const statsSample: Commands['statsSample'] = async () => {
       cpu: cpu * (0.7 + 0.6 * wave(0, 1, 19 + (pid % 13))),
       mem_bytes: Math.round(gib * GIB),
       command
-    }))
+    })),
+    full: true
   };
   return ok(stats);
 };

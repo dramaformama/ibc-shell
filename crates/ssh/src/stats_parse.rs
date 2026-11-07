@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use crate::stats::{HostStats, ProcRow};
+use crate::stats::{HostStats, NetIface, ProcRow};
 use crate::SshError;
 
 const MAX_STR: usize = 128;
@@ -82,21 +82,47 @@ fn busy_pct(d: &Jiffies) -> f32 {
     pct(total.saturating_sub(d[3] + d[4]), total)
 }
 
-/// Total (rx, tx) bytes over non-loopback interfaces.
-fn parse_net(s: &str) -> (u64, u64) {
-    let (mut rx, mut tx) = (0u64, 0u64);
-    for line in s.lines() {
-        let Some((name, rest)) = line.split_once(':') else {
-            continue;
-        };
-        if name.trim() == "lo" {
-            continue;
-        }
-        let f: Vec<&str> = rest.split_whitespace().collect();
-        rx += f.first().and_then(|v| v.parse::<u64>().ok()).unwrap_or(0);
-        tx += f.get(8).and_then(|v| v.parse::<u64>().ok()).unwrap_or(0);
-    }
-    (rx, tx)
+/// Interfaces shown at most.
+const MAX_IFACES: usize = 8;
+
+/// (name, rx bytes, tx bytes) of every non-loopback interface.
+fn parse_net(s: &str) -> Vec<(String, u64, u64)> {
+    s.lines()
+        .filter_map(|line| {
+            let (name, rest) = line.split_once(':')?;
+            let name = name.trim();
+            if name == "lo" || name.contains(' ') {
+                return None;
+            }
+            let f: Vec<&str> = rest.split_whitespace().collect();
+            let rx = f.first().and_then(|v| v.parse::<u64>().ok())?;
+            let tx = f.get(8).and_then(|v| v.parse::<u64>().ok())?;
+            Some((sanitize(name), rx, tx))
+        })
+        .collect()
+}
+
+/// Per-interface rates between two snapshots, busiest first.
+fn ifaces(a: &[(String, u64, u64)], b: &[(String, u64, u64)], dt: f64) -> Vec<NetIface> {
+    let mut out: Vec<NetIface> = b
+        .iter()
+        .map(|(name, rx2, tx2)| {
+            let (rx1, tx1) = a
+                .iter()
+                .find(|(n, _, _)| n == name)
+                .map_or((*rx2, *tx2), |(_, r, t)| (*r, *t));
+            NetIface {
+                name: name.clone(),
+                rx_bps: rate(rx1, *rx2, dt),
+                tx_bps: rate(tx1, *tx2, dt),
+                rx_total: *rx2,
+                tx_total: *tx2,
+            }
+        })
+        .collect();
+    out.sort_by_key(|i| std::cmp::Reverse(i.rx_bps.saturating_add(i.tx_bps)));
+    out.truncate(MAX_IFACES);
+    out
 }
 
 fn is_whole_disk(name: &str) -> bool {
@@ -179,15 +205,18 @@ fn parse_procs(s: &str) -> Vec<ProcRow> {
         .collect()
 }
 
-/// Parses the whole script output.
+/// Parses the whole script output; `full` = the slow sections were requested.
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-pub(crate) fn parse_report(text: &str) -> Result<HostStats, SshError> {
+pub(crate) fn parse_report(text: &str, full: bool) -> Result<HostStats, SshError> {
     let sec = sections(text);
     let get = |k: &str| sec.get(k).map_or("", String::as_str);
     if sec.contains_key("UNSUPPORTED") || !sec.contains_key("STAT2") {
         return Err(SshError::Unsupported);
     }
-    let mut h = HostStats::default();
+    let mut h = HostStats {
+        full,
+        ..HostStats::default()
+    };
 
     let (a1, c1) = parse_stat(get("STAT1"));
     let (a2, c2) = parse_stat(get("STAT2"));
@@ -213,10 +242,11 @@ pub(crate) fn parse_report(text: &str) -> Result<HostStats, SshError> {
 
     let dt = (first_f64(get("UP2")) - first_f64(get("UP1"))).max(0.0);
     let dt = if dt < 0.1 { 1.0 } else { dt };
-    let (rx1, tx1) = parse_net(get("NET1"));
-    let (rx2, tx2) = parse_net(get("NET2"));
-    h.net_rx_bps = rate(rx1, rx2, dt);
-    h.net_tx_bps = rate(tx1, tx2, dt);
+    let (n1, n2) = (parse_net(get("NET1")), parse_net(get("NET2")));
+    let all = ifaces(&n1, &n2, dt);
+    h.net_rx_bps = all.iter().map(|i| i.rx_bps).sum();
+    h.net_tx_bps = all.iter().map(|i| i.tx_bps).sum();
+    h.ifaces = all;
     let (dr1, dw1) = parse_disks(get("DISK1"));
     let (dr2, dw2) = parse_disks(get("DISK2"));
     h.disk_read_bps = rate(dr1, dr2, dt);
@@ -231,6 +261,7 @@ pub(crate) fn parse_report(text: &str) -> Result<HostStats, SshError> {
         .unwrap_or_else(|| g("MemFree") + g("Buffers") + g("Cached"));
     h.mem_used = h.mem_total.saturating_sub(avail);
     h.mem_cached = g("Cached");
+    h.mem_free = g("MemFree");
     h.swap_total = g("SwapTotal");
     h.swap_used = h.swap_total.saturating_sub(g("SwapFree"));
 
@@ -321,7 +352,7 @@ Filesystem 1024-blocks Used Available Capacity Mounted on
 
     #[test]
     fn parses_full_report() {
-        let h = parse_report(REPORT).unwrap();
+        let h = parse_report(REPORT, true).unwrap();
         // delta: user 50, nice 10, sys 30, idle 20, iowait 10, softirq 5, steal 5 = 130
         assert!(
             (h.cpu_pct - 100.0 * 100.0 / 130.0).abs() < 0.1,
@@ -344,11 +375,33 @@ Filesystem 1024-blocks Used Available Capacity Mounted on
         assert_eq!(h.uptime_s, 101);
         assert_eq!(h.os_name.as_deref(), Some("Ubuntu 24.04 LTS"));
         assert_eq!(h.temp_c, Some(45.5));
+        assert_eq!(h.mem_free, 1_000_000 * 1024);
+        assert_eq!(h.ifaces.len(), 1);
+        assert_eq!(h.ifaces[0].name, "eth0");
+        assert_eq!((h.ifaces[0].rx_bps, h.ifaces[0].tx_bps), (2000, 4000));
+        assert_eq!(h.ifaces[0].rx_total, 3000);
+        assert!(h.full);
+    }
+
+    #[test]
+    fn fast_sample_has_no_slow_fields() {
+        let fast: String = REPORT
+            .split("@@IBC:DF@@")
+            .next()
+            .unwrap_or_default()
+            .to_string()
+            + "@@IBC:END@@\n";
+        let h = parse_report(&fast, false).unwrap();
+        assert!(!h.full);
+        assert_eq!(h.disk_total, 0);
+        assert_eq!(h.procs.len(), 0);
+        assert_eq!(h.cores, 2); // falls back to the per-core count
+        assert!(h.cpu_pct > 0.0);
     }
 
     #[test]
     fn procs_are_sanitized_and_joined() {
-        let h = parse_report(REPORT).unwrap();
+        let h = parse_report(REPORT, true).unwrap();
         assert_eq!(h.procs.len(), 2);
         assert_eq!(h.procs[0].command, "systemd");
         assert_eq!(h.procs[0].mem_bytes, 2048 * 1024);
@@ -359,11 +412,11 @@ Filesystem 1024-blocks Used Available Capacity Mounted on
     #[test]
     fn unsupported_hosts() {
         assert!(matches!(
-            parse_report("@@IBC:UNSUPPORTED@@\n"),
+            parse_report("@@IBC:UNSUPPORTED@@\n", false),
             Err(SshError::Unsupported)
         ));
         assert!(matches!(
-            parse_report("garbage"),
+            parse_report("garbage", false),
             Err(SshError::Unsupported)
         ));
     }

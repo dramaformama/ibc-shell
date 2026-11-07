@@ -21,7 +21,7 @@ const group: TabGroup = {
   current: tab,
   tabs: [tab]
 };
-const now = 100_000;
+const now = 1_000_000;
 const observation = (reachable: boolean, checked_at = now): Record<string, HostReachability> => ({
   [host.id]: { reachable, checked_at, latency_ms: reachable ? 24 : null }
 });

@@ -28,6 +28,21 @@ pub struct ProcRow {
     pub command: String,
 }
 
+/// Throughput of one network interface.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, specta::Type)]
+pub struct NetIface {
+    /// Interface name (sanitized).
+    pub name: String,
+    /// Receive rate, bytes/s.
+    pub rx_bps: u64,
+    /// Transmit rate, bytes/s.
+    pub tx_bps: u64,
+    /// Received since boot, bytes.
+    pub rx_total: u64,
+    /// Transmitted since boot, bytes.
+    pub tx_total: u64,
+}
+
 /// Snapshot of host metrics. Percentages 0–100, memory/disk in bytes, rates in bytes/s.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, specta::Type)]
 pub struct HostStats {
@@ -59,6 +74,8 @@ pub struct HostStats {
     pub mem_used: u64,
     /// Page cache.
     pub mem_cached: u64,
+    /// Completely unused RAM (`MemFree`).
+    pub mem_free: u64,
     /// Swap total.
     pub swap_total: u64,
     /// Swap used.
@@ -71,6 +88,8 @@ pub struct HostStats {
     pub net_rx_bps: u64,
     /// Network transmit rate.
     pub net_tx_bps: u64,
+    /// Per-interface throughput (non-loopback, at most 8, busiest first).
+    pub ifaces: Vec<NetIface>,
     /// Disk read rate (whole disks).
     pub disk_read_bps: u64,
     /// Disk write rate (whole disks).
@@ -83,6 +102,9 @@ pub struct HostStats {
     pub temp_c: Option<f32>,
     /// Top 8 processes by CPU.
     pub procs: Vec<ProcRow>,
+    /// True when this sample carries the slow fields (disk usage, OS, cores, processes);
+    /// otherwise they are left empty and the caller reuses the previous full sample.
+    pub full: bool,
 }
 
 /// The remote script. Read-only; sections are delimited by `@@IBC:NAME@@` lines.
@@ -99,26 +121,33 @@ sleep 1
 snap 2
 echo '@@IBC:MEM@@'; cat /proc/meminfo
 echo '@@IBC:LOAD@@'; cat /proc/loadavg
+echo '@@IBC:TEMP@@'; cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null
+if [ "$1" = full ]; then
 echo '@@IBC:DF@@'; df -kP / 2>/dev/null
 echo '@@IBC:NPROC@@'; nproc 2>/dev/null
 echo '@@IBC:OS@@'; sed -n 's/^PRETTY_NAME=//p' /etc/os-release 2>/dev/null | head -1
 echo '@@IBC:PS@@'; ps -eo pid,user,pcpu,rss,comm --sort=-pcpu 2>/dev/null | head -9
-echo '@@IBC:TEMP@@'; cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null
+fi
 echo '@@IBC:END@@'
 "#;
 
-/// Samples the host over `conn` (exec channel, independent of any shell).
+/// Samples the host over `conn` (exec channel, independent of any shell). `full` adds the slow
+/// fields (`df`, `nproc`, OS name, `ps`); fast samples fork only `cat` and `sleep`.
 ///
 /// Errors: [`SshError::Unsupported`] for non-Linux hosts, [`SshError::Timeout`] after 8 s.
-pub async fn sample_stats(conn: &Connection) -> Result<HostStats, SshError> {
-    let out = tokio::time::timeout(TIMEOUT, conn.exec(&wrap_command(), MAX_OUTPUT))
+pub async fn sample_stats(conn: &Connection, full: bool) -> Result<HostStats, SshError> {
+    let out = tokio::time::timeout(TIMEOUT, conn.exec(&wrap_command(full), MAX_OUTPUT))
         .await
         .map_err(|_| SshError::Timeout)??;
     let text = String::from_utf8_lossy(&out.stdout);
-    parse_report(&text)
+    parse_report(&text, full)
 }
 
-/// `sh -c '<script>'`, so the script runs under POSIX `sh` whatever the login shell is.
-fn wrap_command() -> String {
-    format!("sh -c '{}'", SCRIPT.replace('\'', "'\\''"))
+/// `sh -c '<script>' sh [full]`, so the script runs under POSIX `sh` whatever the login shell is.
+fn wrap_command(full: bool) -> String {
+    format!(
+        "sh -c '{}' sh{}",
+        SCRIPT.replace('\'', "'\\''"),
+        if full { " full" } else { "" }
+    )
 }

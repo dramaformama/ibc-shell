@@ -3,7 +3,7 @@
 
 use ibc_shell_sftp::{ConflictPolicy, TransferId};
 use ibc_shell_ssh::{ConnectStep, ForwardState, HostKeyInfo, KbdPrompt};
-pub use ibc_shell_ssh::{HostStats, ProcRow};
+pub use ibc_shell_ssh::{HostStats, NetIface, ProcRow};
 use ibc_shell_store::{ForwardId, HostId, IdentityId, IdentityKind};
 use ibc_shell_vault::{VaultMode, VaultState};
 use secrecy::SecretString;

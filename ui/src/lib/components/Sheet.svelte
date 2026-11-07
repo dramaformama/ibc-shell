@@ -48,7 +48,7 @@
     flex-direction: column;
     overflow: hidden;
     border: 0.5px solid var(--border);
-    border-radius: 20px;
+    border-radius: var(--r-sheet);
     background: var(--bg);
     box-shadow: var(--shadow);
     animation: slide 150ms var(--ease);
@@ -93,7 +93,7 @@
       inset: auto 0 0 0;
       width: 100vw;
       max-height: 92vh;
-      border-radius: 20px 20px 0 0;
+      border-radius: var(--r-sheet) var(--r-sheet) 0 0;
     }
   }
 </style>

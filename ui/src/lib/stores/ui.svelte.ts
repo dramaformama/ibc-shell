@@ -15,10 +15,25 @@ class UiState {
   sidebarOpen = $state(true);
   sidebarWidth = $state(264);
   inspectorOpen = $state(false);
+  /** Side panel page next to the terminal. */
+  panelTab = $state<'metrics' | 'snippets'>('metrics');
 
   constructor() {
     try {
       this.inspectorOpen = localStorage.getItem('ibc.ui.inspectorOpen') === 'true';
+      if (localStorage.getItem('ibc.ui.panelTab') === 'snippets') this.panelTab = 'snippets';
+    } catch {
+      /* storage unavailable */
+    }
+  }
+
+  /** Opens the side panel on `tab` (closes it when that page is already shown). */
+  showPanel(tab: 'metrics' | 'snippets'): void {
+    if (this.inspectorOpen && this.panelTab === tab) return this.toggleInspector();
+    this.panelTab = tab;
+    if (!this.inspectorOpen) this.toggleInspector();
+    try {
+      localStorage.setItem('ibc.ui.panelTab', tab);
     } catch {
       /* storage unavailable */
     }

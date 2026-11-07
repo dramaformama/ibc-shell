@@ -2,7 +2,8 @@
 import { api, type HostReachability } from '$lib/api';
 import { hidden, whenVisible } from '$lib/util/visible';
 
-const EVERY = 30_000;
+/** Every 3 min: each probe is a pre-auth disconnect in the server's sshd log (ADR-010 amendment). */
+const EVERY = 180_000;
 
 export class ReachabilityStore {
   data = $state<Record<string, HostReachability | null>>({});

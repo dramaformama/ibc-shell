@@ -4,3 +4,4 @@ node_modules/
 pnpm-lock.yaml
 src/lib/api/bindings.ts
 src/lib/paraglide/
+.impeccable

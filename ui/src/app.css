@@ -30,8 +30,12 @@
     -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable', 'Segoe UI', Inter,
     sans-serif;
   --font-mono: 'SF Mono', ui-monospace, 'JetBrains Mono', Menlo, Consolas, monospace;
-  --r-control: 8px;
-  --r-card: 16px;
+  /* One radius family: controls (buttons = fields = selects), grouped fields, cards, sheets. */
+  --r-control: 10px;
+  --r-inner: 8px;
+  --r-field: 16px;
+  --r-card: 20px;
+  --r-sheet: 26px;
   --lift: 0 1px 2px rgb(0 0 0 / 0.04);
   --control-h: 32px;
   --toolbar-h: 52px;
@@ -204,9 +208,9 @@ textarea {
   min-width: 200px;
   max-height: 60vh;
   overflow: auto;
-  padding: 4px;
-  border: 1px solid var(--border);
-  border-radius: var(--r-card);
+  padding: 5px;
+  border: 0.5px solid var(--border);
+  border-radius: 14px;
   background: var(--surface);
   box-shadow: var(--shadow);
   z-index: 60;
@@ -216,8 +220,8 @@ textarea {
   align-items: center;
   gap: 8px;
   height: 28px;
-  padding: 0 8px;
-  border-radius: 4px;
+  padding: 0 9px;
+  border-radius: var(--r-inner);
   cursor: default;
   user-select: none;
   outline: none;

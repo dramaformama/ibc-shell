@@ -6,7 +6,8 @@ import { api, type HostStats, type Result, type SessionId } from '$lib/api';
 import { hidden, whenVisible } from '$lib/util/visible';
 
 const HISTORY = 60;
-const EVERY_MS = 2000;
+/** Pause after each answer; one sample takes ~1 s, so a point every ~5 s (ADR-009 amendment). */
+const EVERY_MS = 4000;
 
 export interface Series {
   latest: HostStats | null;
@@ -19,6 +20,9 @@ export interface Series {
   load15: (number | null)[];
   rx: (number | null)[];
   tx: (number | null)[];
+  /** Disk read / write, bytes/s. */
+  dr: (number | null)[];
+  dw: (number | null)[];
   /** The server cannot report metrics (not Linux, no /proc). */
   unsupported: boolean;
 }
@@ -34,6 +38,8 @@ const empty = (): Series => ({
   load15: [],
   rx: [],
   tx: [],
+  dr: [],
+  dw: [],
   unsupported: false
 });
 const push = (a: (number | null)[], v: number | null) => [...a.slice(-(HISTORY - 1)), v];
@@ -96,6 +102,8 @@ class StatsStore {
           load15: push(s.load15, d.load15),
           rx: push(s.rx, d.net_rx_bps),
           tx: push(s.tx, d.net_tx_bps),
+          dr: push(s.dr, d.disk_read_bps),
+          dw: push(s.dw, d.disk_write_bps),
           unsupported: false
         };
       } else {
@@ -104,15 +112,21 @@ class StatsStore {
         if (r.error.code === 'Unsupported')
           this.data[sid] = { ...s, stale: true, unsupported: true };
         // A closed session or a server that cannot report: stop quietly.
+        if (r.error.code === 'NotFound') delete this.data[sid];
         if (r.error.code === 'Unsupported' || r.error.code === 'NotFound' || failures >= 5) break;
       }
       await new Promise((ok) => setTimeout(ok, failures ? EVERY_MS * 4 : EVERY_MS));
     }
-    if (!this.#watchers.has(sid)) delete this.data[sid];
   }
 
   forget(sid: SessionId): void {
     delete this.data[sid];
+  }
+
+  /** Lock: drop every sample (the loops stop with their watchers). */
+  clear(): void {
+    this.#watchers.clear();
+    this.data = {};
   }
 }
 

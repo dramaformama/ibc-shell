@@ -1,6 +1,10 @@
 <script lang="ts">
-  import Inspector from '$lib/stats/Inspector.svelte';
   import Dashboard from '$lib/stats/Dashboard.svelte';
+  import SidePanel from '$lib/stats/SidePanel.svelte';
+  import StatusView from '$lib/stats/StatusView.svelte';
+  import RunDialog from '$lib/snippets/RunDialog.svelte';
+  import SnippetEditor from '$lib/snippets/SnippetEditor.svelte';
+  import { snippets } from '$lib/snippets/snippets.svelte';
   import { sessions } from '$lib/stores/sessions.svelte';
   import { ui } from '$lib/stores/ui.svelte';
 
@@ -23,12 +27,21 @@
     {/if}
     {#if !tab}
       <Dashboard />
+    {:else if tab.kind === 'status'}
+      {#key tab.id}<StatusView {tab} />{/key}
     {/if}
   </div>
   {#if tab?.kind === 'terminal' && group && ui.inspectorOpen}
-    <Inspector {group} />
+    <SidePanel {group} />
   {/if}
 </div>
+
+{#if snippets.pending}
+  {#key snippets.pending}<RunDialog run={snippets.pending} />{/key}
+{/if}
+{#if snippets.editing}
+  <SnippetEditor />
+{/if}
 
 <style>
   .stage {

@@ -168,6 +168,16 @@
           />
         </label>
         <label class="row">
+          <span class="lbl">{m.settings_probe()}</span>
+          <input
+            type="checkbox"
+            role="switch"
+            checked={settings.probe}
+            onchange={(e) => settings.setProbe(e.currentTarget.checked)}
+          />
+        </label>
+        <p class="note">{m.settings_probe_note()}</p>
+        <label class="row">
           <span class="lbl">{m.settings_update_check()}</span>
           <input
             type="checkbox"

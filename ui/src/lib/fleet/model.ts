@@ -31,7 +31,7 @@ export function buildFleet(
     const group = byHost.get(host.id) ?? null;
     const phase = group ? phaseOf(group) : null;
     const probe = observations[host.id];
-    const fresh = probe && now - probe.checked_at <= 60_000;
+    const fresh = probe && now - probe.checked_at <= 240_000;
     const availability: Availability =
       phase === 'connected'
         ? 'online'

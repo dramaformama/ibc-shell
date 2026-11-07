@@ -1,8 +1,10 @@
 <script lang="ts">
   import {
+    Activity,
     FolderOpen,
+    Gauge,
     LayoutGrid,
-    PanelRight,
+    Zap,
     PanelLeftClose,
     PanelLeftOpen,
     Plus,
@@ -91,6 +93,9 @@
     <div class="tools">
       {#if active.hostId}
         <div class="seg" role="group" aria-label={m.tabs_label()}>
+          <button aria-pressed={active.kind === 'status'} onclick={() => switchKind('status')}
+            ><Gauge size={14} />{m.tab_status()}</button
+          >
           <button aria-pressed={active.kind === 'terminal'} onclick={() => switchKind('terminal')}
             ><SquareTerminal size={14} />{m.tab_terminal()}</button
           >
@@ -100,12 +105,20 @@
         </div>
       {/if}
       {#if active.kind === 'terminal'}
+        <span class="sep" aria-hidden="true"></span>
         <button
           class="icon-btn"
-          onclick={() => ui.toggleInspector()}
-          aria-label={m.stat_inspector()}
-          aria-pressed={ui.inspectorOpen}
-          title={m.stat_inspector()}><PanelRight size={16} /></button
+          onclick={() => ui.showPanel('metrics')}
+          aria-label={m.panel_metrics()}
+          aria-pressed={ui.inspectorOpen && ui.panelTab === 'metrics'}
+          title={m.panel_metrics()}><Activity size={16} /></button
+        >
+        <button
+          class="icon-btn"
+          onclick={() => ui.showPanel('snippets')}
+          aria-label={m.panel_snippets()}
+          aria-pressed={ui.inspectorOpen && ui.panelTab === 'snippets'}
+          title={m.panel_snippets()}><Zap size={16} /></button
         >
       {/if}
       <button
@@ -196,7 +209,7 @@
     width: 20px;
     height: 20px;
     border: 0;
-    border-radius: 5px;
+    border-radius: 7px;
     background: none;
     color: inherit;
     opacity: 0;

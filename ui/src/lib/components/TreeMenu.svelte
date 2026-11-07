@@ -3,7 +3,7 @@
   import { ChevronRight } from '@lucide/svelte';
   import Flag from '$lib/flags/Flag.svelte';
   import * as m from '$lib/paraglide/messages.js';
-  import { connectHost } from '$lib/stores/actions';
+  import { connectFolder, connectHost, hostsInFolder } from '$lib/stores/actions';
   import { settings } from '$lib/stores/settings.svelte';
   import { tree } from '$lib/stores/tree.svelte';
   import { ui } from '$lib/stores/ui.svelte';
@@ -56,10 +56,16 @@
   {#if only?.kind === 'host'}
     {@render item(m.menu_connect(), () => connectHost(only.id))}
     {@render item(m.menu_sftp(), () => connectHost(only.id, 'sftp'))}
+    {@render item(m.menu_status(), () => connectHost(only.id, 'status'))}
     <div class="menu-sep"></div>
     {@render item(m.menu_duplicate(), () => void tree.duplicate(only.id))}
     {@render item(m.menu_edit(), edit)}
   {:else if only?.kind === 'folder'}
+    {@const n = hostsInFolder(only.id).length}
+    {#if n}
+      {@render item(m.menu_connect_all({ count: n }), () => connectFolder(only.id))}
+      <div class="menu-sep"></div>
+    {/if}
     {@render item(m.menu_new_host_here(), () => ui.openHostEditor(only.id, only.id))}
     {@render item(m.menu_new_subfolder(), () => ui.openFolderEditor(null, only.id))}
     <div class="menu-sep"></div>

@@ -25,7 +25,7 @@ pub use hostkey::{
 };
 pub use session::{Connection, ExecOutput, SubsystemStream, CREDIT_WINDOW};
 pub use shell::{Shell, ShellOutput};
-pub use stats::{sample_stats, HostStats, ProcRow};
+pub use stats::{sample_stats, HostStats, NetIface, ProcRow};
 
 /// SSH errors. Messages never contain credentials.
 #[derive(Debug, thiserror::Error)]

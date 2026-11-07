@@ -21,6 +21,7 @@
   } from './text';
   import { Highlighter } from './highlight';
   import { resolveTheme } from './themes';
+  import { registerTerminal } from './registry';
 
   let { tab, active }: { tab: Tab; active: boolean } = $props();
 
@@ -143,6 +144,11 @@
       if (d?.tabId === tab.id) requestPaste(d.text);
     };
     window.addEventListener('ibc:paste', onExternalPaste);
+    const unregister = registerTerminal(tab.id, {
+      send: (text) => conn.write(utf8(text)),
+      phase: () => conn.phase,
+      focus: focusTerm
+    });
 
     void (async () => {
       const [, resolved] = await Promise.all([
@@ -186,6 +192,7 @@
       mo.disconnect();
       clearTimeout(timer);
       window.removeEventListener('ibc:paste', onExternalPaste);
+      unregister();
       conn.close();
       engine?.dispose();
       engine = null;

@@ -11,3 +11,7 @@ Metrics continue using `stats_sample` on authenticated sessions (ADR-009). Missi
 Design: shared tokens and controls across overview, sidebar, tabs, forms, dialogs and SFTP. Light default, system typography, 4 pt spacing; control heights 32 (regular), 28 (compact), 36 (prominent); radius 8 controls, 12 grouped fields, 16 cards, 20 sheets. Quiet hairlines, subtle shadows, semantic colors and consistent keyboard focus. Full text status accompanies color. No third-party branding/assets. Virtualized server grid supports large catalogs. Search and status filters operate on the same fleet model.
 
 The Rust/store/vault/SSH separation remains intact; this ADR adds no core crate dependencies and does not replace russh with Traversio. Reference findings in `docs/swiftserver-reference.md` distinguish published behavior from inferred internal design.
+
+## Amendment 2026-11-07: gentler probes
+
+A bare TCP connect is logged by `sshd` as a pre-auth disconnect; frequent probes fill server logs and an aggressive `fail2ban` policy may ban the user's own address. Probes now repeat every 3 min (was 30 s), are never sent to servers with a live session, pause while the window is hidden, and can be turned off in Settings (`fleet.probe`, default on; off = availability "Not checked"). The map view probes at most 100 hosts.
