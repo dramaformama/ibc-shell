@@ -1,82 +1,84 @@
 # ibc server
 
-A light SSH and SFTP client for people who run many servers.
-Nested folders, country flags, a terminal that stays out of your way, and secrets that never leave your machine.
+[English](README.en.md) · **Русский**
 
-> **Status: early development.** The core (SSH, SFTP engine, encrypted vault, terminal and file UI) is built and tested.
-> The pieces are not yet wired into a runnable release, so there are no installers yet. See [Download](#download).
+Лёгкий SSH- и SFTP-клиент для тех, кто администрирует много серверов.
+Вложенные папки, флаги стран, терминал, который не мешает, и секреты, которые не покидают ваш компьютер.
 
-## Why
+> **Статус: ранняя разработка.** Ядро (SSH, движок SFTP, зашифрованное хранилище, интерфейс терминала и файлов) написано и протестировано.
+> Части ещё не собраны в запускаемый релиз, поэтому установщиков пока нет. См. [Скачать](#скачать).
 
-- **Light.** Small installer, low memory. Tauri and Rust, no Electron.
-- **Servers by place.** Nested folders, each host with a country flag. Find a server by where it is, not by scrolling.
-- **Honest security.** Host-key changes are a hard block, never auto-accepted. The vault state is always visible.
-  No accounts, no cloud, nothing phones home.
-- **Keyboard first.** Command palette on <kbd>⌘K</kbd> / <kbd>Ctrl K</kbd>. Russian and English UI.
-- **Quiet design.** Content first, the terminal is the hero. Light and dark themes.
+## Зачем
 
-## Download
+- **Лёгкий.** Маленький установщик, мало памяти. Tauri и Rust, без Electron.
+- **Серверы по месту.** Вложенные папки, у каждого хоста флаг страны. Сервер ищется по тому, где он стоит, а не прокруткой списка.
+- **Честная безопасность.** Смена ключа хоста блокирует подключение, а не принимается молча. Состояние хранилища всегда на виду.
+  Без аккаунтов, без облака, ничего не отправляется наружу.
+- **Клавиатура прежде всего.** Палитра команд по <kbd>⌘K</kbd> / <kbd>Ctrl K</kbd>. Интерфейс на русском и английском, язык меняется в настройках.
+- **Спокойный дизайн.** Содержимое на первом месте, терминал главный. Светлая и тёмная темы.
 
-All builds will be published on the [Releases page](https://github.com/dramaformama/ibc-server/releases/latest).
+## Скачать
 
-| Platform | Download | Status |
-| --- | --- | --- |
-| macOS (Apple Silicon, Intel) | [Releases](https://github.com/dramaformama/ibc-server/releases/latest) | not built yet |
-| Windows 10/11 | [Releases](https://github.com/dramaformama/ibc-server/releases/latest) | not built yet |
-| Linux (AppImage, deb) | [Releases](https://github.com/dramaformama/ibc-server/releases/latest) | not built yet |
-| iOS | — | planned (Phase 4) |
-| Android | — | planned (Phase 4) |
+Все сборки будут публиковаться на странице [Releases](https://github.com/dramaformama/ibc-server/releases/latest).
 
-Until installers exist you can [build from source](#build-from-source).
+| Платформа                    | Загрузка                                                               | Состояние         |
+| ---------------------------- | ---------------------------------------------------------------------- | ----------------- |
+| macOS (Apple Silicon, Intel) | [Releases](https://github.com/dramaformama/ibc-server/releases/latest) | пока не собрано   |
+| Windows 10/11                | [Releases](https://github.com/dramaformama/ibc-server/releases/latest) | пока не собрано   |
+| Linux (AppImage, deb)        | [Releases](https://github.com/dramaformama/ibc-server/releases/latest) | пока не собрано   |
+| iOS                          | —                                                                      | в планах (Фаза 4) |
+| Android                      | —                                                                      | в планах (Фаза 4) |
 
-## What works today
+Пока установщиков нет, можно [собрать из исходников](#сборка-из-исходников).
 
-| Area | State |
-| --- | --- |
-| Encrypted vault (Argon2id + XChaCha20-Poly1305), host store, folder tree | done, tested |
-| SSH client: password, key, keyboard-interactive, host-key checks, jump hosts | done, tested against real OpenSSH |
-| SFTP engine: queue, resume, pause, conflict policies, remote-to-remote | done, tested |
-| Terminal UI (xterm.js tabs, search, paste safety) | done, not yet run against the real backend |
-| SFTP UI (two panes, transfer queue) | done, not yet run against the real backend |
-| App shell wiring (Tauri commands) | in progress |
-| Port forwarding, `ssh_config` import, key manager, split panes, snippets, backups | planned (Phase 3) |
-| Mobile | planned (Phase 4) |
+## Что работает сейчас
 
-Nothing here is benchmarked against other clients yet. Numbers will go in `docs/bench.md` once they are measured.
+| Область                                                                                             | Состояние                                        |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| Зашифрованное хранилище (Argon2id + XChaCha20-Poly1305), база хостов, дерево папок                  | готово, протестировано                           |
+| SSH-клиент: пароль, ключ, keyboard-interactive, проверка ключа хоста, прыжки через хосты            | готово, проверено на настоящем OpenSSH           |
+| Движок SFTP: очередь, докачка, пауза, политики конфликтов, передача между серверами                 | готово, протестировано                           |
+| Интерфейс терминала (вкладки xterm.js, поиск, безопасная вставка)                                   | готово, с настоящим бэкендом пока не запускалось |
+| Интерфейс SFTP (две панели, очередь передач)                                                        | готово, с настоящим бэкендом пока не запускалось |
+| Подключение команд приложения (Tauri)                                                               | в работе                                         |
+| Проброс портов, импорт `ssh_config`, менеджер ключей, разделение панелей, сниппеты, резервные копии | в планах (Фаза 3)                                |
+| Мобильные платформы                                                                                 | в планах (Фаза 4)                                |
 
-## Build from source
+Сравнения с другими клиентами пока нет. Замеры появятся в `docs/bench.md`, когда будут сняты.
 
-You need Rust (stable), Node with pnpm, and [just](https://github.com/casey/just).
+## Сборка из исходников
+
+Нужны Rust (stable), Node с pnpm и [just](https://github.com/casey/just).
 
 ```sh
 pnpm install
-pnpm tauri dev          # run the app
-cargo test --workspace  # Rust tests
+pnpm tauri dev          # запустить приложение
+cargo test --workspace  # тесты Rust
 pnpm -C ui check && pnpm -C ui test
-just e2e                # integration tests against OpenSSH in Docker
+just e2e                # интеграционные тесты на OpenSSH в Docker
 ```
 
-## Layout
+## Структура
 
 ```
-crates/store   SQLite, folder tree, inheritance
-crates/vault   keys, secret encryption, backup format
-crates/ssh     russh client: auth, host keys, PTY, forwards, jump hosts
-crates/sftp    SFTP operations and the transfer engine
-src-tauri      app shell: commands, channels, capabilities
-ui             Svelte 5 interface
-tests/docker   OpenSSH servers for integration tests
-docs           plan, frozen contracts, ADRs, status
+crates/store   SQLite, дерево папок, наследование настроек
+crates/vault   ключи, шифрование секретов, формат резервной копии
+crates/ssh     клиент на russh: вход, ключи хостов, PTY, проброс, прыжки
+crates/sftp    операции SFTP и движок передач
+src-tauri      оболочка приложения: команды, каналы, права
+ui             интерфейс на Svelte 5
+tests/docker   серверы OpenSSH для интеграционных тестов
+docs           план, замороженные контракты, ADR, статус
 ```
 
-The plan lives in [docs/PLAN.md](docs/PLAN.md) (Russian), current progress in [docs/STATUS.md](docs/STATUS.md).
+План лежит в [docs/PLAN.md](docs/PLAN.md), текущий прогресс в [docs/STATUS.md](docs/STATUS.md).
 
-## Security
+## Безопасность
 
-Passwords, private keys and passphrases never reach the UI layer except for the one thing you type.
-A changed host key blocks the connection. Remote strings are never rendered as HTML, and remote file names are sanitized before touching your disk.
-Details: [docs/contracts/security.md](docs/contracts/security.md).
+Пароли, приватные ключи и парольные фразы не попадают в слой интерфейса, кроме того единственного, что вы вводите сами.
+Изменённый ключ хоста блокирует соединение. Строки с сервера никогда не отображаются как HTML, а имена удалённых файлов очищаются до того, как коснутся вашего диска.
+Подробности: [docs/contracts/security.md](docs/contracts/security.md).
 
-## License
+## Лицензия
 
-MIT, as declared in `Cargo.toml`.
+MIT, как указано в `Cargo.toml`.
