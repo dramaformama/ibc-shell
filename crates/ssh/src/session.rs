@@ -1,49 +1,161 @@
-//! Established connection, interactive shell, subsystem stream, port forwards.
+//! Established connection: shell / exec / subsystem channels.
 
 use std::io;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-use serde::{Deserialize, Serialize};
+use russh::client::{Handle, Msg};
+use russh::{ChannelMsg, ChannelStream, Disconnect};
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 
 use crate::config::PtyRequest;
+use crate::error::map_russh;
+use crate::forward::{ForwardHandle, ForwardSpec};
+use crate::shell::Shell;
+use crate::verify::ClientHandler;
 use crate::SshError;
 
 /// Credit window: the shell stops reading from the SSH channel while unacked bytes exceed this.
 pub const CREDIT_WINDOW: u32 = 1 << 20;
 
 /// An authenticated connection (to the last hop of the chain). Cheap to share via `Arc`;
-/// dropping the last reference disconnects.
-#[derive(Debug)]
+/// dropping the last reference disconnects (earlier hops are kept alive inside).
 pub struct Connection {
-    _private: (),
+    handle: Handle<ClientHandler>,
+    _upstream: Vec<Handle<ClientHandler>>,
+    banner: Option<String>,
+}
+
+impl std::fmt::Debug for Connection {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Connection")
+            .field("closed", &self.handle.is_closed())
+            .finish_non_exhaustive()
+    }
 }
 
 impl Connection {
+    pub(crate) fn new(
+        handle: Handle<ClientHandler>,
+        upstream: Vec<Handle<ClientHandler>>,
+        banner: Option<String>,
+    ) -> Self {
+        Self {
+            handle,
+            _upstream: upstream,
+            banner,
+        }
+    }
+
     /// Server banner received during auth, if any (plain text).
     #[must_use]
     pub fn server_banner(&self) -> Option<&str> {
-        None
+        self.banner.as_deref()
     }
+
+    /// True once the connection is gone (disconnect, keepalive loss).
+    #[must_use]
+    pub fn is_closed(&self) -> bool {
+        self.handle.is_closed()
+    }
+
     /// Opens a PTY + shell channel.
     pub async fn open_shell(&self, pty: PtyRequest) -> Result<Shell, SshError> {
-        Err(SshError::Unimplemented)
+        let ch = self
+            .handle
+            .channel_open_session()
+            .await
+            .map_err(|e| map_russh(&e))?;
+        ch.request_pty(
+            false,
+            &pty.term,
+            u32::from(pty.cols),
+            u32::from(pty.rows),
+            0,
+            0,
+            &[],
+        )
+        .await
+        .map_err(|e| map_russh(&e))?;
+        ch.request_shell(false).await.map_err(|e| map_russh(&e))?;
+        let (rx, tx) = ch.split();
+        Ok(Shell::new(rx, tx))
     }
+
     /// Runs a command without PTY, collecting at most `max_output` bytes of stdout.
     pub async fn exec(&self, command: &str, max_output: usize) -> Result<ExecOutput, SshError> {
-        Err(SshError::Unimplemented)
+        let mut ch = self
+            .handle
+            .channel_open_session()
+            .await
+            .map_err(|e| map_russh(&e))?;
+        ch.exec(true, command.as_bytes().to_vec())
+            .await
+            .map_err(|e| map_russh(&e))?;
+        let mut out = ExecOutput {
+            exit_status: None,
+            stdout: Vec::new(),
+            stderr: Vec::new(),
+        };
+        while let Some(msg) = ch.wait().await {
+            match msg {
+                ChannelMsg::Data { data } => append_capped(&mut out.stdout, &data, max_output),
+                ChannelMsg::ExtendedData { data, ext: 1 } => {
+                    append_capped(&mut out.stderr, &data, max_output);
+                }
+                ChannelMsg::ExitStatus { exit_status } => out.exit_status = Some(exit_status),
+                ChannelMsg::Failure => {
+                    return Err(SshError::Protocol("exec refused".into()));
+                }
+                ChannelMsg::Close => break,
+                _ => {}
+            }
+        }
+        Ok(out)
     }
+
     /// Opens the `sftp` subsystem; the stream feeds `russh-sftp` in `crates/sftp`.
     pub async fn open_sftp(&self) -> Result<SubsystemStream, SshError> {
-        Err(SshError::Unimplemented)
+        let mut ch = self
+            .handle
+            .channel_open_session()
+            .await
+            .map_err(|e| map_russh(&e))?;
+        ch.request_subsystem(true, "sftp")
+            .await
+            .map_err(|e| map_russh(&e))?;
+        loop {
+            match ch.wait().await {
+                Some(ChannelMsg::Success) => break,
+                Some(ChannelMsg::Failure) | None => {
+                    return Err(SshError::Protocol("sftp subsystem refused".into()));
+                }
+                Some(_) => {}
+            }
+        }
+        Ok(SubsystemStream {
+            inner: ch.into_stream(),
+        })
     }
+
+    #[allow(clippy::unused_async, clippy::unused_async_trait_impl)] // async per contract
     /// Starts a port forward (Phase 3). Stops when the handle is dropped.
-    pub async fn start_forward(&self, spec: ForwardSpec) -> Result<ForwardHandle, SshError> {
+    pub async fn start_forward(&self, _spec: ForwardSpec) -> Result<ForwardHandle, SshError> {
         Err(SshError::Unimplemented)
     }
+
     /// Graceful disconnect.
-    pub async fn disconnect(&self) {}
+    pub async fn disconnect(&self) {
+        let _ = self
+            .handle
+            .disconnect(Disconnect::ByApplication, "", "en")
+            .await;
+    }
+}
+
+fn append_capped(buf: &mut Vec<u8>, data: &[u8], cap: usize) {
+    let room = cap.saturating_sub(buf.len());
+    buf.extend_from_slice(&data[..data.len().min(room)]);
 }
 
 /// Output of [`Connection::exec`].
@@ -57,132 +169,52 @@ pub struct ExecOutput {
     pub stderr: Vec<u8>,
 }
 
-/// Item read from a shell.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum ShellOutput {
-    /// stdout/stderr bytes (merged, as a terminal sees them).
-    Data(Vec<u8>),
-    /// Remote process exit status.
-    ExitStatus(u32),
-}
-
-/// Interactive shell with credit-based backpressure ([`CREDIT_WINDOW`]).
-#[derive(Debug)]
-pub struct Shell {
-    _private: (),
-}
-
-impl Shell {
-    /// Next output item; `None` = channel closed (EOF / disconnect). Waits while the credit
-    /// window is exhausted.
-    pub async fn read(&mut self) -> Option<ShellOutput> {
-        None
-    }
-    /// Sends input bytes.
-    pub async fn write(&self, data: &[u8]) -> Result<(), SshError> {
-        Err(SshError::Unimplemented)
-    }
-    /// Window change.
-    pub async fn resize(&self, cols: u16, rows: u16) -> Result<(), SshError> {
-        Err(SshError::Unimplemented)
-    }
-    /// Returns credit for `bytes` consumed by the UI (`shell_ack`).
-    pub fn ack(&self, bytes: u32) {}
-    /// Sends EOF + close.
-    pub async fn close(self) {}
-}
-
 /// Bidirectional byte stream of a subsystem channel.
-#[derive(Debug)]
 pub struct SubsystemStream {
-    _private: (),
+    inner: ChannelStream<Msg>,
 }
 
-fn unimplemented_io() -> io::Error {
-    io::Error::new(io::ErrorKind::Unsupported, "not implemented")
+impl std::fmt::Debug for SubsystemStream {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SubsystemStream").finish_non_exhaustive()
+    }
 }
 
 impl AsyncRead for SubsystemStream {
     fn poll_read(
-        self: Pin<&mut Self>,
-        _cx: &mut Context<'_>,
-        _buf: &mut ReadBuf<'_>,
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
-        Poll::Ready(Err(unimplemented_io()))
+        Pin::new(&mut self.inner).poll_read(cx, buf)
     }
 }
 
 impl AsyncWrite for SubsystemStream {
     fn poll_write(
-        self: Pin<&mut Self>,
-        _cx: &mut Context<'_>,
-        _buf: &[u8],
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &[u8],
     ) -> Poll<io::Result<usize>> {
-        Poll::Ready(Err(unimplemented_io()))
+        Pin::new(&mut self.inner).poll_write(cx, buf)
     }
-    fn poll_flush(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-        Poll::Ready(Err(unimplemented_io()))
+    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+        Pin::new(&mut self.inner).poll_flush(cx)
     }
-    fn poll_shutdown(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-        Poll::Ready(Err(unimplemented_io()))
+    fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+        Pin::new(&mut self.inner).poll_shutdown(cx)
     }
 }
 
-/// Port forward definition (mirrors store `PortForward`, without ids).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum ForwardSpec {
-    /// `-L bind_addr:bind_port:dest_host:dest_port`.
-    Local {
-        /// Bind address.
-        bind_addr: String,
-        /// Bind port.
-        bind_port: u16,
-        /// Destination host.
-        dest_host: String,
-        /// Destination port.
-        dest_port: u16,
-    },
-    /// `-R`.
-    Remote {
-        /// Remote bind address.
-        bind_addr: String,
-        /// Remote bind port.
-        bind_port: u16,
-        /// Local destination host.
-        dest_host: String,
-        /// Local destination port.
-        dest_port: u16,
-    },
-    /// `-D` SOCKS5 (CONNECT only, no auth).
-    Dynamic {
-        /// Bind address (default 127.0.0.1).
-        bind_addr: String,
-        /// Bind port.
-        bind_port: u16,
-    },
-}
+#[cfg(test)]
+mod tests {
+    use super::append_capped;
 
-/// Forward state. IPC: `SessionEvent::ForwardStatus.state`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
-pub enum ForwardState {
-    /// Listening / registered.
-    Active,
-    /// Stopped by the user or session end.
-    Stopped,
-    /// Bind or remote request failed.
-    Failed,
-}
-
-/// Running forward; dropping it stops the forward.
-#[derive(Debug)]
-pub struct ForwardHandle {
-    _private: (),
-}
-
-impl ForwardHandle {
-    /// Actual bound port (useful when `bind_port` was 0).
-    #[must_use]
-    pub fn bound_port(&self) -> u16 {
-        0
+    #[test]
+    fn capped_append() {
+        let mut b = Vec::new();
+        append_capped(&mut b, b"abcdef", 4);
+        append_capped(&mut b, b"xyz", 4);
+        assert_eq!(b, b"abcd");
     }
 }
