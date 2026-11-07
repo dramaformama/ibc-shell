@@ -76,15 +76,15 @@ export const vaultChangePassword: Commands['vaultChangePassword'] = async (
   return ok(null);
 };
 
-export const vaultExport: Commands['vaultExport'] = async (_path, pw) => {
+export const vaultExport: Commands['vaultExport'] = async (pw) => {
   await delay(500);
   if (state !== 'Unlocked') return err({ code: 'VaultLocked' });
   if (pw.length < 10)
     return err({ code: 'Validation', detail: 'backup password must be at least 10 characters' });
-  return ok(null);
+  return ok(true);
 };
 
-export const vaultImport: Commands['vaultImport'] = async (_path, pw) => {
+export const vaultImport: Commands['vaultImport'] = async (pw) => {
   await delay(500);
   if (state !== 'Unlocked') return err({ code: 'VaultLocked' });
   if (pw.length < 10) return err({ code: 'WrongPassword' });

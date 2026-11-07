@@ -32,9 +32,10 @@ impl KnownHosts for StoreKnownHosts {
             .collect())
     }
 
+    /// Never replaces a stored key (a concurrent prompt may have stored another one first).
     fn add(&self, host_pattern: &str, key: &KnownKey) -> Result<(), String> {
         self.0
-            .known_host_upsert(KnownHostInput {
+            .known_host_add_new(KnownHostInput {
                 host_pattern: host_pattern.to_owned(),
                 key_type: key.key_type.clone(),
                 key_blob: key.key_blob.clone(),

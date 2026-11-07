@@ -1,9 +1,10 @@
 //! Vault commands (`ipc.md` §vault). Passwords arrive as `SecretInput`.
 
-use std::path::Path;
+use std::path::PathBuf;
 
-use ibc_vault::{ImportSummary, VaultMode};
+use ibc_vault::{ImportSummary, VaultMode, VaultState};
 use tauri::{AppHandle, State};
+use tauri_plugin_dialog::{DialogExt, FilePath};
 use tauri_specta::Event;
 
 use crate::api::dto::{SecretInput, VaultStatus};
@@ -82,29 +83,75 @@ pub async fn vault_change_password(
     blocking(&state, move |v| v.change_password(&o, &n)).await
 }
 
-/// Writes a `.tlvault` backup (password ≥ 10 chars).
+/// Backup file extension (without the dot).
+const BACKUP_EXT: &str = "tlvault";
+
+fn require_unlocked(state: &AppState) -> ApiResult<()> {
+    match state.vault.state()? {
+        VaultState::Unlocked => Ok(()),
+        _ => Err(ApiError::VaultLocked),
+    }
+}
+
+fn picked_path(p: FilePath) -> ApiResult<PathBuf> {
+    p.into_path()
+        .map_err(|_| ApiError::Validation("unsupported file location".into()))
+}
+
+/// Shows the native "save" dialog (backend side, ADR-007) and writes a `.tlvault` backup
+/// there (password ≥ 10 chars). The webview never names the path. `false` = cancelled.
 #[tauri::command]
 #[specta::specta]
 pub async fn vault_export(
+    app: AppHandle,
     state: State<'_, AppState>,
-    path: String,
     password: SecretInput,
-) -> ApiResult<()> {
+) -> ApiResult<bool> {
+    require_unlocked(&state)?;
     let pw = password.0;
-    blocking(&state, move |v| v.export_backup(Path::new(&path), &pw)).await
+    let picked = tauri::async_runtime::spawn_blocking(move || {
+        app.dialog()
+            .file()
+            .add_filter("iBC Shell backup", &[BACKUP_EXT])
+            .set_file_name(format!("ibc-shell-backup.{BACKUP_EXT}"))
+            .blocking_save_file()
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))?;
+    let Some(picked) = picked else {
+        return Ok(false);
+    };
+    let path = picked_path(picked)?;
+    blocking(&state, move |v| v.export_backup(&path, &pw)).await?;
+    Ok(true)
 }
 
-/// Merges a `.tlvault` backup; emits `tree://changed`.
+/// Shows the native "open" dialog (backend side, ADR-007) and merges the chosen `.tlvault`
+/// backup; emits `tree://changed`. `null` = cancelled.
 #[tauri::command]
 #[specta::specta]
 pub async fn vault_import(
     app: AppHandle,
     state: State<'_, AppState>,
-    path: String,
     password: SecretInput,
-) -> ApiResult<ImportSummary> {
+) -> ApiResult<Option<ImportSummary>> {
+    require_unlocked(&state)?;
     let pw = password.0;
-    let summary = blocking(&state, move |v| v.import_backup(Path::new(&path), &pw)).await?;
+    let dialog_app = app.clone();
+    let picked = tauri::async_runtime::spawn_blocking(move || {
+        dialog_app
+            .dialog()
+            .file()
+            .add_filter("iBC Shell backup", &[BACKUP_EXT])
+            .blocking_pick_file()
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))?;
+    let Some(picked) = picked else {
+        return Ok(None);
+    };
+    let path = picked_path(picked)?;
+    let summary = blocking(&state, move |v| v.import_backup(&path, &pw)).await?;
     let _ = TreeChanged.emit(&app);
-    Ok(summary)
+    Ok(Some(summary))
 }

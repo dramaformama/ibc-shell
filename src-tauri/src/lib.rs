@@ -7,6 +7,7 @@ use ibc_vault::{OsKeyring, Vault};
 use tauri::Manager;
 
 pub mod api;
+pub mod autolock;
 pub mod commands;
 pub mod connect;
 pub mod prompts;
@@ -35,7 +36,15 @@ pub fn run() {
     let result = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(move |invoke| {
-            if api::RAW_COMMANDS.contains(&invoke.message.command()) {
+            let cmd = invoke.message.command();
+            // Backend auto-lock (ADR-007): user-driven commands count as activity; output
+            // acks are driven by the server and do not.
+            if !api::PASSIVE_COMMANDS.contains(&cmd) {
+                if let Some(st) = invoke.message.webview().try_state::<state::AppState>() {
+                    st.vault.touch();
+                }
+            }
+            if api::RAW_COMMANDS.contains(&cmd) {
                 raw(invoke)
             } else {
                 typed(invoke)
@@ -43,7 +52,10 @@ pub fn run() {
         })
         .setup(move |app| {
             specta.mount_events(app);
-            app.manage(init_state(app.handle())?);
+            let st = init_state(app.handle())?;
+            autolock::apply_from_store(&st.store, &st.vault);
+            autolock::spawn_sweeper(app.handle().clone(), st.vault.clone());
+            app.manage(st);
             Ok(())
         })
         .run(tauri::generate_context!());

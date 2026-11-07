@@ -80,7 +80,17 @@ store_cmd!(
     /// Reads a UI setting.
     settings_get(key: String) -> Option<serde_json::Value> => setting_get(&key)
 );
-store_cmd!(
-    /// Writes a UI setting.
-    settings_set(key: String, value: serde_json::Value) -> () => setting_set(&key, &value)
-);
+/// Writes a UI setting; `security.autolock_minutes` is applied to the vault at once (ADR-007).
+#[tauri::command]
+#[specta::specta]
+pub async fn settings_set(
+    state: State<'_, AppState>,
+    key: String,
+    value: serde_json::Value,
+) -> ApiResult<()> {
+    state.store.setting_set(&key, &value)?;
+    if key == crate::autolock::AUTOLOCK_KEY {
+        crate::autolock::apply_from_store(&state.store, &state.vault);
+    }
+    Ok(())
+}

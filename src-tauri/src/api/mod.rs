@@ -16,6 +16,10 @@ use crate::commands::{app, catalog, identity, session, sftp, tree, vault};
 /// through hand-written wrappers in `ui/src/lib/api/raw.ts`.
 pub const RAW_COMMANDS: &[&str] = &["shell_write"];
 
+/// Commands that do NOT count as user activity for the backend auto-lock (ADR-007):
+/// they are triggered by server output or by the app itself, not by the user.
+pub const PASSIVE_COMMANDS: &[&str] = &["shell_ack", "vault_status", "transfers_subscribe"];
+
 /// The tauri-specta builder with every typed command and event of `docs/contracts/ipc.md`.
 #[must_use]
 pub fn builder() -> Builder<tauri::Wry> {
