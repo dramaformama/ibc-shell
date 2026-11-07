@@ -1,0 +1,160 @@
+.tree-wrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.tree {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  position: relative;
+  outline: none;
+  container-type: inline-size;
+  padding: 0 4px;
+}
+.tree .canvas {
+  position: relative;
+}
+.tree .row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 10px;
+  border-radius: var(--r-control);
+  cursor: default;
+  user-select: none;
+  touch-action: pan-y;
+}
+.tree .row:hover {
+  background: var(--surface-2);
+}
+.tree .row.sel {
+  background: var(--accent-soft);
+}
+.tree:focus-visible .row.cur {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.tree .row.into {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.tree .row.dragging {
+  opacity: 0.45;
+}
+.tree .chev {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.tree .chev svg {
+  transition: transform 120ms var(--ease);
+}
+.tree .chev svg.open {
+  transform: rotate(90deg);
+}
+.tree .folder-ic {
+  flex: none;
+  color: var(--muted);
+}
+.tree .label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.tree .sub {
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 12px;
+  display: none;
+  min-width: 0;
+}
+.tree .row:hover .sub {
+  display: block;
+}
+@container (min-width: 320px) {
+  .tree .sub {
+    display: block;
+  }
+}
+.tree .count {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+.tree .dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ok);
+}
+.tree .rename {
+  flex: 1;
+  min-width: 0;
+  height: 22px;
+  padding: 0 6px;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  outline: none;
+}
+.tree .drop-line {
+  position: absolute;
+  right: 8px;
+  height: 2px;
+  margin-top: -1px;
+  border-radius: 1px;
+  background: var(--accent);
+  pointer-events: none;
+}
+.tree .drop-line::before {
+  content: '';
+  position: absolute;
+  left: -3px;
+  top: -2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.tree-ghost {
+  position: fixed;
+  z-index: 70;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-control);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  pointer-events: none;
+  font-size: 12px;
+}
+.tree .empty {
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  padding: 40px 16px;
+  color: var(--muted);
+  text-align: center;
+}
+.tree .empty p {
+  margin: 0;
+}
