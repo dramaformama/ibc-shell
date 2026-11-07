@@ -1,0 +1,41 @@
+# Test-only servers. Generate fixtures first: tests/docker/gen-fixtures.sh
+# user: tester  password: test-pw-123 (pass/kbd/evil)  keys: tests/fixtures/keys/*
+name: termlite-e2e
+x-sshd: &sshd
+  build: ./sshd
+  volumes:
+    - ../fixtures:/fixtures:ro
+  restart: "no"
+services:
+  ssh-pass:
+    <<: *sshd
+    environment: { MODE: pass }
+    ports: ["127.0.0.1:2201:22"]
+    networks: [front]
+  ssh-key:
+    <<: *sshd
+    environment: { MODE: key }
+    ports: ["127.0.0.1:2202:22"]
+    networks: [front]
+  ssh-kbd:
+    <<: *sshd
+    environment: { MODE: kbd }
+    ports: ["127.0.0.1:2203:22"]
+    networks: [front]
+  bastion:
+    <<: *sshd
+    environment: { MODE: bastion }
+    ports: ["127.0.0.1:2204:22"]
+    networks: [front, back]
+  internal: # no published port; reach via bastion as internal:22
+    <<: *sshd
+    environment: { MODE: internal }
+    networks: [back]
+  ssh-evil:
+    <<: *sshd
+    environment: { MODE: evil }
+    ports: ["127.0.0.1:2205:22"]
+    networks: [front]
+networks:
+  front: {}
+  back: { internal: true }

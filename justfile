@@ -24,9 +24,11 @@ bindings:
     cargo run -q -p termlite --example export_bindings
     node scripts/check-mock-coverage.mjs
 
-# Docker integration tests (placeholder until tests/docker exists)
+# Docker integration tests: fixtures, servers up, tests, servers down
 e2e:
-    @echo "e2e: not implemented yet"
+    tests/docker/gen-fixtures.sh
+    docker compose -f tests/docker/compose.yml up -d --build --wait
+    trap 'docker compose -f tests/docker/compose.yml down -v' EXIT; TL_E2E=1 cargo test -p ssh -p sftp --test '*'
 
 # Rename the project (placeholder)
 rename name:
