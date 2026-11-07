@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Plus } from '@lucide/svelte';
+  import { Plus, Search } from '@lucide/svelte';
   import Flag from '$lib/flags/Flag.svelte';
   import * as m from '$lib/paraglide/messages.js';
   import { sessions } from '$lib/stores/sessions.svelte';
@@ -27,14 +27,16 @@
     </div>
   {:else}
     <div class="welcome">
-      <h1>{m.app_name()}</h1>
+      <img class="mark" src="/favicon.svg" alt="" width="56" height="56" />
+      <h1>{m.welcome_title()}</h1>
       <p>{m.welcome_hint()}</p>
       <div class="actions">
         <button class="btn btn-primary" onclick={() => ui.openHostEditor(null)}
-          ><Plus size={14} />{m.action_new_host()}</button
+          ><Plus size={15} />{m.welcome_new()}</button
         >
         <button class="btn" onclick={() => (ui.paletteOpen = true)}
-          >{m.palette_open()} <span class="kbd">{mod('K')}</span></button
+          ><Search size={14} />{m.palette_open()}
+          <span class="kbd">{mod('K')}</span></button
         >
       </div>
     </div>
@@ -43,6 +45,7 @@
 
 <style>
   .stage {
+    position: relative;
     flex: 1;
     min-height: 0;
     display: grid;
@@ -50,6 +53,11 @@
   }
   .stage[data-tab-kind='sftp'] {
     display: flex;
+  }
+  .mark {
+    margin-bottom: 10px;
+    border-radius: 14px;
+    box-shadow: var(--shadow);
   }
   .welcome {
     display: grid;
@@ -60,14 +68,21 @@
   }
   h1 {
     margin: 0;
-    font-size: 18px;
+    font-size: 22px;
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
   }
   p {
-    margin: 0 0 12px;
+    margin: 0 0 14px;
     color: var(--muted);
-    max-width: 36ch;
+    max-width: 40ch;
+    text-wrap: pretty;
+  }
+  .kbd {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
   }
   .actions {
     display: flex;

@@ -14,8 +14,15 @@
     inheritFrom: FolderId | null;
     /** Host being edited (excluded from jump choices). */
     selfHostId?: string | null;
+    /** Render only the advanced fields (the host editor owns login / password itself). */
+    advancedOnly?: boolean;
   }
-  let { form = $bindable(), inheritFrom, selfHostId = null }: Props = $props();
+  let {
+    form = $bindable(),
+    inheritFrom,
+    selfHostId = null,
+    advancedOnly = false
+  }: Props = $props();
 
   let identities = $state.raw<IdentityDto[]>([]);
   void api.identityList().then((r) => r.status === 'ok' && (identities = r.data));
@@ -63,71 +70,74 @@
   }
 </script>
 
-<section>
-  <h3>{m.section_connection()}</h3>
-  <InheritField
-    label={m.field_port()}
-    type="number"
-    value={form.port}
-    hint={hint('port', str, '22')}
-    onchange={(v) => (form.port = v)}
-  />
-  <InheritField
-    label={m.field_username()}
-    value={form.username}
-    hint={hint('username', str)}
-    onchange={(v) => (form.username = v)}
-  />
-  <InheritField
-    label={m.field_identity()}
-    type="select"
-    value={form.identity}
-    hint={hint('identity_id', (v: string) => identityName(v))}
-    options={identities.map((i) => ({ value: i.id, label: i.label }))}
-    onchange={(v) => (form.identity = v)}
-  />
-  {#if creating}
-    <div class="inline">
-      <input
-        class="input"
-        placeholder={m.field_identity_label()}
-        bind:value={draft.label}
-        aria-label={m.field_identity_label()}
-      />
-      <input
-        class="input"
-        placeholder={m.field_username()}
-        bind:value={draft.username}
-        aria-label={m.field_username()}
-        autocomplete="off"
-      />
-      <input
-        class="input"
-        type="password"
-        placeholder={m.field_password()}
-        bind:value={draft.password}
-        aria-label={m.field_password()}
-        autocomplete="new-password"
-      />
-      <div class="row">
-        <button type="button" class="btn btn-ghost" onclick={() => (creating = false)}
-          >{m.action_cancel()}</button
-        >
-        <button
-          type="button"
-          class="btn btn-primary"
-          disabled={busy || !draft.label.trim()}
-          onclick={createIdentity}>{m.action_create()}</button
-        >
+{#if !advancedOnly}
+  <section>
+    <h3>{m.section_connection()}</h3>
+    <InheritField
+      label={m.field_port()}
+      type="number"
+      value={form.port}
+      hint={hint('port', str, '22')}
+      onchange={(v) => (form.port = v)}
+    />
+    <InheritField
+      label={m.field_username()}
+      value={form.username}
+      hint={hint('username', str)}
+      onchange={(v) => (form.username = v)}
+    />
+    <InheritField
+      label={m.field_identity()}
+      type="select"
+      value={form.identity}
+      hint={hint('identity_id', (v: string) => identityName(v))}
+      options={identities.map((i) => ({ value: i.id, label: i.label }))}
+      onchange={(v) => (form.identity = v)}
+    />
+    {#if creating}
+      <div class="inline">
+        <input
+          class="input"
+          placeholder={m.field_identity_label()}
+          bind:value={draft.label}
+          aria-label={m.field_identity_label()}
+        />
+        <input
+          class="input"
+          placeholder={m.field_username()}
+          bind:value={draft.username}
+          aria-label={m.field_username()}
+          autocomplete="off"
+        />
+        <input
+          class="input"
+          type="password"
+          placeholder={m.field_password()}
+          bind:value={draft.password}
+          aria-label={m.field_password()}
+          autocomplete="new-password"
+        />
+        <div class="row">
+          <button type="button" class="btn btn-ghost" onclick={() => (creating = false)}
+            >{m.action_cancel()}</button
+          >
+          <button
+            type="button"
+            class="btn btn-primary"
+            disabled={busy || !draft.label.trim()}
+            onclick={createIdentity}>{m.action_create()}</button
+          >
+        </div>
       </div>
-    </div>
-  {:else}
-    <button type="button" class="link" onclick={() => (creating = true)}>{m.identity_new()}</button>
-  {/if}
-</section>
+    {:else}
+      <button type="button" class="link" onclick={() => (creating = true)}
+        >{m.identity_new()}</button
+      >
+    {/if}
+  </section>
+{/if}
 
-<details>
-  <summary>{m.section_advanced()}</summary>
+{#snippet advFields()}
   <div class="adv">
     <InheritField
       label={m.field_jump_host()}
@@ -162,7 +172,16 @@
       onchange={(v) => (form.theme = v)}
     />
   </div>
-</details>
+{/snippet}
+
+{#if advancedOnly}
+  {@render advFields()}
+{:else}
+  <details>
+    <summary>{m.section_advanced()}</summary>
+    {@render advFields()}
+  </details>
+{/if}
 
 <style>
   section,

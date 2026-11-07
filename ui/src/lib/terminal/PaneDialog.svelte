@@ -81,7 +81,7 @@
     animation: rise-fade 140ms var(--ease);
   }
   .card {
-    width: min(420px, 100%);
+    width: min(500px, 100%);
     max-height: 100%;
     overflow: auto;
     display: grid;
@@ -121,7 +121,9 @@
     display: flex;
     flex-wrap: wrap;
     justify-content: flex-end;
+    align-items: center;
     gap: 8px;
+    margin-top: 4px;
     margin-top: 2px;
   }
   @keyframes rise {

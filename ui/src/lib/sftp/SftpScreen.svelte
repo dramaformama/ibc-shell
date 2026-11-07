@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { sessions } from '$lib/stores/sessions.svelte';
   import { Channel } from '@tauri-apps/api/core';
   import { onMount } from 'svelte';
   import { api, type Endpoint, type SessionEvent, type SftpId } from '$lib/api';
@@ -195,6 +196,13 @@
     };
   }
   const acts = $derived({ left: actions('left'), right: actions('right') });
+
+  $effect(() =>
+    sessions.setPhase(
+      tab.id,
+      status === 'ready' ? 'connected' : status === 'failed' ? 'failed' : 'connecting'
+    )
+  );
 </script>
 
 <div class="sf-screen">

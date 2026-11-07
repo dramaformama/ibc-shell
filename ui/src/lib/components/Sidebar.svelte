@@ -4,6 +4,7 @@
   import { ui } from '$lib/stores/ui.svelte';
   import { vault } from '$lib/stores/vault.svelte';
   import { mod } from '$lib/util/platform';
+  import OpenSessions from './OpenSessions.svelte';
   import Tree from './Tree.svelte';
 
   let { mac = false }: { mac?: boolean } = $props();
@@ -23,6 +24,8 @@
   <button class="search" onclick={() => (ui.paletteOpen = true)}>
     <Search size={14} /><span>{m.sidebar_search()}</span><span class="kbd">{mod('K')}</span>
   </button>
+  <OpenSessions />
+  <h2 class="sect">{m.sidebar_hosts_section()}</h2>
   <Tree />
   <footer>
     <button
@@ -60,12 +63,12 @@
     flex-direction: column;
     min-width: 0;
     border-right: 1px solid var(--border);
-    background: var(--surface);
+    background: var(--sidebar);
   }
   .top {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: flex-start;
     height: 40px;
     padding: 0 8px;
     flex: none;
@@ -78,13 +81,14 @@
     align-items: center;
     gap: 8px;
     height: 30px;
-    margin: 0 8px 8px;
-    padding: 0 10px;
-    border: 1px solid var(--border);
+    margin: 0 8px 10px;
+    padding: 0 6px 0 10px;
+    border: 1px solid transparent;
     border-radius: var(--r-control);
-    background: var(--bg);
+    background: var(--hover);
     color: var(--muted);
     font: inherit;
+    white-space: nowrap;
     cursor: pointer;
     transition: border-color 120ms var(--ease);
   }
@@ -93,7 +97,17 @@
   }
   .search span:first-of-type {
     flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     text-align: left;
+  }
+  .sect {
+    margin: 4px 0 2px;
+    padding: 0 16px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
   }
   footer {
     display: flex;

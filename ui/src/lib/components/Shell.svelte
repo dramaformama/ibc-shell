@@ -47,10 +47,10 @@
     else if (k === 'l') void vault.lock();
     else if (k === ',') ui.settingsOpen = true;
     else if (k === 't') ui.paletteOpen = true;
-    else if (k === 'w' && sessions.activeId) sessions.close(sessions.activeId);
+    else if (k === 'w' && sessions.activeGroup) sessions.closeGroup(sessions.activeGroup);
     else if (/^[1-9]$/.test(k)) {
-      const t = sessions.tabs[Number(k) - 1];
-      if (t) sessions.activeId = t.id;
+      const g = sessions.groups[Number(k) - 1];
+      if (g) sessions.select(g.current.id);
     } else return;
     e.preventDefault();
   }
@@ -161,7 +161,9 @@
     height: 100%;
   }
   .content {
+    position: relative;
     flex: 1;
+    overflow: hidden;
     min-height: 0;
     display: flex;
     flex-direction: column;

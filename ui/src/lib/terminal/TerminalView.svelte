@@ -191,6 +191,8 @@
     if (engine) engine.term.options.theme = theme;
   });
 
+  $effect(() => sessions.setPhase(tab.id, conn.phase));
+
   $effect(() => {
     const size = terminalPrefs.fontSize;
     if (!engine || engine.term.options.fontSize === size) return;
@@ -242,7 +244,12 @@
   onpastecapture={onPasteEvent}
   onkeydown={keepCtrlForShell}
 >
-  <div bind:this={xt} class="xt" inert={modalOpen}></div>
+  <div
+    bind:this={xt}
+    class="xt"
+    class:hidden={conn.phase === 'connecting' || conn.phase === 'failed'}
+    inert={modalOpen}
+  ></div>
   {#if searchOpen && engine}
     <SearchBar search={engine.search} onclose={closeSearch} />
   {/if}
@@ -266,6 +273,9 @@
     position: absolute;
     inset: 0;
     padding: 8px;
+  }
+  .xt.hidden {
+    visibility: hidden;
   }
   .xt :global(.xterm) {
     height: 100%;
