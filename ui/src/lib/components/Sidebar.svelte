@@ -1,10 +1,9 @@
 <script lang="ts">
-  import { FolderPlus, Lock, PanelLeft, Plus, Search, Settings } from '@lucide/svelte';
+  import { FolderPlus, Lock, Plus, Search, Settings } from '@lucide/svelte';
   import * as m from '$lib/paraglide/messages.js';
   import { ui } from '$lib/stores/ui.svelte';
   import { vault } from '$lib/stores/vault.svelte';
   import { mod } from '$lib/util/platform';
-  import OpenSessions from './OpenSessions.svelte';
   import Tree from './Tree.svelte';
 
   let { mac = false }: { mac?: boolean } = $props();
@@ -12,19 +11,10 @@
 
 <aside class="side" aria-label={m.sidebar_hosts()}>
   <div class="top" class:mac data-tauri-drag-region>
-    <button
-      class="icon-btn"
-      onclick={() => (ui.sidebarOpen = false)}
-      aria-label={m.sidebar_hide()}
-      title="{m.sidebar_hide()} ({mod('B')})"
-    >
-      <PanelLeft size={16} />
+    <button class="search" onclick={() => (ui.paletteOpen = true)}>
+      <Search size={14} /><span>{m.sidebar_search()}</span><span class="kbd">{mod('K')}</span>
     </button>
   </div>
-  <button class="search" onclick={() => (ui.paletteOpen = true)}>
-    <Search size={14} /><span>{m.sidebar_search()}</span><span class="kbd">{mod('K')}</span>
-  </button>
-  <OpenSessions />
   <h2 class="sect">{m.sidebar_hosts_section()}</h2>
   <Tree />
   <footer>
@@ -68,8 +58,7 @@
   .top {
     display: flex;
     align-items: center;
-    justify-content: flex-start;
-    height: 40px;
+    height: 44px;
     padding: 0 8px;
     flex: none;
   }
@@ -80,8 +69,9 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    height: 30px;
-    margin: 0 8px 10px;
+    flex: 1;
+    min-width: 0;
+    height: 28px;
     padding: 0 6px 0 10px;
     border: 1px solid transparent;
     border-radius: var(--r-control);
@@ -103,7 +93,7 @@
     text-align: left;
   }
   .sect {
-    margin: 4px 0 2px;
+    margin: 8px 0 2px;
     padding: 0 16px;
     font-size: 11px;
     font-weight: 600;

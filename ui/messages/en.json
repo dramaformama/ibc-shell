@@ -279,5 +279,8 @@
   "welcome_title": "Your servers, one keystroke away",
   "welcome_new": "Add a server",
   "host_name_hint": "Optional — the address is used if empty",
-  "section_signin": "Sign in"
+  "section_signin": "Sign in",
+  "sftp_split": "Resize panes",
+  "sftp_resize_col": "Drag to resize · double-click to reset",
+  "settings_highlight": "Highlight terminal output (IPs, links, errors)"
 }

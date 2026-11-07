@@ -19,6 +19,7 @@
     sanitizeTitle,
     utf8
   } from './text';
+  import { Highlighter } from './highlight';
   import { resolveTheme } from './themes';
 
   let { tab, active }: { tab: Tab; active: boolean } = $props();
@@ -32,10 +33,14 @@
   let link = $state<string | null>(null);
   let paste = $state<{ text: string; lines: number } | null>(null);
 
+  const hl = new Highlighter();
+  const decoder = new TextDecoder();
   // svelte-ignore state_referenced_locally
-  const conn = new Connection(tab, (data, done) =>
-    engine ? engine.term.write(data, done) : done()
-  );
+  const conn = new Connection(tab, (data, done) => {
+    if (!engine) return done();
+    if (!terminalPrefs.highlight) return engine.term.write(data, done);
+    engine.term.write(hl.feed(decoder.decode(data, { stream: true })), done);
+  });
   const theme = $derived(resolveTheme(themeId, appDark));
   const modalOpen = $derived(!!conn.prompt || !!link || !!paste);
 

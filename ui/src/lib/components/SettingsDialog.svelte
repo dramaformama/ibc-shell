@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { terminalPrefs } from '$lib/terminal/prefs.svelte';
   import { api, type AppInfo } from '$lib/api';
   import * as m from '$lib/paraglide/messages.js';
   import { settings, type ThemeChoice } from '$lib/stores/settings.svelte';
@@ -138,6 +139,14 @@
         >
       </section>
 
+      <label class="row">
+        <span class="lbl">{m.settings_highlight()}</span>
+        <input
+          type="checkbox"
+          checked={terminalPrefs.highlight}
+          onchange={(e) => terminalPrefs.setHighlight(e.currentTarget.checked)}
+        />
+      </label>
       <label class="row">
         <span class="lbl">{m.settings_update_check()}</span>
         <input

@@ -6,6 +6,7 @@
   import { dnd } from './dnd';
   import { formatDate, formatMode, formatSize, type Actions, type SortKey } from './model';
   import type { Pane } from './paneState.svelte';
+  import { drag, sftpLayout, type ColKey } from './layout.svelte';
   import VList from './VList.svelte';
 
   let {
@@ -24,6 +25,16 @@
     { key: 'mtime', label: () => m.sftp_col_modified(), cls: 'c-mtime' },
     { key: 'mode', label: () => m.sftp_col_perms(), cls: 'c-mode' }
   ];
+
+  /** Drags the left border of a fixed column: left widens it, right narrows it. */
+  function startCol(e: PointerEvent, k: ColKey) {
+    const w0 = sftpLayout.cols[k];
+    drag(
+      e,
+      (dx) => sftpLayout.setCol(k, w0 - dx),
+      () => sftpLayout.save()
+    );
+  }
 
   const sortLabel = (k: SortKey) =>
     pane.sort.key !== k ? 'none' : pane.sort.dir === 'asc' ? 'ascending' : 'descending';
@@ -101,6 +112,16 @@
 >
   <div class="sf-head" role="row">
     {#each cols as c (c.key)}
+      {#if c.key !== 'name'}
+        {@const k = c.key as ColKey}
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <span
+          class="sf-grip {c.cls}"
+          title={m.sftp_resize_col()}
+          onpointerdown={(e) => startCol(e, k)}
+          ondblclick={() => sftpLayout.resetCol(k)}
+        ></span>
+      {/if}
       <button
         type="button"
         role="columnheader"

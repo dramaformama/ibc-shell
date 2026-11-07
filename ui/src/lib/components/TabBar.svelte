@@ -1,5 +1,13 @@
 <script lang="ts">
-  import { FolderOpen, PanelLeft, Plus, Power, SquareTerminal, X } from '@lucide/svelte';
+  import {
+    FolderOpen,
+    PanelLeftClose,
+    PanelLeftOpen,
+    Plus,
+    Power,
+    SquareTerminal,
+    X
+  } from '@lucide/svelte';
   import Flag from '$lib/flags/Flag.svelte';
   import * as m from '$lib/paraglide/messages.js';
   import { switchKind } from '$lib/stores/actions';
@@ -26,14 +34,15 @@
 </script>
 
 <div class="bar" class:mac={mac && !ui.sidebarOpen} data-tauri-drag-region>
-  {#if !ui.sidebarOpen}
-    <button
-      class="icon-btn"
-      onclick={() => (ui.sidebarOpen = true)}
-      aria-label={m.sidebar_show()}
-      title="{m.sidebar_show()} ({mod('B')})"><PanelLeft size={16} /></button
-    >
-  {/if}
+  <button
+    class="icon-btn"
+    onclick={() => (ui.sidebarOpen = !ui.sidebarOpen)}
+    aria-label={ui.sidebarOpen ? m.sidebar_hide() : m.sidebar_show()}
+    aria-pressed={ui.sidebarOpen}
+    title="{ui.sidebarOpen ? m.sidebar_hide() : m.sidebar_show()} ({mod('B')})"
+    >{#if ui.sidebarOpen}<PanelLeftClose size={16} />{:else}<PanelLeftOpen size={16} />{/if}</button
+  >
+  <span class="sep" aria-hidden="true"></span>
   <div class="tabs" role="tablist" aria-label={m.tabs_label()} data-tauri-drag-region>
     {#each sessions.groups as g, i (g.key)}
       {@const on = g.key === sessions.activeGroup}
@@ -183,6 +192,16 @@
   }
   .new {
     flex: none;
+  }
+  .sep {
+    flex: none;
+    width: 1px;
+    height: 16px;
+    margin: 0 2px;
+    background: var(--border);
+  }
+  .bar > .icon-btn[aria-pressed='true'] {
+    color: var(--muted);
   }
   .tools {
     display: flex;

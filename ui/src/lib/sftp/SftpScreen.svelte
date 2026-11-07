@@ -1,5 +1,6 @@
 <script lang="ts">
   import { sessions } from '$lib/stores/sessions.svelte';
+  import { drag, sftpLayout } from './layout.svelte';
   import { Channel } from '@tauri-apps/api/core';
   import { onMount } from 'svelte';
   import { api, type Endpoint, type SessionEvent, type SftpId } from '$lib/api';
@@ -203,9 +204,31 @@
       status === 'ready' ? 'connected' : status === 'failed' ? 'failed' : 'connecting'
     )
   );
+
+  let panesEl = $state<HTMLDivElement | null>(null);
+  function startSplit(e: PointerEvent) {
+    const w = panesEl?.clientWidth ?? 1;
+    const s0 = sftpLayout.split;
+    drag(
+      e,
+      (dx) => sftpLayout.setSplit(s0 + dx / w),
+      () => sftpLayout.save()
+    );
+  }
+  function splitKey(e: KeyboardEvent) {
+    const d = e.key === 'ArrowLeft' ? -0.05 : e.key === 'ArrowRight' ? 0.05 : 0;
+    if (!d) return;
+    sftpLayout.setSplit(sftpLayout.split + d);
+    sftpLayout.save();
+  }
 </script>
 
-<div class="sf-screen">
+<div
+  class="sf-screen"
+  style:--sf-c-size="{sftpLayout.cols.size}px"
+  style:--sf-c-mtime="{sftpLayout.cols.mtime}px"
+  style:--sf-c-mode="{sftpLayout.cols.mode}px"
+>
   {#if status === 'failed'}
     <div class="sf-state" role="alert">
       <p>{m.sftp_connect_failed()}</p>
@@ -214,7 +237,27 @@
   {:else if status === 'connecting'}
     <div class="sf-state"><p class="muted">{m.sftp_connecting()}</p></div>
   {:else}
-    <div class="sf-panes">
+    <div
+      class="sf-panes"
+      bind:this={panesEl}
+      style:grid-template-columns="minmax(0, {sftpLayout.split}fr) minmax(0, {1 -
+        sftpLayout.split}fr)"
+    >
+      <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
+      <div
+        class="sf-split"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label={m.sftp_split()}
+        aria-valuenow={Math.round(sftpLayout.split * 100)}
+        aria-valuemin="20"
+        aria-valuemax="80"
+        tabindex="0"
+        style:left="{sftpLayout.split * 100}%"
+        onpointerdown={startSplit}
+        onkeydown={splitKey}
+        ondblclick={() => (sftpLayout.setSplit(0.5), sftpLayout.save())}
+      ></div>
       {#each ['left', 'right'] as const as side (side)}
         <div class="sf-slot" data-side={side}>
           <PaneView
