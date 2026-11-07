@@ -1,6 +1,7 @@
 # STATUS (orchestrator keeps ≤ 40 lines)
 
-Name: iBC Shell (crates ibc-shell-*, id app.ibcshell). Phases 1-2 DONE and merged (terminal, SFTP engine+UI, bridge, hardening, security review). Next: G2 manual acceptance (docs/TESTING.md), update check, Phase 3.
+Name: iBC Shell (crates ibc-shell-*, id app.ibcshell). Phases 1-2 DONE; UI redesign (Apple style, server-grouped tabs, simple login/password, output highlighting, resizable SFTP columns, update check) DONE.
+IN PROGRESS: SwiftServer-style server metrics (backend stats_sample + UI branch wip/stats-ui). Full context for the next agent: docs/HANDOFF.md.
 Open security findings: #6-#9, #11-#14 in docs/security-review.md (#5, #10 closed).
 Contracts: FROZEN v1
 
