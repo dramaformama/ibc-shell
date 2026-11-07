@@ -1,5 +1,8 @@
 <script lang="ts">
   import { FolderOpen, Gauge, Pencil, Server as ServerIcon, SquareTerminal } from '@lucide/svelte';
+  import { getLocale } from '$lib/paraglide/runtime.js';
+  import { lastSeen } from '$lib/stores/lastseen.svelte';
+  import { ago, ms, pct } from './format';
   import Flag from '$lib/flags/Flag.svelte';
   import * as m from '$lib/paraglide/messages.js';
   import type { Server } from '$lib/fleet/model';
@@ -20,6 +23,14 @@
     serverStatus(server, settings.probe && reachability.data[server.id] === undefined)
   );
 
+  const snap = $derived(lastSeen.get(server.host?.id));
+  const snapMem = $derived(
+    snap && snap.d.mem_total ? (snap.d.mem_used / snap.d.mem_total) * 100 : null
+  );
+  const snapDisk = $derived(
+    snap && snap.d.disk_total ? (snap.d.disk_used / snap.d.disk_total) * 100 : null
+  );
+
   function open(kind: 'terminal' | 'sftp' | 'status') {
     if (server.host) connectHost(server.host.id, kind);
     else if (server.group) sessions.select(server.group.current.id);
@@ -38,10 +49,17 @@
       <b>{server.label}</b>
       <small>{server.address}</small>
     </span>
+    {#if snap}
+      <span class="snap tnum" title={m.stat_last({ when: ago(snap.at, getLocale()) })}>
+        <span><small>CPU</small>{pct(snap.d.cpu_pct)}%</span>
+        <span><small>RAM</small>{pct(snapMem)}%</span>
+        {#if snapDisk != null}<span><small>{m.stat_disk()}</small>{pct(snapDisk)}%</span>{/if}
+      </span>
+    {/if}
     <span class="meta">
       <span class="st" data-tone={st.tone}>{st.text}</span>
       <small class="tnum"
-        >{server.latency != null ? `${server.latency} ms` : server.folder || ' '}</small
+        >{server.latency != null ? ms(server.latency) : server.folder || ' '}</small
       >
     </span>
   </button>
@@ -77,6 +95,7 @@
 
 <style>
   .tile {
+    container-type: inline-size;
     position: relative;
     height: 68px;
     border-radius: var(--r-field);
@@ -105,6 +124,29 @@
     font: inherit;
     text-align: left;
     cursor: pointer;
+  }
+  .snap {
+    display: flex;
+    gap: 10px;
+    flex: none;
+    color: var(--text);
+    font-size: 12.5px;
+    font-weight: 600;
+    opacity: 0.75;
+  }
+  .snap span {
+    display: grid;
+    line-height: 1.25;
+  }
+  .snap small {
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 500;
+  }
+  @container (max-width: 330px) {
+    .snap {
+      display: none;
+    }
   }
   .main:active {
     transform: scale(0.99);

@@ -13,6 +13,7 @@
   import * as m from '$lib/paraglide/messages.js';
   import type { Server } from '$lib/fleet/model';
   import { connectHost } from '$lib/stores/actions';
+  import { lastSeen } from '$lib/stores/lastseen.svelte';
   import { sessions } from '$lib/stores/sessions.svelte';
   import { stats } from '$lib/stores/stats.svelte';
   import { ui } from '$lib/stores/ui.svelte';
@@ -26,7 +27,13 @@
   $effect(() => {
     if (sid) return stats.watch(sid);
   });
-  const s = $derived(stats.get(sid));
+  const live = $derived(stats.get(sid));
+  $effect(() => {
+    if (server.host && live?.latest && !live.stale) lastSeen.record(server.host.id, live);
+  });
+  const snap = $derived(lastSeen.get(server.host?.id));
+  // Until the first live sample arrives, draw the remembered one (marked stale).
+  const s = $derived(live?.latest ? live : snap ? lastSeen.toSeries(snap) : live);
   const d = $derived(s?.latest ?? null);
 
   function open(kind: 'terminal' | 'sftp' | 'status') {

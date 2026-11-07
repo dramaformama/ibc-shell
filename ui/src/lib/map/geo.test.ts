@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { fitView, project, spread, WORLD } from './geo';
+import { fitView, project, projectLonLat, spread, WORLD } from './geo';
+import { isPublicIp, parseAnswer } from './geoip.svelte';
 import { GRID } from './world';
 
 describe('map geometry', () => {
@@ -34,5 +35,60 @@ describe('map geometry', () => {
     expect(a).toEqual([100, 100]);
     expect(Math.hypot(a![0] - b![0], a![1] - b![1])).toBeGreaterThanOrEqual(30);
     expect(c).toEqual([400, 300]);
+  });
+
+  it('places a city by coordinates', () => {
+    const [x, y] = projectLonLat(8.68, 50.11);
+    const de = project('de')!;
+    expect(Math.abs(x - de[0])).toBeLessThan(3);
+    expect(Math.abs(y - de[1])).toBeLessThan(3);
+  });
+});
+
+describe('ip location', () => {
+  it('never sends private or reserved addresses', () => {
+    for (const ip of [
+      '10.0.0.5',
+      '192.168.1.50',
+      '172.20.1.1',
+      '127.0.0.1',
+      '100.64.1.1',
+      '169.254.0.1',
+      '203.0.113.10',
+      '::1',
+      'fd00::1',
+      'fe80::1',
+      'nas.local'
+    ])
+      expect(isPublicIp(ip), ip).toBe(false);
+    for (const ip of ['5.75.130.10', '1.1.1.1', '2a01:4f8::1'])
+      expect(isPublicIp(ip), ip).toBe(true);
+  });
+
+  it('reads an ipapi.is answer and rejects junk', () => {
+    const hit = parseAnswer(
+      'a.example',
+      '1.1.1.1',
+      { location: { country_code: 'DE', city: 'Berlin', latitude: 52.5, longitude: 13.4 } },
+      5
+    );
+    expect(hit).toEqual({
+      addr: 'a.example',
+      ip: '1.1.1.1',
+      cc: 'de',
+      city: 'Berlin',
+      lat: 52.5,
+      lon: 13.4,
+      at: 5
+    });
+    expect(parseAnswer('a', '1.1.1.1', { error: 'x' }, 5)).toBeNull();
+    expect(
+      parseAnswer(
+        'a',
+        '1.1.1.1',
+        { location: { country_code: '<b>', latitude: 1, longitude: 2 } },
+        5
+      )
+    ).toBeNull();
   });
 });

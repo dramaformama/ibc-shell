@@ -7,6 +7,7 @@
  * Vault: starts Locked, password `ibc-shell` (`?vault=new` → onboarding). Terminal: echo shell.
  */
 import * as catalog from './mock/catalog';
+import * as geo from './mock/geo';
 import * as sftp from './mock/sftp';
 import * as stats from './mock/stats';
 import * as term from './mock/terminal';
@@ -111,6 +112,7 @@ export const mockApi: Api = {
   // stats
   statsSample: stats.statsSample,
   hostProbe: stats.hostProbe,
+  hostLookupIp: geo.hostLookupIp,
   // app
   appInfo: vault.appInfo,
   openExternal: vault.openExternal

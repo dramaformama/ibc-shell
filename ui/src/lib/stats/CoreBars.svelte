@@ -2,14 +2,14 @@
   import { pct } from './format';
 
   /** Per-core load as rows of segments (SwiftServer-style), one row per core. */
-  let { cores }: { cores: (number | null)[] } = $props();
+  let { cores, columns = 1 }: { cores: (number | null)[]; columns?: 1 | 2 } = $props();
   const SEG = 24;
   const lit = (p: number) => Math.round((Math.min(100, Math.max(0, p)) / 100) * SEG);
   const tone = (i: number, p: number) =>
     i >= SEG * 0.85 && p >= 85 ? 'hot' : i >= SEG * 0.6 && p >= 60 ? 'warm' : 'calm';
 </script>
 
-<div class="bars">
+<div class="bars" class:two={columns === 2}>
   {#each cores as p, c (c)}
     {@const n = lit(p ?? 0)}
     <div class="row">
@@ -27,6 +27,10 @@
   .bars {
     display: grid;
     gap: 5px;
+  }
+  .bars.two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 18px;
   }
   .row {
     display: flex;

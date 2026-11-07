@@ -1,5 +1,14 @@
 <script lang="ts">
-  import { Focus, FolderOpen, Gauge, Globe, MapPinOff, SquareTerminal, X } from '@lucide/svelte';
+  import {
+    Focus,
+    FolderOpen,
+    Gauge,
+    Globe,
+    LocateFixed,
+    MapPinOff,
+    SquareTerminal,
+    X
+  } from '@lucide/svelte';
   import Flag from '$lib/flags/Flag.svelte';
   import { flagName } from '$lib/flags/flags';
   import { getLocale } from '$lib/paraglide/runtime.js';
@@ -9,8 +18,11 @@
   import { connectHost } from '$lib/stores/actions';
   import { sessions } from '$lib/stores/sessions.svelte';
   import { settings } from '$lib/stores/settings.svelte';
+  import { tree } from '$lib/stores/tree.svelte';
   import { serverStatus, toneRank, type StatusTone } from '$lib/stats/status';
-  import { fitView, project, spread, WORLD } from './geo';
+  import { ms } from '$lib/stats/format';
+  import { fitView, project, projectLonLat, spread, WORLD } from './geo';
+  import { geo } from './geoip.svelte';
   import { CENTROIDS, GRID, LAND } from './world';
   import './world-map.css';
 
@@ -18,7 +30,10 @@
   let { servers }: { servers: Server[] } = $props();
 
   interface Pin {
+    key: string;
     cc: string;
+    /** City from the IP lookup; empty when placed by flag. */
+    city: string;
     x: number;
     y: number;
     servers: Server[];
@@ -26,13 +41,29 @@
     live: number;
   }
 
+  /** By IP location when known (one pin per city), else by the server's flag (per country). */
   const groups = $derived.by(() => {
-    const by = new Map<string, Server[]>();
+    const by = new Map<
+      string,
+      { key: string; cc: string; city: string; list: Server[]; at: [number, number] }
+    >();
     for (const s of servers) {
-      const cc = s.flag?.toLowerCase();
-      if (cc && CENTROIDS[cc]) by.set(cc, [...(by.get(cc) ?? []), s]);
+      const hit = geo.get(s.host?.id);
+      const cc = hit?.cc ?? s.flag?.toLowerCase();
+      if (!cc) continue;
+      const key = hit ? `@${hit.lat.toFixed(1)},${hit.lon.toFixed(1)}` : cc;
+      const at = hit ? projectLonLat(hit.lon, hit.lat) : project(cc);
+      if (!at) continue;
+      const g = by.get(key) ?? { key, cc, city: hit?.city ?? '', list: [], at };
+      g.list.push(s);
+      by.set(key, g);
     }
-    return [...by].map(([cc, list]) => ({ cc, list, at: project(cc)! }));
+    return [...by.values()];
+  });
+  // Look up hosts' locations when the option is on.
+  $effect(() => {
+    if (geo.enabled)
+      void geo.locate(tree.data.hosts.map((h) => ({ id: h.id, hostname: h.hostname })));
   });
 
   /** Zoomed to the servers by default; "Whole world" shows everything. */
@@ -52,6 +83,8 @@
     return sorted.map((g, i) => {
       const tones = g.list.map((s) => serverStatus(s, false).tone);
       return {
+        key: g.key,
+        city: g.city,
         cc: g.cc,
         x: Math.max(1.5, Math.min(98.5, (placed[i]![0] / width) * 100)),
         y: Math.max(3, Math.min(97, (placed[i]![1] / height) * 100)),
@@ -61,7 +94,9 @@
       };
     });
   });
-  const unplaced = $derived(servers.filter((s) => !s.flag || !CENTROIDS[s.flag.toLowerCase()]));
+  const unplaced = $derived(
+    servers.filter((s) => !geo.get(s.host?.id) && (!s.flag || !CENTROIDS[s.flag.toLowerCase()]))
+  );
 
   // Availability for the pins (bounded: the first 100 saved, not connected servers).
   $effect(() => {
@@ -74,8 +109,9 @@
   });
 
   let open = $state<string | null>(null);
-  const openPin = $derived(pins.find((p) => p.cc === open) ?? null);
+  const openPin = $derived(pins.find((p) => p.key === open) ?? null);
   const region = (cc: string) => flagName(cc, getLocale() === 'ru' ? 'ru' : 'en');
+  const place = (p: Pin) => (p.city ? `${p.city}, ${region(p.cc)}` : region(p.cc));
 
   function go(s: Server, kind: 'terminal' | 'sftp' | 'status') {
     open = null;
@@ -85,6 +121,15 @@
 </script>
 
 <div class="map card">
+  {#if !geo.enabled && servers.some((s) => s.host)}
+    <div class="geo-offer">
+      <LocateFixed size={16} />
+      <p><b>{m.map_geo()}</b>{m.map_geo_hint()}</p>
+      <button class="btn btn-sm btn-primary" onclick={() => geo.setEnabled(true)}
+        >{m.map_geo_on()}</button
+      >
+    </div>
+  {/if}
   <div class="canvas" style:aspect-ratio="{GRID.cols} / {GRID.rows}" bind:clientWidth={width}>
     <svg
       viewBox="{view.x - 0.5} {view.y - 0.5} {view.w} {view.h}"
@@ -94,16 +139,17 @@
     >
       <path d={LAND} />
     </svg>
-    {#each pins as p (p.cc)}
+    {#each pins as p (p.key)}
       <button
         class="pin"
         data-tone={p.tone}
-        class:active={open === p.cc}
+        class:active={open === p.key}
         style:left="{p.x}%"
         style:top="{p.y}%"
-        onclick={() => (open = open === p.cc ? null : p.cc)}
-        aria-label="{region(p.cc)}: {p.servers.length}"
-        aria-expanded={open === p.cc}
+        onclick={() => (open = open === p.key ? null : p.key)}
+        aria-label="{place(p)}: {p.servers.length}"
+        title={place(p)}
+        aria-expanded={open === p.key}
       >
         {#if p.live}<span class="pulse"></span>{/if}
         <span class="head"><Flag code={p.cc} size={18} /></span>
@@ -117,10 +163,10 @@
         style:top="{openPin.y}%"
         class:below={openPin.y < 45}
         role="dialog"
-        aria-label={region(openPin.cc)}
+        aria-label={place(openPin)}
       >
         <header>
-          <Flag code={openPin.cc} size={16} /><b>{region(openPin.cc)}</b>
+          <Flag code={openPin.cc} size={16} /><b>{place(openPin)}</b>
           <button class="mini" onclick={() => (open = null)} aria-label={m.action_close()}
             ><X size={13} /></button
           >
@@ -130,8 +176,10 @@
             {@const st = serverStatus(s, false)}
             <li>
               <i class="dot" data-phase={st.tone}></i>
-              <span class="nm">{s.label}</span>
-              <small class="tnum">{s.latency != null ? `${s.latency} ms` : st.text}</small>
+              <span class="nm"
+                >{s.label}{#if s.folder}<em>{s.folder}</em>{/if}</span
+              >
+              <small class="tnum">{s.latency != null ? ms(s.latency) : st.text}</small>
               <button
                 class="mini"
                 onclick={() => go(s, 'status')}
@@ -165,11 +213,18 @@
     <span class="key"><i data-tone="offline"></i>{m.dash_unavailable()}</span>
     <span class="key"><i data-tone="unknown"></i>{m.dash_not_checked()}</span>
     <span class="sp"></span>
+    {#if geo.busy}<span class="unplaced">{m.map_geo_busy()}</span>{/if}
     {#if unplaced.length}
       <span class="unplaced" title={unplaced.map((s) => s.label).join(', ')}
         ><MapPinOff size={12} />{m.map_unplaced({ count: unplaced.length })}</span
       >
     {/if}
+    <button
+      class="btn btn-sm"
+      aria-pressed={geo.enabled}
+      onclick={() => geo.setEnabled(!geo.enabled)}
+      title={m.map_geo_hint()}><LocateFixed size={13} />{m.map_geo()}</button
+    >
     {#if groups.length}
       <button
         class="btn btn-sm"

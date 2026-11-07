@@ -13,8 +13,12 @@ export const WORLD: View = { x: 0, y: 0, w: GRID.cols, h: GRID.rows };
 /** Country label point → grid [col, row] (dot centres sit on integers). */
 export function project(cc: string): [number, number] | null {
   const c = CENTROIDS[cc.toLowerCase()];
-  if (!c) return null;
-  return [(c[0] + 180) / GRID.step - 0.5, (GRID.lat0 - c[1]) / GRID.step - 0.5];
+  return c ? projectLonLat(c[0], c[1]) : null;
+}
+
+/** Longitude/latitude → grid [col, row]. */
+export function projectLonLat(lon: number, lat: number): [number, number] {
+  return [(lon + 180) / GRID.step - 0.5, (GRID.lat0 - lat) / GRID.step - 0.5];
 }
 
 /**

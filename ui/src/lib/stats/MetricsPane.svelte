@@ -1,9 +1,11 @@
 <script lang="ts">
-  import { Clock, Cpu, MemoryStick, ServerCog } from '@lucide/svelte';
+  import { Clock, Cpu, History, MemoryStick, ServerCog } from '@lucide/svelte';
+  import { getLocale } from '$lib/paraglide/runtime.js';
+  import { lastSeen } from '$lib/stores/lastseen.svelte';
   import * as m from '$lib/paraglide/messages.js';
   import { sessions, type TabGroup } from '$lib/stores/sessions.svelte';
   import { stats } from '$lib/stores/stats.svelte';
-  import { bytes, uptime } from './format';
+  import { ago, bytes, uptime } from './format';
   import StatsCards from './StatsCards.svelte';
 
   /** Live metrics of a server: compact in the side panel, a card grid on the Status page. */
@@ -13,12 +15,33 @@
   $effect(() => {
     if (sid) return stats.watch(sid);
   });
-  const s = $derived(stats.get(sid));
+  const live = $derived(stats.get(sid));
+  const hostId = $derived(group.current.hostId);
+  // Remember live samples; show the remembered one until the session reports.
+  $effect(() => {
+    if (hostId && live?.latest && !live.stale) lastSeen.record(hostId, live);
+  });
+  const snap = $derived(lastSeen.get(hostId));
+  const s = $derived(live?.latest ? live : snap ? lastSeen.toSeries(snap) : null);
+  const remembered = $derived(!live?.latest && !!snap);
   const d = $derived(s?.latest ?? null);
   const phase = $derived(sessions.groupPhase(group));
+  const time = (ts: number) =>
+    new Date(ts).toLocaleString(getLocale(), {
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
 </script>
 
-{#if !sid}
+{#if remembered && d && s && snap}
+  <p class="last" title={m.stat_last_hint({ time: time(snap.at) })}>
+    <History size={13} />{m.stat_last({ when: ago(snap.at, getLocale()) })}
+    {#if phase === 'connecting'}<span class="dot" data-phase="connecting"></span>{/if}
+  </p>
+  <StatsCards {s} {d} {wide} />
+{:else if !sid}
   <div class="state">
     <span class="state-icon"><ServerCog size={22} /></span>
     <p>
@@ -51,14 +74,28 @@
       class:stale={s.stale}
       title={s.updatedAt
         ? m.stat_sampled({ time: new Date(s.updatedAt).toLocaleTimeString() })
-        : ''}
-      ><i></i>{#if wide || s.stale}{s.stale ? m.stat_stale() : m.stat_live()}{/if}</span
+        : ''}><i></i>{s.stale ? m.stat_stale() : wide ? m.stat_live() : m.stat_live_short()}</span
     >
   </header>
   <StatsCards {s} {d} {wide} />
 {/if}
 
 <style>
+  .last {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 12px;
+    padding: 8px 12px;
+    border-radius: var(--r-control);
+    background: color-mix(in oklab, var(--warn) 12%, transparent);
+    color: color-mix(in oklab, var(--warn) 60%, var(--text));
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .last .dot {
+    margin-left: auto;
+  }
   .state {
     display: grid;
     justify-items: center;

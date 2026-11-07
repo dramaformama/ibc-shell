@@ -64,6 +64,26 @@ pub async fn host_probe(
     Ok(observation)
 }
 
+/// Resolves a saved host's name to IP addresses (IPv4 first, at most 4) for the map's
+/// location lookup (ADR-011). No connection is made; IP literals are returned as is.
+#[tauri::command]
+#[specta::specta]
+pub async fn host_lookup_ip(state: State<'_, AppState>, host_id: HostId) -> ApiResult<Vec<String>> {
+    require_unlocked(&state)?;
+    let host = state.store.host_resolve(host_id)?;
+    let found = timeout(
+        Duration::from_secs(3),
+        tokio::net::lookup_host((host.hostname.as_str(), host.port.value)),
+    )
+    .await
+    .map_err(|_| ApiError::Timeout)?
+    .map_err(|_| ApiError::Network("name not resolved".into()))?;
+    let mut ips: Vec<std::net::IpAddr> = found.map(|a| a.ip()).collect();
+    ips.sort_by_key(|ip| (ip.is_ipv6(), *ip));
+    ips.dedup();
+    Ok(ips.into_iter().take(4).map(|ip| ip.to_string()).collect())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -234,3 +234,36 @@
   align-items: center;
   gap: 5px;
 }
+.map .nm em {
+  margin-left: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 400;
+}
+.map footer .btn[aria-pressed='true'] {
+  background: color-mix(in oklab, var(--accent) 14%, var(--surface));
+  color: var(--accent);
+}
+.map .geo-offer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: var(--r-field);
+  background: color-mix(in oklab, var(--accent) 8%, var(--surface-2));
+  color: var(--accent);
+}
+.map .geo-offer p {
+  flex: 1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.map .geo-offer b {
+  display: block;
+  color: var(--text);
+  font-size: 13px;
+}

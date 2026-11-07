@@ -27,6 +27,17 @@ const PROCS: Array<[number, string, number, number, string]> = [
   [1, 'root', 0.4, 0.1, 'systemd']
 ];
 
+/** inbound, port, peer, connections, MiB so far, MiB/s weight. */
+const FLOWS: Array<[boolean, number, string, number, number, number]> = [
+  [true, 443, '91.204.17.6', 6, 410, 0.9],
+  [true, 443, '176.59.40.12', 4, 220, 0.5],
+  [true, 443, '2a00:1fa0:4418::1', 3, 96, 0.3],
+  [true, 22, '85.140.3.77', 1, 2, 0.01],
+  [true, 80, '66.249.66.1', 2, 1, 0.02],
+  [false, 443, '140.82.121.4', 2, 38, 0.05],
+  [false, 53, '1.1.1.1', 1, 0.3, 0.001]
+];
+
 export const statsSample: Commands['statsSample'] = async () => {
   await delay(300);
   const cpu_cores = Array.from({ length: 8 }, (_, i) => wave(4, 85, 17 + i * 3, i));
@@ -81,6 +92,26 @@ export const statsSample: Commands['statsSample'] = async () => {
       mem_bytes: Math.round(gib * GIB),
       command
     })),
+    listen: [
+      { proto: 'tcp', addr: '0.0.0.0', port: 22, process: 'sshd' },
+      { proto: 'tcp', addr: '127.0.0.53', port: 53, process: 'systemd-resolve' },
+      { proto: 'tcp', addr: '0.0.0.0', port: 80, process: 'nginx' },
+      { proto: 'tcp', addr: '::', port: 443, process: 'xray' },
+      { proto: 'tcp', addr: '127.0.0.1', port: 5432, process: 'postgres' },
+      { proto: 'udp', addr: '0.0.0.0', port: 51820, process: null }
+    ],
+    flows: FLOWS.map(([inbound, port, peer, conns, mib, share]) => {
+      const grow = (Date.now() - t0) / 1000;
+      return {
+        inbound,
+        port,
+        peer,
+        conns,
+        bytes_in: Math.round((mib + grow * share * 0.8) * MIB),
+        bytes_out: Math.round((mib * 6 + grow * share * 5) * MIB)
+      };
+    }),
+    conns: 23,
     full: true
   };
   return ok(stats);

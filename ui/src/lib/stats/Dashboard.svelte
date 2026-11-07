@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import {
     CircleHelp,
+    FolderPlus,
     History,
     LayoutGrid,
     Map as MapIcon,
@@ -112,6 +113,9 @@
           >
         </div>
       {/if}
+      <button class="btn btn-prominent" onclick={() => ui.openFolderEditor(null)}
+        ><FolderPlus size={16} />{m.action_new_folder()}</button
+      >
       <button class="btn btn-primary btn-prominent" onclick={() => ui.openHostEditor(null)}
         ><Plus size={16} />{m.action_new_host()}</button
       >
@@ -203,6 +207,9 @@
       <div class="row">
         <button class="btn btn-primary btn-prominent" onclick={() => ui.openHostEditor(null)}
           ><Plus size={16} />{m.action_new_host()}</button
+        >
+        <button class="btn btn-prominent" onclick={() => ui.openFolderEditor(null)}
+          ><FolderPlus size={16} />{m.action_new_folder()}</button
         >
         <button class="btn btn-prominent" onclick={() => (ui.paletteOpen = true)}
           >{m.dash_quick_connect()}</button

@@ -13,6 +13,7 @@ pub mod policy;
 mod session;
 mod shell;
 mod stats;
+mod stats_net;
 mod stats_parse;
 mod verify;
 
@@ -26,6 +27,7 @@ pub use hostkey::{
 pub use session::{Connection, ExecOutput, SubsystemStream, CREDIT_WINDOW};
 pub use shell::{Shell, ShellOutput};
 pub use stats::{sample_stats, HostStats, NetIface, ProcRow};
+pub use stats_net::{Listener, PeerFlow};
 
 /// SSH errors. Messages never contain credentials.
 #[derive(Debug, thiserror::Error)]

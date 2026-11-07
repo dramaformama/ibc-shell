@@ -100,3 +100,6 @@ Typed passwords / passphrases / kbd answers arrive as `SecretInput` (`#[serde(tr
 ## Update check (ADR-008)
 - On start (vault unlocked) the UI reads `https://api.github.com/repos/dramaformama/ibc-shell/releases/latest` (GET, no credentials, no referrer, no identifiers, 8 s timeout). Setting `app.update_check` (default on) turns it off in Settings.
 - CSP `connect-src` allows exactly this one extra host (`https://api.github.com`). Nothing is downloaded or installed; if a newer stable release exists, Settings shows a link that opens via `open_external`. Links outside `github.com/dramaformama/ibc-shell/releases/` are replaced by the releases page.
+
+## Map location by IP (ADR-011)
+- Off by default (`map.geoip`). When on, the UI sends public server IP addresses (never names, labels or credentials) to `https://api.ipapi.is/?q=<ip>` (GET, no credentials, no referrer, 8 s timeout) and caches the answer in settings `map.geo`. Private/reserved addresses are skipped. CSP `connect-src` adds exactly `https://api.ipapi.is`.

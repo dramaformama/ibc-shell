@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { FolderOpen, SquareTerminal, Zap } from '@lucide/svelte';
+  import { Eye, FolderOpen, SquareTerminal, Zap } from '@lucide/svelte';
+  import { lastSeen } from '$lib/stores/lastseen.svelte';
   import Flag from '$lib/flags/Flag.svelte';
   import * as m from '$lib/paraglide/messages.js';
   import { switchKind } from '$lib/stores/actions';
@@ -30,6 +31,14 @@
         </p>
       </div>
       <div class="acts">
+        {#if host}
+          <button
+            class="btn"
+            aria-pressed={lastSeen.isWatched(host.id)}
+            onclick={() => lastSeen.setWatched(host.id, !lastSeen.isWatched(host.id))}
+            title={m.stat_watch_hint()}><Eye size={14} />{m.stat_watch()}</button
+          >
+        {/if}
         <button
           class="btn"
           onclick={() => {
@@ -52,6 +61,7 @@
 
 <style>
   .status {
+    container-type: inline-size;
     position: absolute;
     inset: 0;
     overflow-y: auto;
@@ -94,22 +104,32 @@
     color: var(--muted);
     font-size: 13px;
   }
+  .acts .btn[aria-pressed='true'] {
+    background: color-mix(in oklab, var(--accent) 14%, var(--surface));
+    color: var(--accent);
+  }
   .acts {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
     justify-content: flex-end;
   }
-  @media (max-width: 760px) {
-    .status {
-      padding: 20px 16px 32px;
-    }
+  @container (max-width: 900px) {
     header {
       flex-wrap: wrap;
+    }
+    .acts .btn[aria-pressed='true'] {
+      background: color-mix(in oklab, var(--accent) 14%, var(--surface));
+      color: var(--accent);
     }
     .acts {
       width: 100%;
       justify-content: flex-start;
+    }
+  }
+  @media (max-width: 760px) {
+    .status {
+      padding: 20px 16px 32px;
     }
   }
 </style>

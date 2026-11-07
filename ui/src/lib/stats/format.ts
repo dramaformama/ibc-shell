@@ -47,3 +47,17 @@ export function loadColor(p: number | null): string {
   if (p >= 60) return 'var(--c-yellow)';
   return 'var(--c-cyan)';
 }
+
+/** "5 min ago" in the given locale, rounded to the largest whole unit. */
+export function ago(ts: number, locale: string, now = Date.now()): string {
+  const s = Math.round((ts - now) / 1000);
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto', style: 'short' });
+  const a = Math.abs(s);
+  if (a < 60) return rtf.format(0, 'second');
+  if (a < 3600) return rtf.format(Math.round(s / 60), 'minute');
+  if (a < 86400) return rtf.format(Math.round(s / 3600), 'hour');
+  return rtf.format(Math.round(s / 86400), 'day');
+}
+
+/** TCP connect time; 0 means under a millisecond (often a local proxy/VPN answering first). */
+export const ms = (v: number): string => (v < 1 ? '<1 ms' : `${v} ms`);

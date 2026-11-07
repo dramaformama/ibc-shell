@@ -24,6 +24,7 @@ pub const PASSIVE_COMMANDS: &[&str] = &[
     "transfers_subscribe",
     "stats_sample",
     "host_probe",
+    "host_lookup_ip",
 ];
 
 /// The tauri-specta builder with every typed command and event of `docs/contracts/ipc.md`.
@@ -107,6 +108,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             sftp::transfers_subscribe,
             stats::stats_sample,
             probe::host_probe,
+            probe::host_lookup_ip,
             app::app_info,
             app::open_external,
         ])

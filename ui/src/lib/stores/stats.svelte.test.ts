@@ -33,6 +33,9 @@ const snapshot: HostStats = {
   os_name: null,
   temp_c: null,
   procs: [],
+  listen: [],
+  flows: [],
+  conns: 0,
   full: true
 };
 

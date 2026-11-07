@@ -168,6 +168,11 @@ export const commands = {
 	statsSample: (sessionId: SessionId) => typedError<HostStats, ApiError>(__TAURI_INVOKE("stats_sample", { sessionId })),
 	/**  Checks a saved host's SSH port without using credentials or modifying host-key trust. */
 	hostProbe: (hostId: HostId) => typedError<HostReachability, ApiError>(__TAURI_INVOKE("host_probe", { hostId })),
+	/**
+	 *  Resolves a saved host's name to IP addresses (IPv4 first, at most 4) for the map's
+	 *  location lookup (ADR-011). No connection is made; IP literals are returned as is.
+	 */
+	hostLookupIp: (hostId: HostId) => typedError<string[], ApiError>(__TAURI_INVOKE("host_lookup_ip", { hostId })),
 	/**  Version / platform / arch. */
 	appInfo: () => typedError<AppInfo, ApiError>(__TAURI_INVOKE("app_info")),
 	/**  Opens an http/https URL in the system browser (validated). */
@@ -695,6 +700,12 @@ export type HostStats = {
 	temp_c: number | null,
 	/**  Top 8 processes by CPU. */
 	procs: ProcRow[],
+	/**  Listening TCP/UDP sockets (slow field; empty when `ss` is missing). */
+	listen: Listener[],
+	/**  Established TCP traffic grouped by direction, port and remote address (slow field). */
+	flows: PeerFlow[],
+	/**  Established non-loopback TCP connections in total (slow field). */
+	conns: number,
 	/**
 	 *  True when this sample carries the slow fields (disk usage, OS, cores, processes);
 	 *  otherwise they are left empty and the caller reuses the previous full sample.
@@ -823,6 +834,18 @@ export type KnownHostSummary = {
 	added_at: number,
 };
 
+/**  A socket accepting connections (`ss -ltun`). */
+export type Listener = {
+	/**  `tcp` or `udp`. */
+	proto: string,
+	/**  Bound address (`0.0.0.0`, `::`, `127.0.0.1`…). */
+	addr: string,
+	/**  Port. */
+	port: number,
+	/**  Owning program when the login user may see it (root), else `None`. */
+	process: string | null,
+};
+
 /**  Throughput of one network interface. */
 export type NetIface = {
 	/**  Interface name (sanitized). */
@@ -843,6 +866,22 @@ export type NodeRef =
 { kind: "folder"; id: FolderId } | 
 /**  A host. */
 { kind: "host"; id: HostId };
+
+/**  Established TCP traffic between this host and one remote address on one port. */
+export type PeerFlow = {
+	/**  True when the remote side connected to us (our port is a listening one). */
+	inbound: boolean,
+	/**  Our listening port for inbound flows, the remote port for outbound ones. */
+	port: number,
+	/**  Remote IP address. */
+	peer: string,
+	/**  Open connections in this group. */
+	conns: number,
+	/**  Bytes received over these connections' lifetime. */
+	bytes_in: number,
+	/**  Bytes sent over these connections' lifetime. */
+	bytes_out: number,
+};
 
 /**  Pending interactive prompt (host key, keyboard-interactive, passphrase). */
 export type PendingId = string;

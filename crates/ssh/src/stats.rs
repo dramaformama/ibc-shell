@@ -5,11 +5,12 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
+use crate::stats_net::{Listener, PeerFlow};
 use crate::stats_parse::parse_report;
 use crate::{Connection, SshError};
 
 /// Upper bound of the script output.
-const MAX_OUTPUT: usize = 256 * 1024;
+const MAX_OUTPUT: usize = 1024 * 1024;
 /// Whole-sample deadline (the script itself sleeps 1 s).
 const TIMEOUT: Duration = Duration::from_secs(8);
 
@@ -102,6 +103,12 @@ pub struct HostStats {
     pub temp_c: Option<f32>,
     /// Top 8 processes by CPU.
     pub procs: Vec<ProcRow>,
+    /// Listening TCP/UDP sockets (slow field; empty when `ss` is missing).
+    pub listen: Vec<Listener>,
+    /// Established TCP traffic grouped by direction, port and remote address (slow field).
+    pub flows: Vec<PeerFlow>,
+    /// Established non-loopback TCP connections in total (slow field).
+    pub conns: u32,
     /// True when this sample carries the slow fields (disk usage, OS, cores, processes);
     /// otherwise they are left empty and the caller reuses the previous full sample.
     pub full: bool,
@@ -126,13 +133,15 @@ if [ "$1" = full ]; then
 echo '@@IBC:DF@@'; df -kP / 2>/dev/null
 echo '@@IBC:NPROC@@'; nproc 2>/dev/null
 echo '@@IBC:OS@@'; sed -n 's/^PRETTY_NAME=//p' /etc/os-release 2>/dev/null | head -1
-echo '@@IBC:PS@@'; ps -eo pid,user,pcpu,rss,comm --sort=-pcpu 2>/dev/null | head -9
+echo '@@IBC:PS@@'; ps -eo pid,user:16,pcpu,rss,comm --sort=-pcpu 2>/dev/null | head -9
+echo '@@IBC:LISTEN@@'; ss -Hltunp 2>/dev/null | head -64
+echo '@@IBC:CONN@@'; ss -Htni state established 2>/dev/null | head -3000
 fi
 echo '@@IBC:END@@'
 "#;
 
 /// Samples the host over `conn` (exec channel, independent of any shell). `full` adds the slow
-/// fields (`df`, `nproc`, OS name, `ps`); fast samples fork only `cat` and `sleep`.
+/// fields (`df`, `nproc`, OS name, `ps`, `ss`); fast samples fork only `cat` and `sleep`.
 ///
 /// Errors: [`SshError::Unsupported`] for non-Linux hosts, [`SshError::Timeout`] after 8 s.
 pub async fn sample_stats(conn: &Connection, full: bool) -> Result<HostStats, SshError> {

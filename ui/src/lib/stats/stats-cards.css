@@ -4,23 +4,89 @@
   gap: 14px;
   align-content: start;
 }
-.cards.wide {
-  display: block;
-  columns: 3 300px;
-  column-gap: 16px;
+.cards .card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 16px 18px;
 }
-.cards.wide > .card {
-  break-inside: avoid;
-  margin-bottom: 16px;
+/* Status page: a real grid, rows share a height, so cards never stagger or touch. */
+.cq {
+  container-type: inline-size;
+}
+.cards.wide {
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: 'cpu' 'mem' 'disk' 'load' 'net' 'flows' 'procs';
+}
+.cards.wide .card {
+  padding: 18px 20px;
+}
+.cards.wide .cpu-card {
+  grid-area: cpu;
+}
+.cards.wide .mem-card {
+  grid-area: mem;
+}
+.cards.wide .disk-card {
+  grid-area: disk;
+}
+.cards.wide .load-card {
+  grid-area: load;
+}
+.cards.wide .net-card {
+  grid-area: net;
+}
+.cards.wide .flows-card {
+  grid-area: flows;
 }
 .cards.wide .procs-card {
-  column-span: all;
+  grid-area: procs;
 }
-.cards .card {
+@container (min-width: 640px) {
+  .cards.wide {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      'cpu mem'
+      'disk load'
+      'net net'
+      'flows flows'
+      'procs procs';
+  }
+}
+@container (min-width: 980px) {
+  .cards.wide {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-areas:
+      'cpu mem disk'
+      'net net load'
+      'flows flows flows'
+      'procs procs procs';
+  }
+}
+@container (min-width: 1500px) {
+  .cards.wide {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-areas:
+      'cpu mem disk load'
+      'net net flows flows'
+      'procs procs flows flows';
+  }
+}
+/* Footers (legend, rates) sit on the card's bottom edge when a row is taller. */
+.cards.wide .legend,
+.cards.wide .net-card .io,
+.cards.wide .loads,
+.cards.wide .foot {
+  margin-top: auto;
+}
+.cards .foot {
   display: grid;
   gap: 10px;
-  align-content: start;
-  padding: 16px 18px;
+}
+.cards .seg {
+  display: flex;
 }
 .cards h3 {
   display: flex;
@@ -216,9 +282,13 @@
 }
 .cards .procs th {
   padding: 0 0 6px;
-  color: var(--tone);
-  font-weight: 600;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
   text-align: left;
+}
+.cards .procs th.owner {
+  width: 96px;
 }
 .cards .procs th:nth-child(1) {
   width: 56px;

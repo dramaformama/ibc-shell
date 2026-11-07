@@ -30,6 +30,9 @@ fn merge_slow(into: &mut HostStats, from: &HostStats) {
     into.disk_used = from.disk_used;
     into.os_name.clone_from(&from.os_name);
     into.procs.clone_from(&from.procs);
+    into.listen.clone_from(&from.listen);
+    into.flows.clone_from(&from.flows);
+    into.conns = from.conns;
     if from.cores > 0 {
         into.cores = from.cores;
     }

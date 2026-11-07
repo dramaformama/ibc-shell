@@ -25,6 +25,30 @@ export interface Series {
   dw: (number | null)[];
   /** The server cannot report metrics (not Linux, no /proc). */
   unsupported: boolean;
+  /** Per-flow rates (bytes/s in, out) from the last two full samples, keyed by `flowKey`. */
+  flowRates: Record<string, [number, number]>;
+  /** Last full sample's flow byte counters and its time, for the next difference. */
+  flowBase: { at: number; bytes: Record<string, [number, number]> } | null;
+}
+
+export const flowKey = (f: { inbound: boolean; port: number; peer: string }) =>
+  `${f.inbound ? 'in' : 'out'}|${f.port}|${f.peer}`;
+
+/** Rates between two full samples; closed connections make a counter drop, which reads as 0. */
+function flowRates(s: Series, d: HostStats, now: number): Pick<Series, 'flowRates' | 'flowBase'> {
+  if (!d.full) return { flowRates: s.flowRates, flowBase: s.flowBase };
+  const bytes: Record<string, [number, number]> = {};
+  for (const f of d.flows) bytes[flowKey(f)] = [f.bytes_in, f.bytes_out];
+  const rates: Record<string, [number, number]> = {};
+  const prev = s.flowBase;
+  const dt = prev ? (now - prev.at) / 1000 : 0;
+  if (prev && dt > 1) {
+    for (const [k, [i, o]] of Object.entries(bytes)) {
+      const p = prev.bytes[k];
+      if (p) rates[k] = [Math.max(0, i - p[0]) / dt, Math.max(0, o - p[1]) / dt];
+    }
+  }
+  return { flowRates: rates, flowBase: { at: now, bytes } };
 }
 
 const empty = (): Series => ({
@@ -40,7 +64,9 @@ const empty = (): Series => ({
   tx: [],
   dr: [],
   dw: [],
-  unsupported: false
+  unsupported: false,
+  flowRates: {},
+  flowBase: null
 });
 const push = (a: (number | null)[], v: number | null) => [...a.slice(-(HISTORY - 1)), v];
 
@@ -91,9 +117,11 @@ class StatsStore {
       if (r.status === 'ok') {
         failures = 0;
         const d = r.data;
+        const now = Date.now();
         this.data[sid] = {
+          ...flowRates(s, d, now),
           latest: d,
-          updatedAt: Date.now(),
+          updatedAt: now,
           stale: false,
           cpu: push(s.cpu, d.cpu_pct),
           mem: push(s.mem, d.mem_total ? (d.mem_used / d.mem_total) * 100 : 0),
