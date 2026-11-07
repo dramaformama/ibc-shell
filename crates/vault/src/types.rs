@@ -1,6 +1,6 @@
 //! Public vault types: lock state, mode, import summary, errors.
 
-use ibc_store::StoreError;
+use ibc_shell_store::StoreError;
 use serde::{Deserialize, Serialize};
 
 use crate::keystore::KeyStoreError;

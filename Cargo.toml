@@ -21,11 +21,11 @@ specta-typescript = "=0.0.13"
 tauri-specta = { version = "=2.0.0-rc.26", features = ["derive", "typescript"] }
 # ring backend (ADR-002): the default aws-lc-rs pulls aws-lc-sys (MIT-0, not allowed by deny.toml).
 russh = { version = "0.65", default-features = false, features = ["ring", "rsa", "flate2"] }
-ibc-store = { path = "crates/store" }
-ibc-vault = { path = "crates/vault" }
-ibc-ssh = { path = "crates/ssh" }
-ibc-sftp = { path = "crates/sftp" }
-ibc-geo = { path = "crates/geo" }
+ibc-shell-store = { path = "crates/store" }
+ibc-shell-vault = { path = "crates/vault" }
+ibc-shell-ssh = { path = "crates/ssh" }
+ibc-shell-sftp = { path = "crates/sftp" }
+ibc-shell-geo = { path = "crates/geo" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

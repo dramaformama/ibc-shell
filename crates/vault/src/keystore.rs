@@ -1,5 +1,5 @@
 //! OS-backed DEK wrapping (`OsKeychain` mode). Desktop/iOS: random KEK in the OS keychain
-//! (service `app.ibcserver`, account `vault-kek-v1`). Android: AES-256-GCM key that never
+//! (service `app.ibcshell`, account `vault-kek-v1`). Android: AES-256-GCM key that never
 //! leaves Android Keystore (own mobile plugin implements this trait).
 
 use std::sync::Mutex;
@@ -142,7 +142,7 @@ mod os_impl {
     use secrecy::SecretBox;
     use zeroize::Zeroizing;
 
-    const SERVICE: &str = "app.ibcserver";
+    const SERVICE: &str = "app.ibcshell";
     const ACCOUNT: &str = "vault-kek-v1";
 
     fn entry() -> Result<keyring::Entry, KeyStoreError> {

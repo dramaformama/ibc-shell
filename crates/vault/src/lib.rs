@@ -16,7 +16,7 @@ use std::path::Path;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
 
-use ibc_store::{SecretId, SecretRow, Store, StoreError};
+use ibc_shell_store::{SecretId, SecretRow, Store, StoreError};
 use secrecy::{ExposeSecret, SecretBox, SecretString};
 use subtle::ConstantTimeEq;
 use zeroize::Zeroizing;

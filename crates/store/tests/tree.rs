@@ -9,7 +9,7 @@
     missing_docs
 )]
 
-use ibc_store::{
+use ibc_shell_store::{
     FolderDefaultsPatch, FolderDeleteMode, FolderId, FolderInput, FolderPatch, HostId, HostInput,
     HostPatch, NodeRef, Source, Store, StoreError, TagInput,
 };
@@ -426,7 +426,7 @@ fn search_cyrillic_latin_tags_and_sync() {
     assert_eq!(s.host_search("копия", 10).unwrap(), vec![h2]);
     s.tag_update(
         t.id,
-        ibc_store::TagPatch {
+        ibc_shell_store::TagPatch {
             name: Some("staging".into()),
             ..Default::default()
         },

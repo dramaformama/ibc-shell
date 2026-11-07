@@ -1,6 +1,6 @@
 //! Tags, snippets, forwards, known hosts, settings (`ipc.md` §store / tree).
 
-use ibc_store::{
+use ibc_shell_store::{
     FolderId, ForwardId, ForwardInput, ForwardPatch, HostId, KnownHostId, KnownHostSummary,
     PortForward, Snippet, SnippetId, SnippetInput, SnippetPatch, Tag, TagId, TagInput, TagPatch,
 };

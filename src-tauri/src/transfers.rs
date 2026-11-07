@@ -2,7 +2,7 @@
 
 use std::sync::{Arc, Mutex, PoisonError};
 
-use ibc_sftp::{TransferConfig, TransferEngine, TransferEvent};
+use ibc_shell_sftp::{TransferConfig, TransferEngine, TransferEvent};
 use tauri::ipc::Channel;
 
 /// Owns the `TransferEngine` and forwards its events to the UI channel.

@@ -1,6 +1,6 @@
 //! Folder / host tree commands (`ipc.md` §store / tree).
 
-use ibc_store::{
+use ibc_shell_store::{
     Folder, FolderDeleteMode, FolderId, FolderInput, FolderPatch, Host, HostId, HostInput,
     HostPatch, NodeRef, ResolvedHost, Tree,
 };

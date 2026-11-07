@@ -2,8 +2,8 @@
 
 use std::sync::Arc;
 
-use ibc_store::Store;
-use ibc_vault::{OsKeyring, Vault};
+use ibc_shell_store::Store;
+use ibc_shell_vault::{OsKeyring, Vault};
 use tauri::Manager;
 
 pub mod api;
@@ -60,7 +60,7 @@ pub fn run() {
         })
         .run(tauri::generate_context!());
     if let Err(err) = result {
-        eprintln!("ibc-server failed to start: {err}");
+        eprintln!("ibc-shell failed to start: {err}");
         std::process::exit(1);
     }
 }

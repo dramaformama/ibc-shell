@@ -45,7 +45,7 @@ pub enum SftpError {
     Io(String),
     /// Underlying SSH failure.
     #[error(transparent)]
-    Ssh(#[from] ibc_ssh::SshError),
+    Ssh(#[from] ibc_shell_ssh::SshError),
     /// Cancelled.
     #[error("cancelled")]
     Cancelled,

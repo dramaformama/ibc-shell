@@ -3,7 +3,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use ibc_sftp::{
+use ibc_shell_sftp::{
     local, ConflictChoice, ConflictId, DirListing, Endpoint as EngineEndpoint, Entry, Sftp,
     TransferEvent, TransferId, TransferJob,
 };
@@ -54,7 +54,7 @@ pub async fn sftp_open(
                 pending: state.pending.clone(),
             };
             let known = StoreKnownHosts(state.store.clone());
-            match ibc_ssh::connect(chain, &known, &prompter).await {
+            match ibc_shell_ssh::connect(chain, &known, &prompter).await {
                 Ok(c) => Arc::new(c),
                 Err(e) => {
                     let err = ApiError::from(e);

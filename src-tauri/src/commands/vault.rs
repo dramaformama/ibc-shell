@@ -2,7 +2,7 @@
 
 use std::path::PathBuf;
 
-use ibc_vault::{ImportSummary, VaultMode, VaultState};
+use ibc_shell_vault::{ImportSummary, VaultMode, VaultState};
 use tauri::{AppHandle, State};
 use tauri_plugin_dialog::{DialogExt, FilePath};
 use tauri_specta::Event;
@@ -15,7 +15,7 @@ use crate::state::AppState;
 /// Runs a blocking (Argon2 / file) vault job off the async runtime.
 async fn blocking<T: Send + 'static>(
     state: &AppState,
-    f: impl FnOnce(&ibc_vault::Vault) -> Result<T, ibc_vault::VaultError> + Send + 'static,
+    f: impl FnOnce(&ibc_shell_vault::Vault) -> Result<T, ibc_shell_vault::VaultError> + Send + 'static,
 ) -> ApiResult<T> {
     let vault = state.vault.clone();
     tauri::async_runtime::spawn_blocking(move || f(&vault))

@@ -2290,20 +2290,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "ibc-geo"
+name = "ibc-shell"
 version = "0.1.0"
 dependencies = [
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "ibc-server"
-version = "0.1.0"
-dependencies = [
- "ibc-sftp",
- "ibc-ssh",
- "ibc-store",
- "ibc-vault",
+ "ibc-shell-sftp",
+ "ibc-shell-ssh",
+ "ibc-shell-store",
+ "ibc-shell-vault",
  "secrecy",
  "serde",
  "serde_json",
@@ -2320,11 +2313,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "ibc-sftp"
+name = "ibc-shell-geo"
+version = "0.1.0"
+dependencies = [
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "ibc-shell-sftp"
 version = "0.1.0"
 dependencies = [
  "futures-util",
- "ibc-ssh",
+ "ibc-shell-ssh",
  "russh-sftp",
  "secrecy",
  "serde",
@@ -2339,7 +2339,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ibc-ssh"
+name = "ibc-shell-ssh"
 version = "0.1.0"
 dependencies = [
  "bytes",
@@ -2353,7 +2353,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ibc-store"
+name = "ibc-shell-store"
 version = "0.1.0"
 dependencies = [
  "rusqlite",
@@ -2366,13 +2366,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "ibc-vault"
+name = "ibc-shell-vault"
 version = "0.1.0"
 dependencies = [
  "argon2 0.5.3",
  "chacha20poly1305",
  "ciborium",
- "ibc-store",
+ "ibc-shell-store",
  "keyring",
  "russh",
  "secrecy",

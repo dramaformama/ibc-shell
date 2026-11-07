@@ -3,7 +3,7 @@
 fn main() {
     let path =
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../ui/src/lib/api/bindings.ts");
-    if let Err(err) = ibc_lib::api::export_bindings(&path) {
+    if let Err(err) = ibc_shell_lib::api::export_bindings(&path) {
         eprintln!("bindings export failed: {err}");
         std::process::exit(1);
     }

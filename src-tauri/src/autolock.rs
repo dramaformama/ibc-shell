@@ -4,8 +4,8 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use ibc_store::Store;
-use ibc_vault::Vault;
+use ibc_shell_store::Store;
+use ibc_shell_vault::Vault;
 use tauri::AppHandle;
 use tauri_specta::Event;
 
@@ -76,9 +76,9 @@ mod tests {
         let store = Arc::new(Store::open_in_memory().unwrap());
         let vault = Vault::new(
             store.clone(),
-            Arc::new(ibc_vault::MemoryKeyStore::default()),
+            Arc::new(ibc_shell_vault::MemoryKeyStore::default()),
         );
-        vault.init(ibc_vault::VaultMode::OsKeychain, None).unwrap();
+        vault.init(ibc_shell_vault::VaultMode::OsKeychain, None).unwrap();
         assert_eq!(
             apply_from_store(&store, &vault),
             Some(Duration::from_mins(15))

@@ -2,9 +2,9 @@
 
 use std::sync::Arc;
 
-use ibc_ssh::{AuthMethod, Hop, KnownHosts, KnownKey};
-use ibc_store::{HostId, IdentityKind, KnownHostInput, ResolvedHost, SecretId, Store};
-use ibc_vault::{Vault, VaultState};
+use ibc_shell_ssh::{AuthMethod, Hop, KnownHosts, KnownKey};
+use ibc_shell_store::{HostId, IdentityKind, KnownHostInput, ResolvedHost, SecretId, Store};
+use ibc_shell_vault::{Vault, VaultState};
 use secrecy::SecretString;
 use zeroize::Zeroizing;
 

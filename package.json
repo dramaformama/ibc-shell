@@ -1,5 +1,5 @@
 {
-  "name": "ibc-server",
+  "name": "ibc-shell",
   "private": true,
   "type": "module",
   "scripts": {

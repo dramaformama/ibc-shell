@@ -1,5 +1,5 @@
 [package]
-name = "ibc-store"
+name = "ibc-shell-store"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

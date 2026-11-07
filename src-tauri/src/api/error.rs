@@ -1,7 +1,7 @@
 //! `ApiError`: the single error type of every IPC command.
 
-use ibc_sftp::ConflictInfo;
-use ibc_ssh::{HostKeyInfo, HostKeyMismatch};
+use ibc_shell_sftp::ConflictInfo;
+use ibc_shell_ssh::{HostKeyInfo, HostKeyMismatch};
 use serde::Serialize;
 
 /// IPC error. TS: `{ code: "...", detail?: ... }`. Messages must never contain secrets.
@@ -68,9 +68,9 @@ pub enum ApiError {
 /// Command result alias.
 pub type ApiResult<T> = Result<T, ApiError>;
 
-impl From<ibc_ssh::SshError> for ApiError {
-    fn from(e: ibc_ssh::SshError) -> Self {
-        use ibc_ssh::SshError as E;
+impl From<ibc_shell_ssh::SshError> for ApiError {
+    fn from(e: ibc_shell_ssh::SshError) -> Self {
+        use ibc_shell_ssh::SshError as E;
         match e {
             E::HostKeyChanged(m) => Self::HostKeyChanged(m),
             E::AuthFailed { methods_left } => Self::AuthFailed { methods_left },
@@ -84,9 +84,9 @@ impl From<ibc_ssh::SshError> for ApiError {
     }
 }
 
-impl From<ibc_sftp::SftpError> for ApiError {
-    fn from(e: ibc_sftp::SftpError) -> Self {
-        use ibc_sftp::SftpError as E;
+impl From<ibc_shell_sftp::SftpError> for ApiError {
+    fn from(e: ibc_shell_sftp::SftpError) -> Self {
+        use ibc_shell_sftp::SftpError as E;
         match e {
             E::NotFound => Self::NotFound,
             E::PermissionDenied => Self::Sftp("permission denied".into()),
@@ -100,9 +100,9 @@ impl From<ibc_sftp::SftpError> for ApiError {
     }
 }
 
-impl From<ibc_store::StoreError> for ApiError {
-    fn from(e: ibc_store::StoreError) -> Self {
-        use ibc_store::StoreError as E;
+impl From<ibc_shell_store::StoreError> for ApiError {
+    fn from(e: ibc_shell_store::StoreError) -> Self {
+        use ibc_shell_store::StoreError as E;
         match e {
             E::NotFound => Self::NotFound,
             E::Validation(s) | E::Conflict(s) => Self::Validation(s),
@@ -115,9 +115,9 @@ impl From<ibc_store::StoreError> for ApiError {
     }
 }
 
-impl From<ibc_vault::VaultError> for ApiError {
-    fn from(e: ibc_vault::VaultError) -> Self {
-        use ibc_vault::VaultError as E;
+impl From<ibc_shell_vault::VaultError> for ApiError {
+    fn from(e: ibc_shell_vault::VaultError) -> Self {
+        use ibc_shell_vault::VaultError as E;
         match e {
             E::Locked => Self::VaultLocked,
             E::WrongPassword => Self::WrongPassword,

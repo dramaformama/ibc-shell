@@ -6,7 +6,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use futures_util::stream::{self, StreamExt};
-use ibc_ssh::Connection;
+use ibc_shell_ssh::Connection;
 use russh_sftp::client::error::Error as CErr;
 use russh_sftp::client::rawsession::Limits;
 use russh_sftp::client::{Config, RawSftpSession};

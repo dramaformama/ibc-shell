@@ -10,7 +10,7 @@ stack (dartssh2, xterm.dart) is less mature than russh + xterm.js.
 Tauri 2.x (pinned via Cargo.lock; 2.12.5 at freeze) with the system WebView, SvelteKit static
 adapter (SPA, `ssr = false`) in `ui/`. Plugins limited to the CLAUDE.md list. IPC types via
 `tauri-specta =2.0.0-rc.26` + `specta =2.0.0-rc.26` + `specta-typescript =0.0.13` (exact pins: pre-1.0,
-tauri-specta requires matching specta). Bindings exported by `cargo run -p ibc-server --example export_bindings`
+tauri-specta requires matching specta). Bindings exported by `cargo run -p ibc-shell --example export_bindings`
 (`just bindings`), unified serde mode (`disable_serde_phases`), `ErrorHandlingMode::Result`.
 
 ## Consequences

@@ -2,7 +2,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use ibc_store::HostId;
+use ibc_shell_store::HostId;
 use tauri::ipc::{Channel, InvokeBody, Request};
 use tauri::State;
 use uuid::Uuid;

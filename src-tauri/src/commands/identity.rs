@@ -1,10 +1,10 @@
 //! Identity commands. Secrets are accepted once, sealed into the vault, never returned.
 
-use ibc_store::{
+use ibc_shell_store::{
     Identity, IdentityId, IdentityKind, IdentityMetaInput, IdentityMetaPatch, SecretId,
 };
-use ibc_vault::keys::{import_private_key, KeyError, KeyInfo};
-use ibc_vault::Vault;
+use ibc_shell_vault::keys::{import_private_key, KeyError, KeyInfo};
+use ibc_shell_vault::Vault;
 use secrecy::{ExposeSecret, SecretString};
 use std::path::Path;
 
@@ -216,8 +216,8 @@ pub async fn identity_import_file(
 mod tests {
     use std::sync::Arc;
 
-    use ibc_store::Store;
-    use ibc_vault::{MemoryKeyStore, VaultMode};
+    use ibc_shell_store::Store;
+    use ibc_shell_vault::{MemoryKeyStore, VaultMode};
 
     use super::*;
 

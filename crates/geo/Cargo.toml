@@ -1,5 +1,5 @@
 [package]
-name = "ibc-geo"
+name = "ibc-shell-geo"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

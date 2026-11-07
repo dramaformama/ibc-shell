@@ -4,7 +4,7 @@
 use std::sync::{Arc, PoisonError};
 use std::time::Duration;
 
-use ibc_ssh::{ConnectStep, PtyRequest, Shell, ShellOutput};
+use ibc_shell_ssh::{ConnectStep, PtyRequest, Shell, ShellOutput};
 use tokio::sync::{mpsc, Notify};
 use tokio::time::Instant;
 
@@ -63,7 +63,7 @@ async fn run_session(
     };
     let known = StoreKnownHosts(state.store.clone());
     let conn = tokio::select! {
-        r = ibc_ssh::connect(chain, &known, &prompter) => match r {
+        r = ibc_shell_ssh::connect(chain, &known, &prompter) => match r {
             Ok(c) => Arc::new(c),
             Err(e) => return fail(e.into()),
         },

@@ -13,7 +13,7 @@
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use ibc_ssh::{
+use ibc_shell_ssh::{
     connect, AuthMethod, ConnectStep, Hop, HostKeyDecision, HostKeyInfo, KbdInteractiveRequest,
     KnownHosts, KnownKey, Prompter, PtyRequest, ShellOutput, SshError,
 };

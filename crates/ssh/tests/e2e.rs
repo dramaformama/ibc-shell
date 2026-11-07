@@ -7,7 +7,7 @@
     missing_docs
 )]
 //! Integration tests against `tests/docker` OpenSSH servers. All `#[ignore]`: run with
-//! `TL_E2E=1 cargo test -p ibc-ssh -- --ignored`.
+//! `TL_E2E=1 cargo test -p ibc-shell-ssh -- --ignored`.
 //!
 //! Env: `TL_SSH_HOST` (default 127.0.0.1), `TL_SSH_PORT` (password server), `TL_SSH_USER`,
 //! `TL_SSH_PASSWORD`, `TL_SSH_KEY_PORT` + `TL_SSH_KEY_FILE` (key-only server),
@@ -15,7 +15,7 @@
 
 use std::sync::Mutex;
 
-use ibc_ssh::{
+use ibc_shell_ssh::{
     connect, AuthMethod, ConnectStep, Hop, HostKeyDecision, HostKeyInfo, KbdInteractiveRequest,
     KnownHosts, KnownKey, Prompter, PtyRequest, ShellOutput, SshError,
 };

@@ -79,7 +79,7 @@ mod tests {
     }
 
     fn vault() -> crate::Vault {
-        let store = std::sync::Arc::new(ibc_store::Store::open_in_memory().unwrap());
+        let store = std::sync::Arc::new(ibc_shell_store::Store::open_in_memory().unwrap());
         let v = crate::Vault::new(store, std::sync::Arc::new(crate::MemoryKeyStore::default()));
         v.init(crate::VaultMode::OsKeychain, None).unwrap();
         v

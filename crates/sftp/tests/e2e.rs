@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
-use ibc_sftp::{
+use ibc_shell_sftp::{
     ConflictChoice, ConflictPolicy, Endpoint, EntryKind, Sftp, TransferConfig, TransferEngine,
     TransferEvent, TransferJob,
 };

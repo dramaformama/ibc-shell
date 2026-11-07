@@ -6,10 +6,10 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 
-use ibc_sftp::Sftp;
-use ibc_ssh::Connection;
-use ibc_store::{HostId, Store};
-use ibc_vault::Vault;
+use ibc_shell_sftp::Sftp;
+use ibc_shell_ssh::Connection;
+use ibc_shell_store::{HostId, Store};
+use ibc_shell_vault::Vault;
 use tauri::ipc::Channel;
 use tokio::sync::{mpsc, Notify};
 

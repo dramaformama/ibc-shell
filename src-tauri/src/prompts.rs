@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
-use ibc_ssh::{ConnectStep, HostKeyDecision, HostKeyInfo, KbdInteractiveRequest, Prompter};
+use ibc_shell_ssh::{ConnectStep, HostKeyDecision, HostKeyInfo, KbdInteractiveRequest, Prompter};
 use secrecy::SecretString;
 use tauri::ipc::Channel;
 use tokio::sync::oneshot;

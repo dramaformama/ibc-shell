@@ -9,7 +9,7 @@
     missing_docs
 )]
 
-use ibc_store::{
+use ibc_shell_store::{
     ForwardInput, ForwardKind, HostInput, IdentityKind, IdentityMetaInput, IdentityMetaPatch,
     KnownHostInput, SecretId, SecretRow, SnippetInput, Store, StoreError, TagInput,
 };
@@ -26,7 +26,7 @@ fn secret(s: &Store) -> SecretId {
     id
 }
 
-fn identity(s: &Store, pw: SecretId) -> ibc_store::Identity {
+fn identity(s: &Store, pw: SecretId) -> ibc_shell_store::Identity {
     s.identity_create(IdentityMetaInput {
         label: "me".into(),
         username: Some("alice".into()),
@@ -68,8 +68,8 @@ fn identity_secret_lifecycle() {
         .unwrap();
     let r = s.host_resolve(h.id).unwrap();
     assert_eq!(r.username.value.as_deref(), Some("alice"));
-    assert_eq!(r.username.source, ibc_store::Source::Default);
-    assert_eq!(r.identity_id.source, ibc_store::Source::Host);
+    assert_eq!(r.username.source, ibc_shell_store::Source::Default);
+    assert_eq!(r.identity_id.source, ibc_shell_store::Source::Host);
     // Delete removes secrets; hosts keep working with the reference cleared.
     s.identity_delete(i.id).unwrap();
     assert!(s.secret_ids().unwrap().is_empty());
@@ -151,7 +151,7 @@ fn known_host_add_new_never_replaces_a_key() {
 fn snapshot_roundtrip_and_merge() {
     let a = Store::open_in_memory().unwrap();
     let f = a
-        .folder_create(ibc_store::FolderInput {
+        .folder_create(ibc_shell_store::FolderInput {
             name: "f".into(),
             ..Default::default()
         })
@@ -242,7 +242,7 @@ fn secret_row_debug_hides_material() {
 #[test]
 fn file_store_persists_with_0600() {
     use std::os::unix::fs::PermissionsExt;
-    let dir = std::env::temp_dir().join(format!("ibc-store-{}", SecretId::new_v7()));
+    let dir = std::env::temp_dir().join(format!("ibc-shell-store-{}", SecretId::new_v7()));
     std::fs::create_dir_all(&dir).unwrap();
     let path = dir.join("ibc.db");
     {

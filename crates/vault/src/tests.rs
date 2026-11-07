@@ -8,7 +8,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
-use ibc_store::{ImportCounts, SecretId, SecretRow, Snapshot, StoreError};
+use ibc_shell_store::{ImportCounts, SecretId, SecretRow, Snapshot, StoreError};
 use secrecy::SecretString;
 
 use crate::crypto;

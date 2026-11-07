@@ -1,10 +1,10 @@
 //! Bridge-owned IPC DTOs (types not owned by a core crate). Secret-bearing inputs use
 //! `SecretString` (typed as `string` in TS) and redact `Debug`.
 
-use ibc_sftp::{ConflictPolicy, TransferId};
-use ibc_ssh::{ConnectStep, ForwardState, HostKeyInfo, KbdPrompt};
-use ibc_store::{ForwardId, HostId, IdentityId, IdentityKind};
-use ibc_vault::{VaultMode, VaultState};
+use ibc_shell_sftp::{ConflictPolicy, TransferId};
+use ibc_shell_ssh::{ConnectStep, ForwardState, HostKeyInfo, KbdPrompt};
+use ibc_shell_store::{ForwardId, HostId, IdentityId, IdentityKind};
+use ibc_shell_vault::{VaultMode, VaultState};
 use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;

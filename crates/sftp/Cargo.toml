@@ -1,12 +1,12 @@
 [package]
-name = "ibc-sftp"
+name = "ibc-shell-sftp"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
 
 [dependencies]
-ibc-ssh.workspace = true
+ibc-shell-ssh.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 uuid.workspace = true

@@ -4,7 +4,7 @@
 use std::io::{Read, Write};
 use std::path::Path;
 
-use ibc_store::{SecretId, Snapshot};
+use ibc_shell_store::{SecretId, Snapshot};
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 use zeroize::{Zeroize, Zeroizing};
