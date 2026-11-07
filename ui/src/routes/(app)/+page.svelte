@@ -9,9 +9,12 @@
   const tab = $derived(sessions.active);
 </script>
 
-<!-- Terminal / SFTP content is mounted here by terminal-ui and sftp-ui for the active tab. -->
+<!-- Terminal tabs are mounted by TerminalHost (lazy); SFTP content is mounted here by sftp-ui. -->
 <div class="stage" data-tab-id={tab?.id} data-tab-kind={tab?.kind}>
-  {#if tab}
+  {#await import('./term/TerminalHost.svelte') then { default: TerminalHost }}
+    <TerminalHost />
+  {/await}
+  {#if tab && tab.kind !== 'terminal'}
     <div class="host-card">
       <Flag code={tab.flag} size={20} />
       <span>{tab.label}</span>
