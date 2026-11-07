@@ -1,5 +1,6 @@
 /** Visible-host reachability: shared observers, bounded concurrency and cached observations. */
 import { api, type HostReachability } from '$lib/api';
+import { hidden, whenVisible } from '$lib/util/visible';
 
 const EVERY = 30_000;
 
@@ -45,6 +46,10 @@ export class ReachabilityStore {
   async #loop(id: string, token: object): Promise<void> {
     const live = () => this.#watchers.has(id) && this.#running.get(id) === token;
     while (live()) {
+      if (hidden()) {
+        await whenVisible();
+        if (!live()) break;
+      }
       const prior = this.data[id];
       const age = prior ? Date.now() - prior.checked_at : EVERY;
       if (age < EVERY) {

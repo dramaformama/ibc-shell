@@ -3,6 +3,7 @@
  * view (dashboard card, inspector) is watching, and keeps a short history for the charts.
  */
 import { api, type HostStats, type Result, type SessionId } from '$lib/api';
+import { hidden, whenVisible } from '$lib/util/visible';
 
 const HISTORY = 60;
 const EVERY_MS = 2000;
@@ -69,6 +70,10 @@ class StatsStore {
     this.data[sid] ??= empty();
     let failures = 0;
     while (this.#watchers.has(sid)) {
+      if (hidden()) {
+        await whenVisible();
+        if (!this.#watchers.has(sid)) break;
+      }
       let r: Result<HostStats>;
       try {
         r = await api.statsSample(sid);
