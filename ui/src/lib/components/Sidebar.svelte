@@ -1,6 +1,8 @@
 <script lang="ts">
-  import { FolderPlus, Lock, Plus, Search, Settings } from '@lucide/svelte';
+  import { FolderPlus, LayoutGrid, Lock, Plus, Search, Settings } from '@lucide/svelte';
   import * as m from '$lib/paraglide/messages.js';
+  import { sessions } from '$lib/stores/sessions.svelte';
+  import { tree } from '$lib/stores/tree.svelte';
   import { ui } from '$lib/stores/ui.svelte';
   import { vault } from '$lib/stores/vault.svelte';
   import { mod } from '$lib/util/platform';
@@ -15,21 +17,34 @@
       <Search size={14} /><span>{m.sidebar_search()}</span><span class="kbd">{mod('K')}</span>
     </button>
   </div>
-  <h2 class="sect">{m.sidebar_hosts_section()}</h2>
-  <Tree />
-  <footer>
+  <nav aria-label={m.dash_title()}>
+    <button
+      class="nav-item"
+      aria-current={sessions.activeId === null ? 'page' : undefined}
+      onclick={() => (sessions.activeId = null)}
+    >
+      <LayoutGrid size={17} /><span>{m.dash_title()}</span><span class="nav-count tnum"
+        >{tree.data.hosts.length}</span
+      >
+    </button>
+  </nav>
+  <div class="section-heading">
+    <h2 class="sect">{m.sidebar_hosts_section()}</h2>
     <button
       class="icon-btn"
       onclick={() => ui.openHostEditor(null)}
       aria-label={m.action_new_host()}
-      title={m.action_new_host()}><Plus size={16} /></button
+      title={m.action_new_host()}><Plus size={14} /></button
     >
     <button
       class="icon-btn"
       onclick={() => ui.openFolderEditor(null)}
       aria-label={m.action_new_folder()}
-      title={m.action_new_folder()}><FolderPlus size={16} /></button
+      title={m.action_new_folder()}><FolderPlus size={14} /></button
     >
+  </div>
+  <Tree />
+  <footer>
     <span class="sp"></span>
     <button
       class="icon-btn"
@@ -58,7 +73,7 @@
   .top {
     display: flex;
     align-items: center;
-    height: 44px;
+    height: var(--toolbar-h);
     padding: 0 8px;
     flex: none;
   }
@@ -92,9 +107,54 @@
     text-overflow: ellipsis;
     text-align: left;
   }
+  nav {
+    padding: 12px 10px 16px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    height: 36px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: var(--r-control);
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+  }
+  .nav-item > :global(svg) {
+    color: var(--accent);
+  }
+  .nav-item:hover {
+    background: var(--hover);
+  }
+  .nav-item[aria-current='page'] {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .nav-count {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .section-heading {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 12px 6px 18px;
+  }
+  .section-heading .icon-btn {
+    width: 24px;
+    height: 24px;
+  }
   .sect {
-    margin: 8px 0 2px;
-    padding: 0 16px;
+    margin: 0;
+    padding: 0;
+    flex: 1;
     font-size: 11px;
     font-weight: 600;
     color: var(--muted);

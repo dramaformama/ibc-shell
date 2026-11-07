@@ -1,0 +1,128 @@
+/* transfers drawer */
+.sf-drawer {
+  flex: none;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.sf-dhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 32px;
+  padding: 0 8px;
+}
+.sf-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--r-control);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.sf-toggle:hover {
+  background: var(--surface-2);
+}
+.sf-toggle .chev {
+  transition: transform 160ms var(--ease);
+}
+.sf-drawer.open .chev {
+  transform: rotate(180deg);
+}
+.sf-screen .badge {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+}
+.sf-clear {
+  height: 26px;
+  font-size: 12px;
+}
+.sf-tlist {
+  list-style: none;
+  margin: 0;
+  padding: 0 8px 8px;
+  max-height: 200px;
+  overflow: auto;
+}
+.sf-t {
+  display: grid;
+  gap: 4px;
+  padding: 6px 4px;
+}
+.sf-t + .sf-t {
+  border-top: 1px solid var(--border);
+}
+.sf-t .top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.sf-t .nm {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sf-t .st {
+  flex: none;
+  max-width: 55%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 12px;
+}
+.sf-t .st.err {
+  color: var(--danger);
+}
+.sf-t .ctl {
+  display: flex;
+  flex: none;
+  min-width: 56px;
+  justify-content: flex-end;
+}
+.sf-t .ctl .icon-btn {
+  width: 24px;
+  height: 24px;
+}
+.sf-t .bar {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.sf-t .bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 200ms linear;
+}
+.sf-t[data-state='done'] .bar i {
+  background: var(--ok);
+}
+.sf-t[data-state='failed'] .bar i {
+  background: var(--danger);
+}
+.sf-t[data-state='paused'] .bar i,
+.sf-t[data-state='conflict'] .bar i {
+  background: var(--warn);
+}
+.sf-t[data-state='cancelled'] {
+  opacity: 0.6;
+}
+.sf-tempty {
+  padding: 12px 4px;
+  color: var(--muted);
+}

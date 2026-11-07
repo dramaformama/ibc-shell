@@ -3,6 +3,7 @@
 pub mod app;
 pub mod catalog;
 pub mod identity;
+pub mod probe;
 pub mod session;
 pub mod sftp;
 pub mod stats;

@@ -104,19 +104,8 @@
   display: none;
 }
 .tree .act {
-  display: grid;
-  place-items: center;
   width: 24px;
-  height: 22px;
-  padding: 0;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  transition:
-    background-color 120ms var(--ease),
-    color 120ms var(--ease);
+  height: 24px;
 }
 .tree .act:hover {
   background: var(--surface);

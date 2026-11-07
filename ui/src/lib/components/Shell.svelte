@@ -2,6 +2,7 @@
   import { onMount, type Snippet } from 'svelte';
   import { api } from '$lib/api';
   import * as m from '$lib/paraglide/messages.js';
+  import { reachability } from '$lib/fleet/reachability.svelte';
   import { sessions } from '$lib/stores/sessions.svelte';
   import { settings } from '$lib/stores/settings.svelte';
   import { ui } from '$lib/stores/ui.svelte';
@@ -17,6 +18,8 @@
   import Toasts from './Toasts.svelte';
 
   let { children }: { children: Snippet } = $props();
+
+  $effect(() => () => reachability.clear());
 
   let mac = $state(false);
   let narrow = $state(false);

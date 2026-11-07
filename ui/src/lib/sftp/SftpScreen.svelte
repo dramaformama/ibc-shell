@@ -68,7 +68,12 @@
           failure = e.reason;
         }
       };
-      const r = await api.sftpOpen({ kind: 'host', host_id: tab.hostId }, ch);
+      const group = sessions.groups.find((g) => g.tabs.some((t) => t.id === tab.id));
+      const sid = group ? sessions.groupSession(group) : null;
+      const r = await api.sftpOpen(
+        sid ? { kind: 'session', session_id: sid } : { kind: 'host', host_id: tab.hostId },
+        ch
+      );
       if (r.status === 'error') {
         status = 'failed';
         failure = errorText(r.error);
@@ -87,6 +92,7 @@
     return () => {
       closed = true;
       if (id) void api.sftpClose(id);
+      sessions.setPhase(tab.id, 'disconnected');
       void offOs.then((f) => f());
     };
   });

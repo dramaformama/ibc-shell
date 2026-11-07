@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bytes, decimal, loadColor, pct, rate, uptime } from './format';
+import { bytes, decimal, loadColor, pct, percent, rate, uptime } from './format';
 
 describe('stats format', () => {
   it('formats sizes and rates', () => {
@@ -10,6 +10,8 @@ describe('stats format', () => {
   });
   it('distinguishes missing metrics from idle values', () => {
     expect(pct(null)).toBe('—');
+    expect(percent(null)).toBe('—');
+    expect(percent(0)).toBe('0%');
     expect(pct(0)).toBe('0');
     expect(decimal(null)).toBe('—');
     expect(decimal(0)).toBe('0.00');

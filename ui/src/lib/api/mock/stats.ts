@@ -1,6 +1,6 @@
 /** Mock: plausible, slowly varying host metrics (8 cores, Ubuntu 24.04). */
 import type { Commands, HostStats } from '../types';
-import { delay, ok } from './state';
+import { db, delay, notFound, ok } from './state';
 
 const GIB = 1024 ** 3;
 const MIB = 1024 ** 2;
@@ -66,4 +66,17 @@ export const statsSample: Commands['statsSample'] = async () => {
     }))
   };
   return ok(stats);
+};
+
+/** Reachability is independent of whether a terminal tab is open. */
+export const hostProbe: Commands['hostProbe'] = async (id) => {
+  await delay(120);
+  const host = db.hosts.find((h) => h.id === id);
+  if (!host) return notFound();
+  const reachable = !['home-nas', 'pi'].includes(host.label);
+  return ok({
+    reachable,
+    latency_ms: reachable ? 12 + ((host.label.length * 7) % 48) : null,
+    checked_at: Date.now()
+  });
 };

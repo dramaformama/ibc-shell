@@ -68,6 +68,22 @@ describe('visible metrics polling', () => {
     expect(stats.get('session')).toBeNull();
   });
 
+  it('marks the last sample stale on a transport failure without inventing zeroes', async () => {
+    const { stats } = await import('./stats.svelte');
+    sample
+      .mockResolvedValueOnce({ status: 'ok', data: snapshot })
+      .mockRejectedValueOnce(new Error('transport unavailable'));
+    const stop = stats.watch('stale');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(stats.get('stale')?.stale).toBe(false);
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(stats.get('stale')?.stale).toBe(true);
+    expect(stats.get('stale')?.latest?.mem_used).toBe(25);
+    expect(stats.get('stale')?.cpu).toEqual([null]);
+    stop();
+    await vi.advanceTimersByTimeAsync(8000);
+  });
+
   it('stops after Unsupported and retries when the view is opened again', async () => {
     const { stats } = await import('./stats.svelte');
     sample.mockResolvedValueOnce({ status: 'error', error: { code: 'Unsupported' } });

@@ -33,6 +33,9 @@ export function uptime(s: number, d = 'd', h = 'h', m = 'm'): string {
 export const pct = (v: number | null): string =>
   v == null ? '—' : `${Math.round(Math.max(0, Math.min(100, v)))}`;
 
+/** Percent label without inventing a unit for missing data. */
+export const percent = (v: number | null): string => (v == null ? '—' : `${pct(v)}%`);
+
 /** Load average or process CPU, retaining the requested precision. */
 export const decimal = (v: number | null, digits = 2): string =>
   v == null ? '—' : v.toFixed(digits);

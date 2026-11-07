@@ -49,7 +49,7 @@
     overflow: hidden;
     border: 0.5px solid var(--border);
     border-radius: 20px;
-    background: var(--surface);
+    background: var(--bg);
     box-shadow: var(--shadow);
     animation: slide 150ms var(--ease);
   }
@@ -63,7 +63,9 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 14px 10px 22px;
+    min-height: 64px;
+    padding: 16px 18px 16px 24px;
+    border-bottom: 1px solid var(--border);
   }
   header :global([data-dialog-title]) {
     margin: 0;
@@ -74,7 +76,7 @@
   .body {
     flex: 1;
     overflow: auto;
-    padding: 4px 20px 20px;
+    padding: 24px;
     display: grid;
     gap: 14px;
     align-content: start;

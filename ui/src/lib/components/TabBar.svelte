@@ -44,13 +44,15 @@
     title="{ui.sidebarOpen ? m.sidebar_hide() : m.sidebar_show()} ({mod('B')})"
     >{#if ui.sidebarOpen}<PanelLeftClose size={16} />{:else}<PanelLeftOpen size={16} />{/if}</button
   >
-  <button
-    class="icon-btn overview"
-    onclick={() => (sessions.activeId = null)}
-    aria-label={m.dash_title()}
-    aria-pressed={sessions.activeId === null}
-    title={m.dash_title()}><LayoutGrid size={16} /></button
-  >
+  {#if !ui.sidebarOpen}
+    <button
+      class="icon-btn overview"
+      onclick={() => (sessions.activeId = null)}
+      aria-label={m.dash_title()}
+      aria-pressed={sessions.activeId === null}
+      title={m.dash_title()}><LayoutGrid size={16} /></button
+    >
+  {/if}
   <span class="sep" aria-hidden="true"></span>
   <div class="tabs" role="tablist" aria-label={m.tabs_label()} data-tauri-drag-region>
     {#each sessions.groups as g, i (g.key)}
@@ -121,7 +123,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    height: 44px;
+    height: var(--toolbar-h);
     padding: 0 8px;
     border-bottom: 1px solid var(--border);
     background: var(--bg);
@@ -147,7 +149,7 @@
     flex: none;
     max-width: 220px;
     height: 30px;
-    border-radius: 10px;
+    border-radius: var(--r-control);
     color: var(--muted);
     transition:
       background-color 120ms var(--ease),
@@ -218,14 +220,10 @@
     margin: 0 2px;
     background: var(--border);
   }
-  .bar > .icon-btn[aria-pressed='true'] {
-    color: var(--muted);
-  }
   .bar > .overview[aria-pressed='true'],
   .tools .icon-btn[aria-pressed='true'] {
-    background: var(--surface);
+    background: var(--accent-soft);
     color: var(--accent);
-    box-shadow: var(--card-shadow);
   }
   .tools {
     display: flex;

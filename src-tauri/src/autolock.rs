@@ -78,7 +78,9 @@ mod tests {
             store.clone(),
             Arc::new(ibc_shell_vault::MemoryKeyStore::default()),
         );
-        vault.init(ibc_shell_vault::VaultMode::OsKeychain, None).unwrap();
+        vault
+            .init(ibc_shell_vault::VaultMode::OsKeychain, None)
+            .unwrap();
         assert_eq!(
             apply_from_store(&store, &vault),
             Some(Duration::from_mins(15))

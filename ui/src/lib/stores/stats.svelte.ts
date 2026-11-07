@@ -2,13 +2,15 @@
  * Live server metrics (ADR-009): polls `statsSample` over an open terminal session while some
  * view (dashboard card, inspector) is watching, and keeps a short history for the charts.
  */
-import { api, type HostStats, type SessionId } from '$lib/api';
+import { api, type HostStats, type Result, type SessionId } from '$lib/api';
 
 const HISTORY = 60;
 const EVERY_MS = 2000;
 
 export interface Series {
   latest: HostStats | null;
+  updatedAt: number | null;
+  stale: boolean;
   cpu: (number | null)[];
   mem: (number | null)[];
   load1: (number | null)[];
@@ -22,6 +24,8 @@ export interface Series {
 
 const empty = (): Series => ({
   latest: null,
+  updatedAt: null,
+  stale: false,
   cpu: [],
   mem: [],
   load1: [],
@@ -65,7 +69,12 @@ class StatsStore {
     this.data[sid] ??= empty();
     let failures = 0;
     while (this.#watchers.has(sid)) {
-      const r = await api.statsSample(sid);
+      let r: Result<HostStats>;
+      try {
+        r = await api.statsSample(sid);
+      } catch {
+        r = { status: 'error', error: { code: 'Network', detail: 'metrics unavailable' } };
+      }
       if (!this.#watchers.has(sid)) break;
       const s: Series = this.data[sid] ?? empty();
       if (r.status === 'ok') {
@@ -73,6 +82,8 @@ class StatsStore {
         const d = r.data;
         this.data[sid] = {
           latest: d,
+          updatedAt: Date.now(),
+          stale: false,
           cpu: push(s.cpu, d.cpu_pct),
           mem: push(s.mem, d.mem_total ? (d.mem_used / d.mem_total) * 100 : 0),
           load1: push(s.load1, d.load1),
@@ -84,7 +95,9 @@ class StatsStore {
         };
       } else {
         failures++;
-        if (r.error.code === 'Unsupported') this.data[sid] = { ...s, unsupported: true };
+        this.data[sid] = { ...s, stale: true };
+        if (r.error.code === 'Unsupported')
+          this.data[sid] = { ...s, stale: true, unsupported: true };
         // A closed session or a server that cannot report: stop quietly.
         if (r.error.code === 'Unsupported' || r.error.code === 'NotFound' || failures >= 5) break;
       }

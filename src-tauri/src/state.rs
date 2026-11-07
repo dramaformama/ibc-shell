@@ -325,7 +325,10 @@ mod tests {
         assert!(tx.write(&chunk));
         assert!(!tx.write(b"x"), "over budget must be rejected");
         drop(rx.try_recv().unwrap());
-        assert!(tx.write(b"x"), "budget returns once the pump consumed a chunk");
+        assert!(
+            tx.write(b"x"),
+            "budget returns once the pump consumed a chunk"
+        );
     }
 
     #[tokio::test]

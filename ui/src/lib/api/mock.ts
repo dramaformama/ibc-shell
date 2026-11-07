@@ -110,6 +110,7 @@ export const mockApi: Api = {
   transfersSubscribe: sftp.transfersSubscribe,
   // stats
   statsSample: stats.statsSample,
+  hostProbe: stats.hostProbe,
   // app
   appInfo: vault.appInfo,
   openExternal: vault.openExternal

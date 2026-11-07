@@ -156,33 +156,37 @@
         >
       </section>
 
-      <label class="row">
-        <span class="lbl">{m.settings_highlight()}</span>
-        <input
-          type="checkbox"
-          checked={terminalPrefs.highlight}
-          onchange={(e) => terminalPrefs.setHighlight(e.currentTarget.checked)}
-        />
-      </label>
-      <label class="row">
-        <span class="lbl">{m.settings_update_check()}</span>
-        <input
-          type="checkbox"
-          checked={settings.updateCheck}
-          onchange={(e) => settings.setUpdateCheck(e.currentTarget.checked)}
-        />
-      </label>
-      <p class="note">{m.settings_update_note()}</p>
-      {#if settings.update}
-        {@const u = settings.update}
-        <div class="row">
-          <span class="lbl">{m.update_available({ version: u.version })}</span>
-          <button type="button" class="btn" onclick={() => void api.openExternal(u.url)}
-            >{m.update_open()}</button
-          >
-        </div>
-      {/if}
-
+      <section>
+        <h3>{m.settings_preferences()}</h3>
+        <label class="row">
+          <span class="lbl">{m.settings_highlight()}</span>
+          <input
+            type="checkbox"
+            role="switch"
+            checked={terminalPrefs.highlight}
+            onchange={(e) => terminalPrefs.setHighlight(e.currentTarget.checked)}
+          />
+        </label>
+        <label class="row">
+          <span class="lbl">{m.settings_update_check()}</span>
+          <input
+            type="checkbox"
+            role="switch"
+            checked={settings.updateCheck}
+            onchange={(e) => settings.setUpdateCheck(e.currentTarget.checked)}
+          />
+        </label>
+        <p class="note">{m.settings_update_note()}</p>
+        {#if settings.update}
+          {@const u = settings.update}
+          <div class="row">
+            <span class="lbl">{m.update_available({ version: u.version })}</span>
+            <button type="button" class="btn" onclick={() => void api.openExternal(u.url)}
+              >{m.update_open()}</button
+            >
+          </div>
+        {/if}
+      </section>
       {#if info}
         <p class="note tnum">{m.app_name()} {info.version} · {info.platform} {info.arch}</p>
       {/if}

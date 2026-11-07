@@ -105,6 +105,7 @@ class SessionsStore {
   }
 
   setPhase(id: string, phase: TabPhase): void {
+    if (!this.tabs.some((t) => t.id === id)) return;
     if (this.phases[id] !== phase) this.phases[id] = phase;
   }
 

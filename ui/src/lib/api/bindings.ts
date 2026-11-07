@@ -165,6 +165,8 @@ export const commands = {
 	 *  (exec channel, independent of the shell). Takes ~1 s. Passive for auto-lock.
 	 */
 	statsSample: (sessionId: SessionId) => typedError<HostStats, ApiError>(__TAURI_INVOKE("stats_sample", { sessionId })),
+	/**  Checks a saved host's SSH port without using credentials or modifying host-key trust. */
+	hostProbe: (hostId: HostId) => typedError<HostReachability, ApiError>(__TAURI_INVOKE("host_probe", { hostId })),
 	/**  Version / platform / arch. */
 	appInfo: () => typedError<AppInfo, ApiError>(__TAURI_INVOKE("app_info")),
 	/**  Opens an http/https URL in the system browser (validated). */
@@ -622,6 +624,16 @@ export type HostPatch = {
 	notes?: string | null,
 	/**  Replaces the full tag set. */
 	tag_ids?: TagId[] | null,
+};
+
+/**  Reachability of the configured SSH port; does not establish an authenticated session. */
+export type HostReachability = {
+	/**  True if a TCP connection was established, not a guarantee of successful SSH login. */
+	reachable: boolean,
+	/**  TCP connect time including DNS, not ICMP RTT. Absent when unreachable. */
+	latency_ms: number | null,
+	/**  Observation timestamp in Unix milliseconds. */
+	checked_at: number,
 };
 
 /**  Snapshot of host metrics. Percentages 0–100, memory/disk in bytes, rates in bytes/s. */

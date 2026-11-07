@@ -29,7 +29,7 @@ ibc-shell-ssh.workspace = true
 ibc-shell-sftp.workspace = true
 zeroize.workspace = true
 # Prompt timeouts + oneshot/mpsc in the session pump (rt is provided by Tauri).
-tokio = { workspace = true, features = ["time", "sync", "macros"] }
+tokio = { workspace = true, features = ["time", "sync", "macros", "net"] }
 tauri-plugin-dialog = "2"
 
 [lints]

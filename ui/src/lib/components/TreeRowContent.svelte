@@ -61,13 +61,23 @@
   <span class="label">{row.label}</span>
   {#if row.host}
     <span class="sub">{row.host.username ? row.host.username + '@' : ''}{row.host.hostname}</span>
-    {#if row.host && sessions.hasHost(row.id)}
-      <span class="dot live" role="img" aria-label={m.status_connected()}></span>
+    {@const group = sessions.groups.find((g) => g.current.hostId === row.id)}
+    {#if group}
+      <span
+        class="dot"
+        data-phase={sessions.groupPhase(group)}
+        role="img"
+        aria-label={sessions.groupPhase(group) === 'connected'
+          ? m.status_connected()
+          : sessions.groupPhase(group) === 'connecting'
+            ? m.dash_connecting()
+            : m.dash_connection_error()}
+      ></span>
     {/if}
     <span class="acts">
       <button
         type="button"
-        class="act"
+        class="icon-btn act"
         tabindex="-1"
         title={m.tab_terminal()}
         aria-label={m.tab_terminal()}
@@ -77,7 +87,7 @@
       >
       <button
         type="button"
-        class="act"
+        class="icon-btn act"
         tabindex="-1"
         title={m.tab_files()}
         aria-label={m.tab_files()}

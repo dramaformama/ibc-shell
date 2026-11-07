@@ -1,0 +1,179 @@
+/* ── Controls ───────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: var(--control-h);
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-control);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: var(--lift);
+  cursor: pointer;
+  transition:
+    background-color 120ms var(--ease),
+    border-color 120ms var(--ease),
+    opacity 120ms var(--ease),
+    transform 120ms var(--ease);
+}
+.btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.btn:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.16),
+    0 1px 2px color-mix(in oklab, var(--accent) 40%, transparent);
+}
+.btn-primary:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--accent) 88%, black);
+}
+.btn-danger {
+  color: var(--danger);
+}
+.btn-ghost {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: var(--control-h);
+  height: var(--control-h);
+  border: 0;
+  border-radius: var(--r-control);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    background-color 120ms var(--ease),
+    color 120ms var(--ease);
+}
+.icon-btn:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.icon-btn[aria-pressed='true'] {
+  color: var(--accent);
+}
+.input {
+  width: 100%;
+  height: var(--control-h);
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-control);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  transition: border-color 120ms var(--ease);
+}
+.input::placeholder {
+  color: var(--muted);
+}
+.input:hover {
+  border-color: color-mix(in oklab, var(--muted) 50%, var(--border));
+}
+.input:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+textarea.input {
+  height: auto;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+/* Shared compact geometry; every screen uses the same variants and interaction states. */
+.btn-sm {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+.btn-prominent {
+  height: 36px;
+  padding: 0 14px;
+}
+.btn-tonal {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: transparent;
+  box-shadow: none;
+}
+.btn-tonal:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--accent) 20%, transparent);
+}
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.icon-btn:active:not(:disabled) {
+  background: var(--hover);
+}
+.icon-btn[aria-pressed='true'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.btn svg,
+.icon-btn svg {
+  flex: none;
+  stroke-width: 1.7;
+}
+select.input,
+select.sf-source {
+  appearance: none;
+  padding-right: 28px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%2389898f' stroke-width='1.5' viewBox='0 0 12 12'%3E%3Cpath d='m3 4.5 3 3 3-3'/%3E%3C/svg%3E");
+  background-position: right 9px center;
+  background-repeat: no-repeat;
+}
+input[type='checkbox'] {
+  accent-color: var(--accent);
+  width: 15px;
+  height: 15px;
+}
+input[role='switch'] {
+  appearance: none;
+  width: 34px;
+  height: 20px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--muted) 35%, transparent);
+  position: relative;
+  cursor: pointer;
+  flex: none;
+  transition: background-color 150ms var(--ease);
+}
+input[role='switch']::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.15);
+  transition: transform 150ms var(--ease);
+}
+input[role='switch']:checked {
+  background: var(--accent);
+}
+input[role='switch']:checked::after {
+  transform: translateX(14px);
+}

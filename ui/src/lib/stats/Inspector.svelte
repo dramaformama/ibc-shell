@@ -38,6 +38,10 @@
     <p class="hint"><span class="dot" data-phase="connecting"></span>{m.stat_waiting()}</p>
   {:else}
     <header>
+      <div class="inspector-title">
+        <h2>{m.stat_inspector()}</h2>
+        <span class:stale={s?.stale}>{s?.stale ? m.stat_stale() : m.stat_live()}</span>
+      </div>
       {#if d.os_name}<span class="os">{d.os_name}</span>{/if}
       <div class="facts tnum">
         <span>{d.cores} {m.stat_cores().toLowerCase()}</span>
@@ -89,7 +93,11 @@
     <section class="card" style:--tone="var(--c-green)">
       <h3><MemoryStick size={15} />{m.stat_memory()}</h3>
       <div class="mem">
-        <Ring value={d.mem_total ? (d.mem_used / d.mem_total) * 100 : 0} label={m.stat_ram()} />
+        <Ring
+          value={d.mem_total ? (d.mem_used / d.mem_total) * 100 : 0}
+          label={m.stat_ram()}
+          tone="var(--c-green)"
+        />
         <div class="memtext tnum">
           <b>{m.stat_used({ used: bytes(d.mem_used), total: bytes(d.mem_total) })}</b>
           <span>{m.stat_cached()} {bytes(d.mem_cached)}</span>
@@ -154,15 +162,51 @@
 
 <style>
   .insp {
-    width: 320px;
+    width: 340px;
     flex: none;
     overflow-y: auto;
-    padding: 12px;
+    padding: 16px;
     display: grid;
-    gap: 12px;
+    gap: 16px;
     align-content: start;
     border-left: 1px solid var(--border);
     background: var(--bg);
+  }
+  .inspector-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .inspector-title h2 {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0;
+  }
+  .inspector-title span {
+    font-size: 10px;
+    color: var(--ok);
+  }
+  .inspector-title .stale {
+    color: var(--warn);
+  }
+  h3 :global(svg) {
+    width: 26px;
+    height: 26px;
+    padding: 5px;
+    border-radius: 7px;
+    background: color-mix(in oklab, var(--tone) 12%, transparent);
+    color: var(--tone);
+  }
+  @media (max-width: 1000px) {
+    .insp {
+      position: absolute;
+      z-index: 8;
+      inset: 0 0 0 auto;
+      width: min(340px, 86%);
+      box-shadow: var(--shadow);
+    }
   }
   .hint {
     display: flex;
@@ -203,9 +247,9 @@
     align-items: center;
     gap: 7px;
     margin: 0;
-    color: var(--tone);
-    font-size: 14px;
-    font-weight: 700;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
   }
   .big {
     margin: -2px 0 0;

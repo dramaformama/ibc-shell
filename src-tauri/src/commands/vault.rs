@@ -86,7 +86,7 @@ pub async fn vault_change_password(
 /// Backup file extension (without the dot).
 const BACKUP_EXT: &str = "tlvault";
 
-fn require_unlocked(state: &AppState) -> ApiResult<()> {
+pub(crate) fn require_unlocked(state: &AppState) -> ApiResult<()> {
     match state.vault.state()? {
         VaultState::Unlocked => Ok(()),
         _ => Err(ApiError::VaultLocked),

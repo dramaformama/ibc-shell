@@ -1,16 +1,19 @@
 <script lang="ts">
-  import { loadColor, pct } from './format';
+  import { loadColor, percent } from './format';
 
   /** Circular gauge with the value in the middle (CPU / RAM). */
   let {
     value,
     size = 64,
-    label
-  }: { value: number | null; size?: number; label: string } = $props();
+    label,
+    tone
+  }: { value: number | null; size?: number; label: string; tone?: string } = $props();
 
   const r = $derived(size / 2 - 5);
   const c = $derived(2 * Math.PI * r);
-  const color = $derived(loadColor(value));
+  const color = $derived(
+    value == null || value >= 85 ? loadColor(value) : (tone ?? loadColor(value))
+  );
 </script>
 
 <div
@@ -18,7 +21,7 @@
   style:width="{size}px"
   style:height="{size}px"
   role="img"
-  aria-label="{label} {pct(value)}%"
+  aria-label="{label} {percent(value)}"
 >
   <svg viewBox="0 0 {size} {size}" width={size} height={size} aria-hidden="true">
     <circle cx={size / 2} cy={size / 2} {r} class="track" style:stroke={color} />
@@ -33,7 +36,7 @@
       transform="rotate(-90 {size / 2} {size / 2})"
     />
   </svg>
-  <span class="v tnum" style:font-size="{Math.round(size * 0.24)}px">{pct(value)}%</span>
+  <span class="v tnum" style:font-size="{Math.round(size * 0.24)}px">{percent(value)}</span>
 </div>
 
 <style>

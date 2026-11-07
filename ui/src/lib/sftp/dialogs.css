@@ -1,0 +1,99 @@
+/* dialogs */
+.sf-dialog {
+  position: fixed;
+  z-index: 51;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(380px, calc(100vw - 32px));
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.sf-dialog [data-dialog-title] {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.sf-dialog [data-dialog-description] {
+  margin: 0;
+  color: var(--muted);
+}
+.sf-dialog .sf-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+.sf-dialog form {
+  display: grid;
+  gap: 12px;
+}
+.sf-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.sf-choices {
+  flex-wrap: wrap;
+}
+.sf-danger.btn-primary {
+  background: var(--danger);
+  border-color: var(--danger);
+}
+.sf-conflict {
+  width: min(460px, calc(100vw - 32px));
+}
+.sf-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.sf-compare > div {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-control);
+}
+.sf-compare h3 {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.sf-compare p {
+  margin: 0;
+}
+.sf-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sf-perms {
+  border-collapse: collapse;
+  width: 100%;
+}
+.sf-perms th,
+.sf-perms td {
+  padding: 4px 8px;
+  text-align: center;
+  font-weight: 400;
+  color: var(--muted);
+}
+.sf-perms th[scope='row'] {
+  text-align: left;
+  color: var(--text);
+}
+.sf-octal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.sf-octal .input {
+  width: 80px;
+}

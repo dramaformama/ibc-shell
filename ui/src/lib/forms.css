@@ -1,17 +1,24 @@
 /* Editor forms (host / folder / settings / vault). */
 .form {
   display: grid;
-  gap: 20px;
+  gap: 24px;
 }
 .form section {
   display: grid;
-  gap: 12px;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.form section > .btn {
+  justify-self: start;
 }
 .form h3 {
   margin: 0;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--muted);
+  color: var(--text);
 }
 .fld {
   display: grid;
@@ -32,7 +39,7 @@
   gap: 6px;
 }
 .chip {
-  height: 24px;
+  height: 28px;
   padding: 0 10px;
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -60,16 +67,18 @@
   display: inline-flex;
   padding: 2px;
   border-radius: var(--r-control);
-  background: var(--surface-2);
+  background: var(--hover);
+  width: fit-content;
+  max-width: 100%;
 }
 .seg button {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 24px;
+  height: 28px;
   padding: 0 10px;
   border: 0;
-  border-radius: 5px;
+  border-radius: 6px;
   white-space: nowrap;
   background: transparent;
   color: var(--muted);
