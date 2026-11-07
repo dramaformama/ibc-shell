@@ -251,5 +251,8 @@
   "sftp_t_paused": "Пауза",
   "sftp_t_queued": "В очереди",
   "sftp_t_skipped": "Пропущено",
-  "sftp_transfers": "Передачи"
+  "sftp_transfers": "Передачи",
+  "settings_autolock": "Автоблокировка при бездействии",
+  "settings_autolock_never": "Никогда",
+  "settings_autolock_minutes": "{n} мин"
 }

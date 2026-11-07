@@ -80,10 +80,12 @@ impl Handler for ClientHandler {
         // Certificates are never offered (host_key_certificates is empty) so only plain keys
         // reach the verifier; clone via re-wrap.
         let key = match key {
-            PublicKeyOrCertificate::PublicKey { key, hash_alg } => PublicKeyOrCertificate::PublicKey {
-                key: key.clone(),
-                hash_alg: *hash_alg,
-            },
+            PublicKeyOrCertificate::PublicKey { key, hash_alg } => {
+                PublicKeyOrCertificate::PublicKey {
+                    key: key.clone(),
+                    hash_alg: *hash_alg,
+                }
+            }
             PublicKeyOrCertificate::Certificate(_) => return Ok(false),
         };
         if self.tx.send(VerifyReq { key, reply }).is_err() {

@@ -11,9 +11,7 @@ use tauri::ipc::Channel;
 use tauri::State;
 use uuid::Uuid;
 
-use crate::api::dto::{
-    Endpoint, SessionEvent, SftpId, SftpTarget, TransferIds, TransferRequest,
-};
+use crate::api::dto::{Endpoint, SessionEvent, SftpId, SftpTarget, TransferIds, TransferRequest};
 use crate::api::{ApiError, ApiResult};
 use crate::commands::session::session_of;
 use crate::connect::{build_chain, StoreKnownHosts};
@@ -21,7 +19,11 @@ use crate::prompts::EventPrompter;
 use crate::state::{AppState, SessionTarget, SftpHandle};
 
 fn sftp_of(state: &AppState, id: SftpId) -> ApiResult<Arc<Sftp>> {
-    state.sftps.get(&id).map(|h| h.sftp.clone()).ok_or(ApiError::NotFound)
+    state
+        .sftps
+        .get(&id)
+        .map(|h| h.sftp.clone())
+        .ok_or(ApiError::NotFound)
 }
 
 /// Opens SFTP over an existing session or a new connection (prompts → `on_event`).
@@ -36,8 +38,13 @@ pub async fn sftp_open(
     let conn = match target {
         SftpTarget::Session { session_id } => {
             let h = session_of(&state, session_id)?;
-            let live = h.live.lock().map_err(|_| ApiError::Internal("state poisoned".into()))?;
-            live.conn.clone().ok_or(ApiError::Network("session not connected".into()))?
+            let live = h
+                .live
+                .lock()
+                .map_err(|_| ApiError::Internal("state poisoned".into()))?;
+            live.conn
+                .clone()
+                .ok_or(ApiError::Network("session not connected".into()))?
         }
         SftpTarget::Host { host_id } => {
             let chain = build_chain(&state.store, &state.vault, &SessionTarget::Host(host_id))?;
@@ -65,8 +72,16 @@ pub async fn sftp_open(
             return Err(err);
         }
     };
-    state.sftps.insert(id, Arc::new(SftpHandle { sftp, conn: conn.clone() }));
-    let _ = on_event.send(SessionEvent::Connected { server_banner: conn.server_banner().map(str::to_owned) });
+    state.sftps.insert(
+        id,
+        Arc::new(SftpHandle {
+            sftp,
+            conn: conn.clone(),
+        }),
+    );
+    let _ = on_event.send(SessionEvent::Connected {
+        server_banner: conn.server_banner().map(str::to_owned),
+    });
     Ok(id)
 }
 
@@ -83,21 +98,33 @@ pub async fn sftp_close(state: State<'_, AppState>, sftp_id: SftpId) -> ApiResul
 /// Lists a remote directory.
 #[tauri::command]
 #[specta::specta]
-pub async fn sftp_list(state: State<'_, AppState>, sftp_id: SftpId, path: String) -> ApiResult<DirListing> {
+pub async fn sftp_list(
+    state: State<'_, AppState>,
+    sftp_id: SftpId,
+    path: String,
+) -> ApiResult<DirListing> {
     Ok(sftp_of(&state, sftp_id)?.list(&path).await?)
 }
 
 /// `lstat`.
 #[tauri::command]
 #[specta::specta]
-pub async fn sftp_stat(state: State<'_, AppState>, sftp_id: SftpId, path: String) -> ApiResult<Entry> {
+pub async fn sftp_stat(
+    state: State<'_, AppState>,
+    sftp_id: SftpId,
+    path: String,
+) -> ApiResult<Entry> {
     Ok(sftp_of(&state, sftp_id)?.stat(&path).await?)
 }
 
 /// `mkdir`.
 #[tauri::command]
 #[specta::specta]
-pub async fn sftp_mkdir(state: State<'_, AppState>, sftp_id: SftpId, path: String) -> ApiResult<()> {
+pub async fn sftp_mkdir(
+    state: State<'_, AppState>,
+    sftp_id: SftpId,
+    path: String,
+) -> ApiResult<()> {
     Ok(sftp_of(&state, sftp_id)?.mkdir(&path).await?)
 }
 
@@ -128,14 +155,23 @@ pub async fn sftp_remove(
 /// Change permissions.
 #[tauri::command]
 #[specta::specta]
-pub async fn sftp_chmod(state: State<'_, AppState>, sftp_id: SftpId, path: String, mode: u32) -> ApiResult<()> {
+pub async fn sftp_chmod(
+    state: State<'_, AppState>,
+    sftp_id: SftpId,
+    path: String,
+    mode: u32,
+) -> ApiResult<()> {
     Ok(sftp_of(&state, sftp_id)?.chmod(&path, mode).await?)
 }
 
 /// Canonical absolute path (`"."` → remote home).
 #[tauri::command]
 #[specta::specta]
-pub async fn sftp_realpath(state: State<'_, AppState>, sftp_id: SftpId, path: String) -> ApiResult<String> {
+pub async fn sftp_realpath(
+    state: State<'_, AppState>,
+    sftp_id: SftpId,
+    path: String,
+) -> ApiResult<String> {
     Ok(sftp_of(&state, sftp_id)?.realpath(&path).await?)
 }
 
@@ -215,7 +251,11 @@ pub async fn local_rename(state: State<'_, AppState>, from: String, to: String) 
 /// Removes a local entry.
 #[tauri::command]
 #[specta::specta]
-pub async fn local_remove(state: State<'_, AppState>, path: String, recursive: bool) -> ApiResult<()> {
+pub async fn local_remove(
+    state: State<'_, AppState>,
+    path: String,
+    recursive: bool,
+) -> ApiResult<()> {
     let p = local_leaf(&state, &path)?;
     tauri::async_runtime::spawn_blocking(move || local::remove(&p, recursive))
         .await
@@ -235,7 +275,10 @@ fn engine_endpoint(state: &AppState, e: Endpoint) -> ApiResult<EngineEndpoint> {
 /// Queues transfers; one id per item.
 #[tauri::command]
 #[specta::specta]
-pub async fn transfer_enqueue(state: State<'_, AppState>, request: TransferRequest) -> ApiResult<TransferIds> {
+pub async fn transfer_enqueue(
+    state: State<'_, AppState>,
+    request: TransferRequest,
+) -> ApiResult<TransferIds> {
     if request.items.is_empty() {
         return Err(ApiError::Validation("no items".into()));
     }
@@ -252,7 +295,13 @@ pub async fn transfer_enqueue(state: State<'_, AppState>, request: TransferReque
     if request.dst == Endpoint::Local {
         dst_dir = local_leaf(&state, &dst_dir)?.to_string_lossy().into_owned();
     }
-    let job = TransferJob { src, dst, items, dst_dir, conflict: request.conflict };
+    let job = TransferJob {
+        src,
+        dst,
+        items,
+        dst_dir,
+        conflict: request.conflict,
+    };
     Ok(state.transfers.engine.enqueue(job)?)
 }
 
@@ -293,7 +342,10 @@ pub async fn transfer_conflict_reply(
     choice: ConflictChoice,
     apply_to_all: bool,
 ) -> ApiResult<()> {
-    Ok(state.transfers.engine.conflict_reply(pending_id, choice, apply_to_all)?)
+    Ok(state
+        .transfers
+        .engine
+        .conflict_reply(pending_id, choice, apply_to_all)?)
 }
 
 /// Subscribes to all transfer events (replaces the previous subscriber).

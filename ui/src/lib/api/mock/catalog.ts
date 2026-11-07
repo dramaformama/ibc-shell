@@ -57,9 +57,8 @@ export const identityDelete: Commands['identityDelete'] = async (id) => {
   return ok(null);
 };
 
-export const identityImportFile: Commands['identityImportFile'] = async (path, passphrase) => {
-  const name = path.split(/[\\/]/).at(-1) ?? 'key';
-  return identityCreate({ label: name, kind: 'key', private_key_pem: 'mock', passphrase });
+export const identityImportFile: Commands['identityImportFile'] = async (passphrase) => {
+  return identityCreate({ label: 'id_ed25519', kind: 'key', private_key_pem: 'mock', passphrase });
 };
 
 export const tagList: Commands['tagList'] = async () => ok(structuredClone(db.tags));

@@ -43,12 +43,17 @@ pub trait KeyStore: Send + Sync {
 }
 
 fn wrap_with_kek(kek: &[u8; 32], dek: &SecretBox<[u8; 32]>) -> Result<Vec<u8>, KeyStoreError> {
-    seal_blob(kek, AAD_OS_WRAP, dek.expose_secret()).map_err(|_| KeyStoreError::Platform("wrap failed".into()))
+    seal_blob(kek, AAD_OS_WRAP, dek.expose_secret())
+        .map_err(|_| KeyStoreError::Platform("wrap failed".into()))
 }
 
 fn unwrap_with_kek(kek: &[u8; 32], wrapped: &[u8]) -> Result<SecretBox<[u8; 32]>, KeyStoreError> {
-    let plain = open_blob(kek, AAD_OS_WRAP, wrapped).map_err(|_| KeyStoreError::Platform("unwrap failed".into()))?;
-    let arr: [u8; 32] = plain.as_slice().try_into().map_err(|_| KeyStoreError::Platform("bad key length".into()))?;
+    let plain = open_blob(kek, AAD_OS_WRAP, wrapped)
+        .map_err(|_| KeyStoreError::Platform("unwrap failed".into()))?;
+    let arr: [u8; 32] = plain
+        .as_slice()
+        .try_into()
+        .map_err(|_| KeyStoreError::Platform("bad key length".into()))?;
     Ok(SecretBox::new(Box::new(arr)))
 }
 
@@ -66,7 +71,9 @@ pub struct MemoryKeyStore {
 
 impl std::fmt::Debug for MemoryKeyStore {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("MemoryKeyStore").field("kek", &"[REDACTED]").finish()
+        f.debug_struct("MemoryKeyStore")
+            .field("kek", &"[REDACTED]")
+            .finish()
     }
 }
 
@@ -80,7 +87,10 @@ impl MemoryKeyStore {
 
 impl KeyStore for MemoryKeyStore {
     fn wrap_dek(&self, dek: &SecretBox<[u8; 32]>) -> Result<Vec<u8>, KeyStoreError> {
-        let mut g = self.kek.lock().map_err(|_| KeyStoreError::Platform("poisoned".into()))?;
+        let mut g = self
+            .kek
+            .lock()
+            .map_err(|_| KeyStoreError::Platform("poisoned".into()))?;
         if g.is_none() {
             *g = Some(new_kek()?);
         }
@@ -88,12 +98,18 @@ impl KeyStore for MemoryKeyStore {
         wrap_with_kek(kek, dek)
     }
     fn unwrap_dek(&self, wrapped: &[u8]) -> Result<SecretBox<[u8; 32]>, KeyStoreError> {
-        let g = self.kek.lock().map_err(|_| KeyStoreError::Platform("poisoned".into()))?;
+        let g = self
+            .kek
+            .lock()
+            .map_err(|_| KeyStoreError::Platform("poisoned".into()))?;
         let kek = g.as_ref().ok_or(KeyStoreError::NotFound)?;
         unwrap_with_kek(kek, wrapped)
     }
     fn reset(&self) -> Result<(), KeyStoreError> {
-        *self.kek.lock().map_err(|_| KeyStoreError::Platform("poisoned".into()))? = None;
+        *self
+            .kek
+            .lock()
+            .map_err(|_| KeyStoreError::Platform("poisoned".into()))? = None;
         Ok(())
     }
     fn biometric_available(&self) -> bool {
@@ -115,7 +131,12 @@ impl OsKeyring {
     }
 }
 
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "windows", target_os = "linux"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "windows",
+    target_os = "linux"
+))]
 mod os_impl {
     use super::{new_kek, unwrap_with_kek, wrap_with_kek, KeyStore, KeyStoreError, OsKeyring};
     use secrecy::SecretBox;
@@ -139,7 +160,10 @@ mod os_impl {
 
     fn read_kek(e: &keyring::Entry) -> Result<Zeroizing<[u8; 32]>, KeyStoreError> {
         let raw = Zeroizing::new(e.get_secret().map_err(map_err)?);
-        let arr: [u8; 32] = raw.as_slice().try_into().map_err(|_| KeyStoreError::Platform("bad kek".into()))?;
+        let arr: [u8; 32] = raw
+            .as_slice()
+            .try_into()
+            .map_err(|_| KeyStoreError::Platform("bad kek".into()))?;
         Ok(Zeroizing::new(arr))
     }
 
@@ -173,7 +197,12 @@ mod os_impl {
     }
 }
 
-#[cfg(not(any(target_os = "macos", target_os = "ios", target_os = "windows", target_os = "linux")))]
+#[cfg(not(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "windows",
+    target_os = "linux"
+)))]
 impl KeyStore for OsKeyring {
     fn wrap_dek(&self, _dek: &SecretBox<[u8; 32]>) -> Result<Vec<u8>, KeyStoreError> {
         Err(KeyStoreError::Unimplemented)

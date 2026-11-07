@@ -251,5 +251,8 @@
   "sftp_t_paused": "Paused",
   "sftp_t_queued": "Queued",
   "sftp_t_skipped": "Skipped",
-  "sftp_transfers": "Transfers"
+  "sftp_transfers": "Transfers",
+  "settings_autolock": "Auto-lock when idle",
+  "settings_autolock_never": "Never",
+  "settings_autolock_minutes": "{n} min"
 }

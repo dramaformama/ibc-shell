@@ -38,12 +38,19 @@ impl std::fmt::Debug for PendingPrompts {
 impl PendingPrompts {
     fn put(&self, owner: Uuid, slot: Slot) -> PendingId {
         let id = PendingId(Uuid::now_v7());
-        self.map.lock().unwrap_or_else(PoisonError::into_inner).insert(id, (owner, slot));
+        self.map
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .insert(id, (owner, slot));
         id
     }
 
     fn take(&self, id: PendingId) -> Option<Slot> {
-        self.map.lock().unwrap_or_else(PoisonError::into_inner).remove(&id).map(|(_, s)| s)
+        self.map
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .remove(&id)
+            .map(|(_, s)| s)
     }
 
     /// Answers a host-key prompt. `NotFound` when expired / unknown / of another kind.
@@ -99,7 +106,10 @@ impl PendingPrompts {
     /// Number of unanswered prompts.
     #[must_use]
     pub fn len(&self) -> usize {
-        self.map.lock().unwrap_or_else(PoisonError::into_inner).len()
+        self.map
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .len()
     }
 
     /// True when nothing is pending.
@@ -131,17 +141,26 @@ impl EventPrompter {
 
 impl Prompter for EventPrompter {
     fn progress(&self, hop_label: &str, step: ConnectStep) {
-        let _ = self.events.send(SessionEvent::Connecting { step, hop: hop_label.to_owned() });
+        let _ = self.events.send(SessionEvent::Connecting {
+            step,
+            hop: hop_label.to_owned(),
+        });
     }
 
     async fn confirm_unknown_host(&self, info: HostKeyInfo) -> HostKeyDecision {
         let (tx, rx) = oneshot::channel();
         let pending_id = self.pending.put(self.owner, Slot::HostKey(tx));
-        if self.events.send(SessionEvent::HostKeyPrompt { pending_id, info }).is_err() {
+        if self
+            .events
+            .send(SessionEvent::HostKeyPrompt { pending_id, info })
+            .is_err()
+        {
             let _ = self.pending.take(pending_id);
             return HostKeyDecision::Reject;
         }
-        self.wait(rx, pending_id).await.unwrap_or(HostKeyDecision::Reject)
+        self.wait(rx, pending_id)
+            .await
+            .unwrap_or(HostKeyDecision::Reject)
     }
 
     async fn keyboard_interactive(&self, req: KbdInteractiveRequest) -> Option<Vec<SecretString>> {
@@ -182,7 +201,10 @@ mod tests {
     #[test]
     fn reply_to_unknown_prompt_is_not_found() {
         let p = PendingPrompts::default();
-        assert_eq!(p.reply_host_key(PendingId(Uuid::now_v7()), true), Err(ApiError::NotFound));
+        assert_eq!(
+            p.reply_host_key(PendingId(Uuid::now_v7()), true),
+            Err(ApiError::NotFound)
+        );
     }
 
     #[test]

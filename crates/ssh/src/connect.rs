@@ -217,7 +217,10 @@ mod tests {
         async fn confirm_unknown_host(&self, _: HostKeyInfo) -> HostKeyDecision {
             HostKeyDecision::Reject
         }
-        async fn keyboard_interactive(&self, _: KbdInteractiveRequest) -> Option<Vec<SecretString>> {
+        async fn keyboard_interactive(
+            &self,
+            _: KbdInteractiveRequest,
+        ) -> Option<Vec<SecretString>> {
             None
         }
         async fn passphrase(&self, _: &str) -> Option<SecretString> {
@@ -229,8 +232,20 @@ mod tests {
     async fn drive_times_out_on_silent_peer() {
         let (_tx, mut rx) = mpsc::unbounded_channel::<VerifyReq>();
         let (known, prompter) = (NoKnown, NoPrompt);
-        let mut ctx = VerifyCtx { host: "h", port: 22, known: &known, prompter: &prompter, error: None };
-        let r = drive(std::future::pending::<()>(), &mut rx, &mut ctx, Duration::from_secs(30)).await;
+        let mut ctx = VerifyCtx {
+            host: "h",
+            port: 22,
+            known: &known,
+            prompter: &prompter,
+            error: None,
+        };
+        let r = drive(
+            std::future::pending::<()>(),
+            &mut rx,
+            &mut ctx,
+            Duration::from_secs(30),
+        )
+        .await;
         assert!(matches!(r, Err(SshError::Timeout)));
     }
 
@@ -238,7 +253,13 @@ mod tests {
     async fn drive_returns_value_in_time() {
         let (_tx, mut rx) = mpsc::unbounded_channel::<VerifyReq>();
         let (known, prompter) = (NoKnown, NoPrompt);
-        let mut ctx = VerifyCtx { host: "h", port: 22, known: &known, prompter: &prompter, error: None };
+        let mut ctx = VerifyCtx {
+            host: "h",
+            port: 22,
+            known: &known,
+            prompter: &prompter,
+            error: None,
+        };
         let fut = async {
             tokio::time::sleep(Duration::from_secs(5)).await;
             7

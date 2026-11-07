@@ -44,7 +44,13 @@ pub fn seal_with_nonce(
 ) -> Result<Vec<u8>> {
     use chacha20poly1305::aead::Aead;
     XChaCha20Poly1305::new(key.into())
-        .encrypt(XNonce::from_slice(nonce), Payload { msg: plaintext, aad })
+        .encrypt(
+            XNonce::from_slice(nonce),
+            Payload {
+                msg: plaintext,
+                aad,
+            },
+        )
         .map_err(|_| VaultError::Corrupt)
 }
 
@@ -99,7 +105,12 @@ impl KdfParams {
 
     /// Custom cost with a fresh salt.
     pub fn with_cost(m: u32, t: u32, p: u32) -> Result<Self> {
-        Ok(Self { m, t, p, salt: random_bytes::<16>()?.to_vec() })
+        Ok(Self {
+            m,
+            t,
+            p,
+            salt: random_bytes::<16>()?.to_vec(),
+        })
     }
 
     /// Extra bound for params read from an (untrusted) backup file: m <= 256 MiB, t <= 10.
@@ -122,10 +133,15 @@ impl KdfParams {
         {
             return Err(VaultError::Corrupt);
         }
-        let params = Params::new(self.m, self.t, self.p, Some(32)).map_err(|_| VaultError::Corrupt)?;
+        let params =
+            Params::new(self.m, self.t, self.p, Some(32)).map_err(|_| VaultError::Corrupt)?;
         let mut out = Zeroizing::new([0u8; 32]);
         Argon2::new(Algorithm::Argon2id, Version::V0x13, params)
-            .hash_password_into(password.expose_secret().as_bytes(), &self.salt, out.as_mut())
+            .hash_password_into(
+                password.expose_secret().as_bytes(),
+                &self.salt,
+                out.as_mut(),
+            )
             .map_err(|_| VaultError::Corrupt)?;
         Ok(out)
     }

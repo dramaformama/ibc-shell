@@ -30,6 +30,7 @@ ibc-sftp.workspace = true
 zeroize.workspace = true
 # Prompt timeouts + oneshot/mpsc in the session pump (rt is provided by Tauri).
 tokio = { workspace = true, features = ["time", "sync", "macros"] }
+tauri-plugin-dialog = "2"
 
 [lints]
 workspace = true

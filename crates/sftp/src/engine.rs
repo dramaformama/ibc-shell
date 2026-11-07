@@ -46,7 +46,9 @@ pub struct TransferEngine {
 
 impl std::fmt::Debug for Shared {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Shared").field("config", &self.config).finish_non_exhaustive()
+        f.debug_struct("Shared")
+            .field("config", &self.config)
+            .finish_non_exhaustive()
     }
 }
 
@@ -119,7 +121,10 @@ impl TransferEngine {
     }
 
     fn job(&self, id: TransferId) -> Result<Arc<Job>, SftpError> {
-        lk(&self.shared.jobs).get(&id).cloned().ok_or(SftpError::NotFound)
+        lk(&self.shared.jobs)
+            .get(&id)
+            .cloned()
+            .ok_or(SftpError::NotFound)
     }
 
     /// Pauses (in-flight writes land, partial file kept).
@@ -182,7 +187,10 @@ impl TransferEngine {
         choice: ConflictChoice,
         apply_to_all: bool,
     ) -> Result<(), SftpError> {
-        let tx = lk(&self.shared.pending).remove(&pending_id).ok_or(SftpError::NotFound)?;
-        tx.send((choice, apply_to_all)).map_err(|_| SftpError::NotFound)
+        let tx = lk(&self.shared.pending)
+            .remove(&pending_id)
+            .ok_or(SftpError::NotFound)?;
+        tx.send((choice, apply_to_all))
+            .map_err(|_| SftpError::NotFound)
     }
 }

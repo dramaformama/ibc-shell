@@ -47,7 +47,9 @@ mod tests {
             russh::Error::Keys(russh::keys::Error::CouldNotReadKey),
         ] {
             match map_russh(&e) {
-                SshError::Protocol(s) => assert!(s == "protocol violation" || s == "protocol error", "{s}"),
+                SshError::Protocol(s) => {
+                    assert!(s == "protocol violation" || s == "protocol error", "{s}");
+                }
                 other => panic!("{other:?}"),
             }
         }

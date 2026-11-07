@@ -8,6 +8,7 @@
   import { settings } from '$lib/stores/settings.svelte';
   import { sessions } from '$lib/stores/sessions.svelte';
   import { vault } from '$lib/stores/vault.svelte';
+  import { watchIdle } from '$lib/util/autolock';
 
   let { children } = $props();
 
@@ -23,6 +24,12 @@
       tree.loaded = false;
       sessions.clear();
     }
+  });
+
+  // Idle auto-lock while unlocked.
+  $effect(() => {
+    if (vault.state !== 'Unlocked') return;
+    return watchIdle(settings.autolockMinutes, () => void vault.lock());
   });
 </script>
 

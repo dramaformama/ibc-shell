@@ -28,7 +28,9 @@ fn is_web_url(url: &str) -> bool {
 #[specta::specta]
 pub async fn open_external(url: String) -> ApiResult<()> {
     if !is_web_url(&url) {
-        return Err(ApiError::Validation("only http/https URLs are allowed".into()));
+        return Err(ApiError::Validation(
+            "only http/https URLs are allowed".into(),
+        ));
     }
     let (prog, args): (&str, Vec<&str>) = if cfg!(target_os = "macos") {
         ("open", vec![&url])

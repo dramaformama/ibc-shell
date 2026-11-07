@@ -80,7 +80,10 @@ pub(crate) async fn drive(sh: Arc<Shared>, job: Arc<Job>) {
                     }
                 } else {
                     c.status = Status::Failed;
-                    TransferEvent::Failed { id, message: e.to_string() }
+                    TransferEvent::Failed {
+                        id,
+                        message: e.to_string(),
+                    }
                 }
             }
         };
@@ -98,7 +101,11 @@ fn check<T>(token: &CancellationToken, r: Result<T, SftpError>) -> Result<T, Sft
     r
 }
 
-async fn run_once(sh: &Arc<Shared>, job: &Arc<Job>, token: &CancellationToken) -> Result<(), SftpError> {
+async fn run_once(
+    sh: &Arc<Shared>,
+    job: &Arc<Job>,
+    token: &CancellationToken,
+) -> Result<(), SftpError> {
     let id = job.id;
     let progress = Arc::new(AtomicU64::new(0));
     let plan = tokio::select! {
@@ -123,17 +130,30 @@ async fn run_once(sh: &Arc<Shared>, job: &Arc<Job>, token: &CancellationToken) -
         if let Some(root) = &root {
             let canon = tokio::fs::canonicalize(d).await?;
             if !canon.starts_with(root) {
-                return Err(SftpError::UnsafePath("destination escapes the target folder".into()));
+                return Err(SftpError::UnsafePath(
+                    "destination escapes the target folder".into(),
+                ));
             }
         }
     }
     for s in &plan.skipped {
-        sh.emit(TransferEvent::FileDone { id, path: s.clone(), skipped: true });
+        sh.emit(TransferEvent::FileDone {
+            id,
+            path: s.clone(),
+            skipped: true,
+        });
     }
 
     let ticker = tokio::spawn(ticker(sh.clone(), id, progress.clone()));
     let chunk = effective_chunk(sh, job);
-    let ctx = Ctx { sh, job, token, progress: &progress, root: root.as_deref().map(std::path::Path::to_path_buf), chunk };
+    let ctx = Ctx {
+        sh,
+        job,
+        token,
+        progress: &progress,
+        root: root.as_deref().map(std::path::Path::to_path_buf),
+        chunk,
+    };
     let ctx = &ctx;
     let mut results = stream::iter(plan.files)
         .map(|t| async move { one_file(ctx, &t).await })
@@ -168,12 +188,20 @@ async fn ticker(sh: Arc<Shared>, id: TransferId, progress: Arc<AtomicU64>) {
         let dt = at.elapsed().as_secs_f64().max(0.001);
         #[allow(clippy::cast_precision_loss)]
         let inst = now.saturating_sub(last) as f64 / dt;
-        speed = if speed == 0.0 { inst } else { speed * 0.7 + inst * 0.3 };
+        speed = if speed == 0.0 {
+            inst
+        } else {
+            speed * 0.7 + inst * 0.3
+        };
         at = Instant::now();
         if now != last {
             last = now;
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-            sh.emit(TransferEvent::Progress { id, bytes_done: now, bytes_per_s: speed as u64 });
+            sh.emit(TransferEvent::Progress {
+                id,
+                bytes_done: now,
+                bytes_per_s: speed as u64,
+            });
         }
     }
 }
@@ -207,7 +235,10 @@ struct Ctx<'a> {
 enum Action {
     Skip,
     /// Write to this final path; `resume_final` = continue from the existing final file.
-    Go { target: String, resume_final: bool },
+    Go {
+        target: String,
+        resume_final: bool,
+    },
 }
 
 fn renamed(name: &str, n: u32) -> String {
@@ -225,7 +256,10 @@ async fn resolve(ctx: &Ctx<'_>, t: &FileTask, final_path: &str) -> Result<Action
         g = job.gate.lock() => g,
     };
     let Some(ex) = job.dst.lstat(final_path).await? else {
-        return Ok(Action::Go { target: final_path.to_owned(), resume_final: false });
+        return Ok(Action::Go {
+            target: final_path.to_owned(),
+            resume_final: false,
+        });
     };
     if ex.kind == EntryKind::Dir {
         return Err(SftpError::Protocol("destination is a folder".into()));
@@ -238,9 +272,7 @@ async fn resolve(ctx: &Ctx<'_>, t: &FileTask, final_path: &str) -> Result<Action
             ConflictPolicy::Overwrite => ConflictChoice::Overwrite,
             ConflictPolicy::Skip => ConflictChoice::Skip,
             ConflictPolicy::Rename => ConflictChoice::Rename,
-            ConflictPolicy::ResumeIfSmaller
-                if ex.kind == EntryKind::File && ex.size < t.size =>
-            {
+            ConflictPolicy::ResumeIfSmaller if ex.kind == EntryKind::File && ex.size < t.size => {
                 ConflictChoice::Resume
             }
             _ => {
@@ -257,17 +289,26 @@ async fn resolve(ctx: &Ctx<'_>, t: &FileTask, final_path: &str) -> Result<Action
     };
     Ok(match choice {
         ConflictChoice::Skip => Action::Skip,
-        ConflictChoice::Overwrite => Action::Go { target: final_path.to_owned(), resume_final: false },
+        ConflictChoice::Overwrite => Action::Go {
+            target: final_path.to_owned(),
+            resume_final: false,
+        },
         ConflictChoice::Resume => {
             let ok = ex.kind == EntryKind::File && ex.size < t.size;
-            Action::Go { target: final_path.to_owned(), resume_final: ok }
+            Action::Go {
+                target: final_path.to_owned(),
+                resume_final: ok,
+            }
         }
         ConflictChoice::Rename => {
             let mut n = 1;
             loop {
                 let cand = job.dst.join(&t.dst_dir, &renamed(&t.dst_name, n));
                 if job.dst.lstat(&cand).await?.is_none() {
-                    break Action::Go { target: cand, resume_final: false };
+                    break Action::Go {
+                        target: cand,
+                        resume_final: false,
+                    };
                 }
                 n += 1;
             }
@@ -329,10 +370,17 @@ async fn one_file(ctx: &Ctx<'_>, t: &FileTask) -> Result<(), SftpError> {
         Action::Skip => {
             lk(&job.done).insert(final_path.clone());
             ctx.progress.fetch_add(t.size, Ordering::Relaxed);
-            sh.emit(TransferEvent::FileDone { id: job.id, path: final_path, skipped: true });
+            sh.emit(TransferEvent::FileDone {
+                id: job.id,
+                path: final_path,
+                skipped: true,
+            });
             return Ok(());
         }
-        Action::Go { target, resume_final } => (target, resume_final),
+        Action::Go {
+            target,
+            resume_final,
+        } => (target, resume_final),
     };
     let _permit = tokio::select! {
         () = token.cancelled() => return Err(SftpError::Cancelled),
@@ -354,7 +402,11 @@ async fn one_file(ctx: &Ctx<'_>, t: &FileTask) -> Result<(), SftpError> {
             }
         }
     }
-    if start > 0 && !tail_matches(job, t, &tmp, start.min(t.size)).await.unwrap_or(false) {
+    if start > 0
+        && !tail_matches(job, t, &tmp, start.min(t.size))
+            .await
+            .unwrap_or(false)
+    {
         start = 0;
     }
     ctx.progress.fetch_add(start, Ordering::Relaxed);
@@ -366,7 +418,12 @@ async fn one_file(ctx: &Ctx<'_>, t: &FileTask) -> Result<(), SftpError> {
             return Err(e);
         }
     };
-    let plan = Plan { chunk: ctx.chunk, depth: sh.config.pipeline_depth, start, size: t.size };
+    let plan = Plan {
+        chunk: ctx.chunk,
+        depth: sh.config.pipeline_depth,
+        start,
+        size: t.size,
+    };
     check(token, copy(src, dst, plan, token, ctx.progress).await)?;
     if job.dst.size_of(&tmp).await? != t.size {
         job.dst.truncate(&tmp, t.size).await?;
@@ -374,9 +431,15 @@ async fn one_file(ctx: &Ctx<'_>, t: &FileTask) -> Result<(), SftpError> {
             return Err(SftpError::Protocol("size mismatch after transfer".into()));
         }
     }
-    job.dst.set_meta(&tmp, t.mtime, (t.mode != 0).then_some(t.mode)).await?;
+    job.dst
+        .set_meta(&tmp, t.mtime, (t.mode != 0).then_some(t.mode))
+        .await?;
     job.dst.rename_over(&tmp, &target).await?;
     lk(&job.done).insert(final_path);
-    sh.emit(TransferEvent::FileDone { id: job.id, path: target, skipped: false });
+    sh.emit(TransferEvent::FileDone {
+        id: job.id,
+        path: target,
+        skipped: false,
+    });
     Ok(())
 }

@@ -91,9 +91,7 @@ pub fn escape_name(name: &str) -> Result<String, SftpError> {
 /// Joins a sanitized `name` onto `base` and asserts the canonical result stays inside `base`.
 pub fn safe_join(base: &Path, name: &str) -> Result<PathBuf, SftpError> {
     let clean = sanitize_name(name)?;
-    let canon_base = base
-        .canonicalize()
-        .map_err(|e| crate::local::io_err(&e))?;
+    let canon_base = base.canonicalize().map_err(|e| crate::local::io_err(&e))?;
     let target = canon_base.join(clean);
     if let Ok(real) = target.canonicalize() {
         if !real.starts_with(&canon_base) {
@@ -125,7 +123,9 @@ mod tests {
         ] {
             assert!(sanitize_name(n).is_err(), "{n:?}");
         }
-        for n in ["COM0", "COM10", "console", "lpt", "ok.txt", " leading", "-rf"] {
+        for n in [
+            "COM0", "COM10", "console", "lpt", "ok.txt", " leading", "-rf",
+        ] {
             assert!(sanitize_name(n).is_ok(), "{n:?}");
         }
     }
