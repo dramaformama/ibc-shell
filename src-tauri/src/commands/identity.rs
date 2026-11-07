@@ -1,6 +1,8 @@
 //! Identity commands. Secrets are accepted once, sealed into the vault, never returned.
 
-use ibc_store::{Identity, IdentityId, IdentityKind, IdentityMetaInput, IdentityMetaPatch, SecretId};
+use ibc_store::{
+    Identity, IdentityId, IdentityKind, IdentityMetaInput, IdentityMetaPatch, SecretId,
+};
 use ibc_vault::keys::{import_private_key, KeyError, KeyInfo};
 use ibc_vault::Vault;
 use secrecy::{ExposeSecret, SecretString};
@@ -58,10 +60,7 @@ impl Drop for Created<'_> {
     }
 }
 
-fn create(
-    state: &AppState,
-    input: IdentityInput,
-) -> ApiResult<IdentityDto> {
+fn create(state: &AppState, input: IdentityInput) -> ApiResult<IdentityDto> {
     let mut made = Created(&state.vault, Vec::new());
     let mut info: Option<KeyInfo> = None;
     let mut key_id = None;
@@ -99,7 +98,10 @@ pub async fn identity_list(state: State<'_, AppState>) -> ApiResult<Vec<Identity
 /// Creates an identity; secrets go straight into the vault.
 #[tauri::command]
 #[specta::specta]
-pub async fn identity_create(state: State<'_, AppState>, input: IdentityInput) -> ApiResult<IdentityDto> {
+pub async fn identity_create(
+    state: State<'_, AppState>,
+    input: IdentityInput,
+) -> ApiResult<IdentityDto> {
     let state = (*state).clone();
     tauri::async_runtime::spawn_blocking(move || create(&state, input))
         .await
@@ -117,7 +119,11 @@ pub async fn identity_update(
     let mut made = Created(&state.vault, Vec::new());
     let mut p = IdentityMetaPatch {
         label: patch.label,
-        username: if patch.clear_username { Some(None) } else { patch.username.map(Some) },
+        username: if patch.clear_username {
+            Some(None)
+        } else {
+            patch.username.map(Some)
+        },
         ..Default::default()
     };
     if let Some(pem) = &patch.private_key_pem {
@@ -170,7 +176,11 @@ fn import_from_path(
     let input = IdentityInput {
         label,
         username: None,
-        kind: if passphrase.is_some() { IdentityKind::KeyPassword } else { IdentityKind::Key },
+        kind: if passphrase.is_some() {
+            IdentityKind::KeyPassword
+        } else {
+            IdentityKind::Key
+        },
         password: None,
         private_key_pem: Some(SecretString::from(pem)),
         passphrase,
@@ -222,7 +232,10 @@ AAAEBpExXls+OkMCOV+0lvM7tv4lCconrTA8VEu/lb4/uEkyNYX1cwaic285lLmNC3A3b4
 
     fn state() -> AppState {
         let store = Arc::new(Store::open_in_memory().unwrap());
-        let vault = Arc::new(Vault::new(store.clone(), Arc::new(MemoryKeyStore::default())));
+        let vault = Arc::new(Vault::new(
+            store.clone(),
+            Arc::new(MemoryKeyStore::default()),
+        ));
         vault.init(VaultMode::OsKeychain, None).unwrap();
         AppState::new(store, vault)
     }
@@ -249,7 +262,10 @@ AAAEBpExXls+OkMCOV+0lvM7tv4lCconrTA8VEu/lb4/uEkyNYX1cwaic285lLmNC3A3b4
         let (big, junk) = (tmp("big"), tmp("junk"));
         std::fs::write(&big, vec![b'a'; MAX_KEY_FILE + 1]).unwrap();
         std::fs::write(&junk, "not a key").unwrap();
-        let (a, b) = (import_from_path(&st, &big, None), import_from_path(&st, &junk, None));
+        let (a, b) = (
+            import_from_path(&st, &big, None),
+            import_from_path(&st, &junk, None),
+        );
         let _ = std::fs::remove_file(&big);
         let _ = std::fs::remove_file(&junk);
         assert!(a.is_err() && b.is_err());

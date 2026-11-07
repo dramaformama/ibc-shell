@@ -17,7 +17,10 @@ pub struct StoreKnownHosts(pub Arc<Store>);
 
 impl KnownHosts for StoreKnownHosts {
     fn lookup(&self, host_pattern: &str) -> Result<Vec<KnownKey>, String> {
-        let rows = self.0.known_host_lookup(host_pattern).map_err(|e| e.to_string())?;
+        let rows = self
+            .0
+            .known_host_lookup(host_pattern)
+            .map_err(|e| e.to_string())?;
         Ok(rows
             .into_iter()
             .map(|r| KnownKey {
@@ -43,7 +46,9 @@ impl KnownHosts for StoreKnownHosts {
 
 fn secret_text(vault: &Vault, id: SecretId) -> ApiResult<Zeroizing<String>> {
     vault
-        .with_secret(id, |b| std::str::from_utf8(b).map(|s| Zeroizing::new(s.to_owned())))?
+        .with_secret(id, |b| {
+            std::str::from_utf8(b).map(|s| Zeroizing::new(s.to_owned()))
+        })?
         .map_err(|_| ApiError::Internal("stored secret is not valid text".into()))
 }
 
@@ -60,15 +65,23 @@ fn auth_methods(store: &Store, vault: &Vault, rh: &ResolvedHost) -> ApiResult<Ve
             if let Some(kid) = ident.key_secret_id {
                 let pem = secret_text(vault, kid)?;
                 let passphrase = match ident.passphrase_secret_id {
-                    Some(pid) => Some(SecretString::from(secret_text(vault, pid)?.as_str().to_owned())),
+                    Some(pid) => Some(SecretString::from(
+                        secret_text(vault, pid)?.as_str().to_owned(),
+                    )),
                     None => None,
                 };
-                out.push(AuthMethod::Key { pem, passphrase, identity_label: ident.label.clone() });
+                out.push(AuthMethod::Key {
+                    pem,
+                    passphrase,
+                    identity_label: ident.label.clone(),
+                });
             }
         }
     }
     if let Some(pid) = ident.password_secret_id {
-        out.push(AuthMethod::Password(SecretString::from(secret_text(vault, pid)?.as_str().to_owned())));
+        out.push(AuthMethod::Password(SecretString::from(
+            secret_text(vault, pid)?.as_str().to_owned(),
+        )));
     }
     out.push(AuthMethod::KeyboardInteractive);
     Ok(out)
@@ -113,11 +126,7 @@ fn adhoc_hop(q: &QuickConnect) -> ApiResult<Hop> {
 }
 
 /// Requires an unlocked vault, then resolves `target` into the hop chain (jump hosts first).
-pub fn build_chain(
-    store: &Store,
-    vault: &Vault,
-    target: &SessionTarget,
-) -> ApiResult<Vec<Hop>> {
+pub fn build_chain(store: &Store, vault: &Vault, target: &SessionTarget) -> ApiResult<Vec<Hop>> {
     if vault.state()? != VaultState::Unlocked {
         return Err(ApiError::VaultLocked);
     }

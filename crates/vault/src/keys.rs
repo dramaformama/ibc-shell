@@ -1,7 +1,9 @@
 //! SSH key import (OpenSSH incl. encrypted, PEM PKCS#1/PKCS#8) and generation.
 //! Only public metadata leaves this module; private bytes stay in `Zeroizing` buffers.
 
-use russh::keys::ssh_key::{getrandom::SysRng, rand_core::UnwrapErr, Algorithm, HashAlg, LineEnding, PrivateKey};
+use russh::keys::ssh_key::{
+    getrandom::SysRng, rand_core::UnwrapErr, Algorithm, HashAlg, LineEnding, PrivateKey,
+};
 use secrecy::{ExposeSecret, SecretString};
 use zeroize::Zeroizing;
 
@@ -52,7 +54,10 @@ pub struct GeneratedKey {
 
 impl std::fmt::Debug for GeneratedKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("GeneratedKey").field("info", &self.info).field("private_openssh", &"[REDACTED]").finish()
+        f.debug_struct("GeneratedKey")
+            .field("info", &self.info)
+            .field("private_openssh", &"[REDACTED]")
+            .finish()
     }
 }
 
@@ -67,8 +72,15 @@ fn info_of(key: &PrivateKey) -> Result<KeyInfo, KeyError> {
 
 /// Parses a private key (any supported format, optionally passphrase-protected) and returns
 /// its public metadata. The caller stores the original bytes with `Vault::put_secret`.
-pub fn import_private_key(data: &[u8], passphrase: Option<&SecretString>) -> Result<KeyInfo, KeyError> {
-    let text = Zeroizing::new(std::str::from_utf8(data).map_err(|_| KeyError::Invalid)?.to_owned());
+pub fn import_private_key(
+    data: &[u8],
+    passphrase: Option<&SecretString>,
+) -> Result<KeyInfo, KeyError> {
+    let text = Zeroizing::new(
+        std::str::from_utf8(data)
+            .map_err(|_| KeyError::Invalid)?
+            .to_owned(),
+    );
     let pass = passphrase.map(ExposeSecret::expose_secret);
     let key = russh::keys::decode_secret_key(&text, pass).map_err(|e| match e {
         russh::keys::Error::KeyIsEncrypted => KeyError::PassphraseRequired,
@@ -93,6 +105,11 @@ pub fn generate_key(algo: KeyGenAlgo) -> Result<GeneratedKey, KeyError> {
         }
     }
     .map_err(|_| KeyError::Generate)?;
-    let pem = key.to_openssh(LineEnding::LF).map_err(|_| KeyError::Generate)?;
-    Ok(GeneratedKey { info: info_of(&key)?, private_openssh: Zeroizing::new(pem.as_bytes().to_vec()) })
+    let pem = key
+        .to_openssh(LineEnding::LF)
+        .map_err(|_| KeyError::Generate)?;
+    Ok(GeneratedKey {
+        info: info_of(&key)?,
+        private_openssh: Zeroizing::new(pem.as_bytes().to_vec()),
+    })
 }

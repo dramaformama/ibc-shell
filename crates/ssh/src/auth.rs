@@ -39,7 +39,10 @@ fn build_kbd_request(
         instruction: strip_control(instructions),
         prompts: prompts
             .into_iter()
-            .map(|(text, echo)| KbdPrompt { text: strip_control(&text), echo })
+            .map(|(text, echo)| KbdPrompt {
+                text: strip_control(&text),
+                echo,
+            })
             .collect(),
     })
 }
@@ -69,11 +72,19 @@ pub(crate) async fn authenticate<P: Prompter>(
                 pem,
                 passphrase,
                 identity_label,
-            } => try_key(handle, user, pem, passphrase.as_ref(), identity_label, prompter).await?,
-            AuthMethod::Agent => try_agent(handle, user).await?,
-            AuthMethod::KeyboardInteractive => {
-                try_kbd(handle, user, hop_label, prompter).await?
+            } => {
+                try_key(
+                    handle,
+                    user,
+                    pem,
+                    passphrase.as_ref(),
+                    identity_label,
+                    prompter,
+                )
+                .await?
             }
+            AuthMethod::Agent => try_agent(handle, user).await?,
+            AuthMethod::KeyboardInteractive => try_kbd(handle, user, hop_label, prompter).await?,
         };
         match res {
             Outcome::Success => return Ok(()),
@@ -122,7 +133,12 @@ async fn try_password(
 
 async fn rsa_hash(handle: &Handle<ClientHandler>) -> Option<HashAlg> {
     // `Ok(Some(None))` means the server only speaks SHA-1 ssh-rsa: we refuse that.
-    handle.best_supported_rsa_hash().await.ok().flatten().flatten()
+    handle
+        .best_supported_rsa_hash()
+        .await
+        .ok()
+        .flatten()
+        .flatten()
 }
 
 async fn try_key<P: Prompter>(
@@ -139,7 +155,10 @@ async fn try_key<P: Prompter>(
             // Encrypted: stored passphrase first, then ask.
             let pass = match passphrase {
                 Some(p) => p.clone(),
-                None => prompter.passphrase(label).await.ok_or(SshError::Cancelled)?,
+                None => prompter
+                    .passphrase(label)
+                    .await
+                    .ok_or(SshError::Cancelled)?,
             };
             match decode_secret_key(pem, Some(pass.expose_secret())) {
                 Ok(k) => k,
@@ -168,7 +187,10 @@ async fn try_key<P: Prompter>(
 #[cfg(unix)]
 async fn connect_agent(
 ) -> Option<AgentClient<Box<dyn russh::keys::agent::client::AgentStream + Send + Unpin>>> {
-    AgentClient::connect_env().await.ok().map(AgentClient::dynamic)
+    AgentClient::connect_env()
+        .await
+        .ok()
+        .map(AgentClient::dynamic)
 }
 
 #[cfg(windows)]
@@ -177,7 +199,10 @@ async fn connect_agent(
     if let Ok(c) = AgentClient::connect_named_pipe(r"\\.\pipe\openssh-ssh-agent").await {
         return Some(c.dynamic());
     }
-    AgentClient::connect_pageant().await.ok().map(AgentClient::dynamic)
+    AgentClient::connect_pageant()
+        .await
+        .ok()
+        .map(AgentClient::dynamic)
 }
 
 #[cfg(not(any(unix, windows)))]
@@ -257,7 +282,10 @@ async fn try_kbd<P: Prompter>(
                         .iter()
                         .map(|s| Zeroizing::new(s.expose_secret().to_owned()))
                         .collect();
-                    wrapped.iter_mut().map(|z| std::mem::take(&mut **z)).collect()
+                    wrapped
+                        .iter_mut()
+                        .map(|z| std::mem::take(&mut **z))
+                        .collect()
                 };
                 resp = handle
                     .authenticate_keyboard_interactive_respond(answers)

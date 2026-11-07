@@ -69,7 +69,11 @@ fn entry_from(name: String, a: &FileAttributes) -> Entry {
     Entry {
         name,
         kind,
-        size: if kind == EntryKind::Dir { 0 } else { a.size.unwrap_or(0) },
+        size: if kind == EntryKind::Dir {
+            0
+        } else {
+            a.size.unwrap_or(0)
+        },
         mtime: a.mtime.map(|t| i64::from(t) * 1000),
         mode,
         link_target: None,
@@ -109,9 +113,16 @@ impl Sftp {
         };
         let mut raw = RawSftpSession::new_with_config(stream, cfg);
         let version = raw.init().await.map_err(|e| map_err(&e))?;
-        let posix_rename = version.extensions.get(POSIX_RENAME).is_some_and(|v| v == "1");
+        let posix_rename = version
+            .extensions
+            .get(POSIX_RENAME)
+            .is_some_and(|v| v == "1");
         let mut limits = None;
-        if version.extensions.get("limits@openssh.com").is_some_and(|v| v == "1") {
+        if version
+            .extensions
+            .get("limits@openssh.com")
+            .is_some_and(|v| v == "1")
+        {
             if let Ok(l) = raw.limits().await {
                 let l = Limits::from(l);
                 raw.set_limits(l);
@@ -139,7 +150,12 @@ impl Sftp {
     /// Lists a directory (read in server batches; symlink targets resolved).
     pub async fn list(&self, path: &str) -> Result<DirListing, SftpError> {
         let abs = self.realpath(path).await?;
-        let h = self.raw.opendir(abs.clone()).await.map_err(|e| map_err(&e))?.handle;
+        let h = self
+            .raw
+            .opendir(abs.clone())
+            .await
+            .map_err(|e| map_err(&e))?
+            .handle;
         let mut entries = Vec::new();
         let res = loop {
             match self.raw.readdir(h.clone()).await {
@@ -202,7 +218,9 @@ impl Sftp {
                 Some(_) => return Err(SftpError::Protocol("not a directory".into())),
                 None => {
                     missing.push(cur.clone());
-                    cur = cur.rsplit_once('/').map_or(String::new(), |(p, _)| p.to_owned());
+                    cur = cur
+                        .rsplit_once('/')
+                        .map_or(String::new(), |(p, _)| p.to_owned());
                 }
             }
         }
@@ -230,7 +248,11 @@ impl Sftp {
                 Err(e) => Err(map_err(&e)),
             };
         }
-        self.raw.rename(from, to).await.map(|_| ()).map_err(|e| map_err(&e))
+        self.raw
+            .rename(from, to)
+            .await
+            .map(|_| ())
+            .map_err(|e| map_err(&e))
     }
 
     /// Rename that replaces an existing destination even without the posix extension.
@@ -245,12 +267,21 @@ impl Sftp {
     pub async fn remove(&self, path: &str, recursive: bool) -> Result<(), SftpError> {
         let e = self.stat(path).await?;
         if e.kind != EntryKind::Dir {
-            return self.raw.remove(path).await.map(|_| ()).map_err(|e| map_err(&e));
+            return self
+                .raw
+                .remove(path)
+                .await
+                .map(|_| ())
+                .map_err(|e| map_err(&e));
         }
         if recursive {
             self.remove_tree(path.to_owned(), 0).await
         } else {
-            self.raw.rmdir(path).await.map(|_| ()).map_err(|e| map_err(&e))
+            self.raw
+                .rmdir(path)
+                .await
+                .map(|_| ())
+                .map_err(|e| map_err(&e))
         }
     }
 
@@ -284,7 +315,11 @@ impl Sftp {
             for d in dirs {
                 self.remove_tree(join(&dir, &d.name), depth + 1).await?;
             }
-            self.raw.rmdir(dir).await.map(|_| ()).map_err(|e| map_err(&e))
+            self.raw
+                .rmdir(dir)
+                .await
+                .map(|_| ())
+                .map_err(|e| map_err(&e))
         })
     }
 
@@ -294,7 +329,11 @@ impl Sftp {
             permissions: Some(mode & 0o7777),
             ..FileAttributes::empty()
         };
-        self.raw.setstat(path, a).await.map(|_| ()).map_err(|e| map_err(&e))
+        self.raw
+            .setstat(path, a)
+            .await
+            .map(|_| ())
+            .map_err(|e| map_err(&e))
     }
 
     /// Sets access/modification time (unix millis).
@@ -305,7 +344,11 @@ impl Sftp {
             mtime: Some(secs),
             ..FileAttributes::empty()
         };
-        self.raw.setstat(path, a).await.map(|_| ()).map_err(|e| map_err(&e))
+        self.raw
+            .setstat(path, a)
+            .await
+            .map(|_| ())
+            .map_err(|e| map_err(&e))
     }
 
     /// Canonical absolute path (`.` → home directory).
@@ -331,7 +374,11 @@ impl Sftp {
     /// Creates `path` as a symlink to `target`.
     pub async fn symlink(&self, path: &str, target: &str) -> Result<(), SftpError> {
         // OpenSSH order: (target, link path), swapped vs the draft spec.
-        self.raw.symlink(target, path).await.map(|_| ()).map_err(|e| map_err(&e))
+        self.raw
+            .symlink(target, path)
+            .await
+            .map(|_| ())
+            .map_err(|e| map_err(&e))
     }
 
     /// Closes the subsystem channel.
@@ -341,7 +388,11 @@ impl Sftp {
     }
 
     /// Opens a remote file; returns the handle.
-    pub(crate) async fn open_file(&self, path: &str, flags: OpenFlags) -> Result<String, SftpError> {
+    pub(crate) async fn open_file(
+        &self,
+        path: &str,
+        flags: OpenFlags,
+    ) -> Result<String, SftpError> {
         self.raw
             .open(path, flags, FileAttributes::empty())
             .await

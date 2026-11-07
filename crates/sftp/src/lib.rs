@@ -14,8 +14,8 @@ mod scan;
 mod side;
 mod transfer;
 
-pub use model::{DirListing, Entry, EntryKind};
 pub use engine::TransferEngine;
+pub use model::{DirListing, Entry, EntryKind};
 pub use remote::Sftp;
 pub use transfer::{
     ConflictChoice, ConflictId, ConflictInfo, ConflictPolicy, Endpoint, TransferConfig,

@@ -49,7 +49,10 @@ pub async fn vault_init(
 /// Unlocks; `password = null` → keychain / biometric.
 #[tauri::command]
 #[specta::specta]
-pub async fn vault_unlock(state: State<'_, AppState>, password: Option<SecretInput>) -> ApiResult<()> {
+pub async fn vault_unlock(
+    state: State<'_, AppState>,
+    password: Option<SecretInput>,
+) -> ApiResult<()> {
     let pw = password.map(|p| p.0);
     blocking(&state, move |v| match &pw {
         Some(p) => v.unlock_with_password(p),
@@ -82,7 +85,11 @@ pub async fn vault_change_password(
 /// Writes a `.tlvault` backup (password ≥ 10 chars).
 #[tauri::command]
 #[specta::specta]
-pub async fn vault_export(state: State<'_, AppState>, path: String, password: SecretInput) -> ApiResult<()> {
+pub async fn vault_export(
+    state: State<'_, AppState>,
+    path: String,
+    password: SecretInput,
+) -> ApiResult<()> {
     let pw = password.0;
     blocking(&state, move |v| v.export_backup(Path::new(&path), &pw)).await
 }

@@ -13,10 +13,10 @@ mod tests;
 use std::path::Path;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
+use ibc_store::{SecretId, SecretRow, Store, StoreError};
 use secrecy::{ExposeSecret, SecretBox, SecretString};
 use serde::{Deserialize, Serialize};
 use subtle::ConstantTimeEq;
-use ibc_store::{SecretId, SecretRow, Store, StoreError};
 use zeroize::Zeroizing;
 
 use crypto::{open_blob, seal_blob, KdfParams};
@@ -130,7 +130,9 @@ pub struct Vault {
 
 impl std::fmt::Debug for Vault {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Vault").field("keys", &"[REDACTED]").finish_non_exhaustive()
+        f.debug_struct("Vault")
+            .field("keys", &"[REDACTED]")
+            .finish_non_exhaustive()
     }
 }
 
@@ -157,7 +159,12 @@ impl Vault {
     /// Creates a vault over any [`VaultStorage`].
     #[must_use]
     pub fn with_storage(storage: Arc<dyn VaultStorage>, keystore: Arc<dyn KeyStore>) -> Self {
-        Self { storage, keystore, dek: Mutex::new(None), cost: (65_536, 3, 1) }
+        Self {
+            storage,
+            keystore,
+            dek: Mutex::new(None),
+            cost: (65_536, 3, 1),
+        }
     }
 
     /// Lowers the Argon2 cost for new wraps (low-RAM mobile, tests). Recorded in meta.
@@ -196,7 +203,9 @@ impl Vault {
         match self.storage.meta_get(META_VERSION)? {
             None => Err(VaultError::Uninitialized),
             Some(v) if v.as_slice() == [0, 1] => Ok(()),
-            Some(v) if v.len() == 2 => Err(VaultError::UnsupportedVersion(u16::from_be_bytes([v[0], v[1]]))),
+            Some(v) if v.len() == 2 => Err(VaultError::UnsupportedVersion(u16::from_be_bytes([
+                v[0], v[1],
+            ]))),
             Some(_) => Err(VaultError::Corrupt),
         }
     }
@@ -210,7 +219,11 @@ impl Vault {
         if self.dek_guard().is_some() {
             return Ok(VaultState::Unlocked);
         }
-        Ok(if self.initialized()? { VaultState::Locked } else { VaultState::Uninitialized })
+        Ok(if self.initialized()? {
+            VaultState::Locked
+        } else {
+            VaultState::Uninitialized
+        })
     }
 
     /// Configured mode; `None` when uninitialized.
@@ -284,7 +297,8 @@ impl Vault {
             self.storage.meta_set(META_WRAP_OS, &wrapped)?;
             self.storage.meta_set(META_MODE, b"os")?;
         }
-        self.storage.meta_set(META_CHECK, &seal_blob(key, AAD_CHECK, CHECK_PLAIN)?)?;
+        self.storage
+            .meta_set(META_CHECK, &seal_blob(key, AAD_CHECK, CHECK_PLAIN)?)?;
         // Version last: a half-written init still reads as Uninitialized.
         self.storage.meta_set(META_VERSION, &[0, 1])?;
         self.install(dek);
@@ -306,7 +320,10 @@ impl Vault {
     /// Unlocks via the [`KeyStore`] (keychain / biometric).
     pub fn unlock_with_keystore(&self) -> Result<()> {
         self.check_version()?;
-        let wrapped = self.storage.meta_get(META_WRAP_OS)?.ok_or(KeyStoreError::NotFound)?;
+        let wrapped = self
+            .storage
+            .meta_get(META_WRAP_OS)?
+            .ok_or(KeyStoreError::NotFound)?;
         let dek = self.keystore.unwrap_dek(&wrapped)?;
         self.verify_check(dek.expose_secret())?;
         self.install(dek);
@@ -342,7 +359,12 @@ impl Vault {
         let created_at = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map_or(0, |d| i64::try_from(d.as_millis()).unwrap_or(i64::MAX));
-        self.storage.secret_put(SecretRow { id, nonce: nonce.to_vec(), ciphertext: ct, created_at })?;
+        self.storage.secret_put(SecretRow {
+            id,
+            nonce: nonce.to_vec(),
+            ciphertext: ct,
+            created_at,
+        })?;
         Ok(())
     }
 

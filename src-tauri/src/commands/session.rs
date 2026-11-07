@@ -11,9 +11,7 @@ use crate::api::dto::{PendingId, QuickConnect, SecretInput, SessionEvent, Sessio
 use crate::api::stream::RawBytes;
 use crate::api::{ApiError, ApiResult};
 use crate::session_task::spawn_session;
-use crate::state::{
-    AppState, Live, SessionHandle, SessionSpec, SessionTarget, ShellCmd,
-};
+use crate::state::{AppState, Live, SessionHandle, SessionSpec, SessionTarget, ShellCmd};
 
 pub(crate) fn session_of(state: &AppState, id: SessionId) -> ApiResult<Arc<SessionHandle>> {
     state.sessions.get(&id).ok_or(ApiError::NotFound)
@@ -30,7 +28,11 @@ fn open(
     let id = SessionId(Uuid::now_v7());
     let handle = Arc::new(SessionHandle {
         id,
-        spec: SessionSpec { target, on_data, on_event },
+        spec: SessionSpec {
+            target,
+            on_data,
+            on_event,
+        },
         live: Mutex::new(Live::default()),
     });
     state.sessions.insert(id, handle.clone());
@@ -51,7 +53,14 @@ pub async fn session_open(
     on_event: Channel<SessionEvent>,
 ) -> ApiResult<SessionId> {
     state.store.host_resolve(host_id)?; // fail fast with NotFound
-    Ok(open(&state, SessionTarget::Host(host_id), cols, rows, on_data, on_event))
+    Ok(open(
+        &state,
+        SessionTarget::Host(host_id),
+        cols,
+        rows,
+        on_data,
+        on_event,
+    ))
 }
 
 /// Quick connect without a stored host (`user@host:port`).
@@ -65,7 +74,14 @@ pub async fn session_open_adhoc(
     on_data: Channel<RawBytes>,
     on_event: Channel<SessionEvent>,
 ) -> ApiResult<SessionId> {
-    Ok(open(&state, SessionTarget::Adhoc(target), cols, rows, on_data, on_event))
+    Ok(open(
+        &state,
+        SessionTarget::Adhoc(target),
+        cols,
+        rows,
+        on_data,
+        on_event,
+    ))
 }
 
 /// Keystrokes. RAW command (not in generated bindings): body = raw bytes
@@ -92,7 +108,11 @@ pub async fn shell_write(state: State<'_, AppState>, request: Request<'_>) -> Ap
 /// Returns credit for `bytes` written to xterm (called from `write(data, callback)`).
 #[tauri::command]
 #[specta::specta]
-pub async fn shell_ack(state: State<'_, AppState>, session_id: SessionId, bytes: u32) -> ApiResult<()> {
+pub async fn shell_ack(
+    state: State<'_, AppState>,
+    session_id: SessionId,
+    bytes: u32,
+) -> ApiResult<()> {
     session_of(&state, session_id)?.send(ShellCmd::Ack(bytes));
     Ok(())
 }
@@ -117,7 +137,10 @@ pub async fn shell_resize(
 #[tauri::command]
 #[specta::specta]
 pub async fn session_close(state: State<'_, AppState>, session_id: SessionId) -> ApiResult<()> {
-    let handle = state.sessions.remove(&session_id).ok_or(ApiError::NotFound)?;
+    let handle = state
+        .sessions
+        .remove(&session_id)
+        .ok_or(ApiError::NotFound)?;
     state.pending.cancel_owner(session_id.0);
     handle.send(ShellCmd::Close);
     Ok(())
@@ -155,9 +178,10 @@ pub async fn kbd_interactive_reply(
     pending_id: PendingId,
     answers: Option<Vec<SecretInput>>,
 ) -> ApiResult<()> {
-    state
-        .pending
-        .reply_kbd(pending_id, answers.map(|a| a.into_iter().map(|s| s.0).collect()))
+    state.pending.reply_kbd(
+        pending_id,
+        answers.map(|a| a.into_iter().map(|s| s.0).collect()),
+    )
 }
 
 /// Key passphrase; `null` = cancel.
@@ -168,5 +192,7 @@ pub async fn passphrase_reply(
     pending_id: PendingId,
     passphrase: Option<SecretInput>,
 ) -> ApiResult<()> {
-    state.pending.reply_passphrase(pending_id, passphrase.map(|s| s.0))
+    state
+        .pending
+        .reply_passphrase(pending_id, passphrase.map(|s| s.0))
 }

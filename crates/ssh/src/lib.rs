@@ -4,23 +4,23 @@
 //! (FROZEN v1). Must not depend on `store`/`vault`: credentials and known hosts come in via
 //! [`Hop`] / [`KnownHosts`]. Forwards are Phase 3 (`SshError::Unimplemented`).
 mod auth;
-mod connect;
 mod config;
+mod connect;
 mod error;
 mod forward;
 mod hostkey;
+pub mod policy;
 mod session;
 mod shell;
-pub mod policy;
 mod verify;
 
 pub use config::{
     AuthMethod, ConnectStep, Hop, KbdInteractiveRequest, KbdPrompt, Prompter, PtyRequest,
 };
+pub use forward::{ForwardHandle, ForwardSpec, ForwardState};
 pub use hostkey::{
     host_pattern, HostKeyDecision, HostKeyInfo, HostKeyMismatch, KnownHosts, KnownKey,
 };
-pub use forward::{ForwardHandle, ForwardSpec, ForwardState};
 pub use session::{Connection, ExecOutput, SubsystemStream, CREDIT_WINDOW};
 pub use shell::{Shell, ShellOutput};
 

@@ -74,24 +74,52 @@ async fn run_session(
             return;
         }
     };
-    let (cols, rows) = handle.live.lock().unwrap_or_else(PoisonError::into_inner).size;
+    let (cols, rows) = handle
+        .live
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .size;
     let label = conn.server_banner().map(str::to_owned);
-    let _ = events.send(SessionEvent::Connecting { step: ConnectStep::OpeningChannel, hop: String::new() });
-    let shell = match conn.open_shell(PtyRequest { term: "xterm-256color".into(), cols, rows }).await {
+    let _ = events.send(SessionEvent::Connecting {
+        step: ConnectStep::OpeningChannel,
+        hop: String::new(),
+    });
+    let shell = match conn
+        .open_shell(PtyRequest {
+            term: "xterm-256color".into(),
+            cols,
+            rows,
+        })
+        .await
+    {
         Ok(s) => s,
         Err(e) => return fail(e.into()),
     };
-    handle.live.lock().unwrap_or_else(PoisonError::into_inner).conn = Some(conn.clone());
+    handle
+        .live
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .conn = Some(conn.clone());
     if let SessionTarget::Host(id) = &handle.spec.target {
         let _ = state.store.host_touch_connected(*id);
     }
-    let _ = events.send(SessionEvent::Connected { server_banner: label });
+    let _ = events.send(SessionEvent::Connected {
+        server_banner: label,
+    });
 
     let user_closed = pump(shell, &mut rx, &handle).await;
-    handle.live.lock().unwrap_or_else(PoisonError::into_inner).conn = None;
+    handle
+        .live
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .conn = None;
     conn.disconnect().await;
     let _ = events.send(SessionEvent::Disconnected {
-        reason: if user_closed { "closed".into() } else { "connection closed".into() },
+        reason: if user_closed {
+            "closed".into()
+        } else {
+            "connection closed".into()
+        },
         can_reconnect: !user_closed,
     });
 }

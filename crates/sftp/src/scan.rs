@@ -39,7 +39,12 @@ pub(crate) fn base_name(side: &Side, path: &str) -> String {
         Side::Local => std::path::Path::new(path)
             .file_name()
             .map_or_else(String::new, |n| n.to_string_lossy().into_owned()),
-        Side::Remote(_) => path.trim_end_matches('/').rsplit('/').next().unwrap_or("").to_owned(),
+        Side::Remote(_) => path
+            .trim_end_matches('/')
+            .rsplit('/')
+            .next()
+            .unwrap_or("")
+            .to_owned(),
     }
 }
 
@@ -99,7 +104,8 @@ pub(crate) async fn scan(
                 let mut taken = HashSet::new();
                 for e in src.list(&sdir).await? {
                     let Some(n) = dst_name(src, dst, &e.name) else {
-                        plan.skipped.push(dst.join(&ddir, &e.name.replace('/', "_")));
+                        plan.skipped
+                            .push(dst.join(&ddir, &e.name.replace('/', "_")));
                         continue;
                     };
                     let n = unique(&mut taken, n);
@@ -152,7 +158,10 @@ mod tests {
     #[test]
     fn remote_names_with_replacement_char_are_skipped() {
         let remote_like = Side::Local; // is_local() true => only checks dst rules
-        assert_eq!(dst_name(&remote_like, &Side::Local, "a:b").as_deref(), Some("a_b"));
+        assert_eq!(
+            dst_name(&remote_like, &Side::Local, "a:b").as_deref(),
+            Some("a_b")
+        );
         assert!(dst_name(&remote_like, &Side::Local, "..").is_none());
     }
 }

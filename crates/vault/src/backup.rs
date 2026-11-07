@@ -4,9 +4,9 @@
 use std::io::{Read, Write};
 use std::path::Path;
 
+use ibc_store::{SecretId, Snapshot};
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
-use ibc_store::{SecretId, Snapshot};
 use zeroize::{Zeroize, Zeroizing};
 
 use crate::crypto::{self, KdfParams, NONCE_LEN};
@@ -51,7 +51,10 @@ pub(crate) fn export(vault: &Vault, path: &Path, password: &SecretString) -> Res
     let mut secrets = Vec::new();
     for id in vault.storage().secret_ids()? {
         let data = vault.get_secret(id)?;
-        secrets.push(BackupSecret { id, data: data.to_vec() });
+        secrets.push(BackupSecret {
+            id,
+            data: data.to_vec(),
+        });
     }
     let payload = Payload { snapshot, secrets };
     let mut cbor = Zeroizing::new(Vec::new());
@@ -64,7 +67,11 @@ pub(crate) fn export(vault: &Vault, path: &Path, password: &SecretString) -> Res
     let mut header = Vec::with_capacity(14 + kdf.len() + NONCE_LEN);
     header.extend_from_slice(MAGIC);
     header.extend_from_slice(&VERSION.to_be_bytes());
-    header.extend_from_slice(&u32::try_from(kdf.len()).map_err(|_| VaultError::Corrupt)?.to_be_bytes());
+    header.extend_from_slice(
+        &u32::try_from(kdf.len())
+            .map_err(|_| VaultError::Corrupt)?
+            .to_be_bytes(),
+    );
     header.extend_from_slice(&kdf);
     header.extend_from_slice(&nonce);
 
@@ -120,11 +127,15 @@ fn decrypt(path: &Path, password: &SecretString) -> Result<Payload> {
     let (header, ct) = bytes.split_at(header_len);
     let nonce = &header[header_len - NONCE_LEN..];
     // Header is AAD: tampering anywhere (or a wrong password) fails the tag.
-    let compressed = crypto::open(&key, header, nonce, ct).map_err(|_| VaultError::WrongPassword)?;
+    let compressed =
+        crypto::open(&key, header, nonce, ct).map_err(|_| VaultError::WrongPassword)?;
 
     let mut plain = Zeroizing::new(Vec::new());
     let decoder = zstd::stream::read::Decoder::new(compressed.as_slice()).map_err(io_err)?;
-    decoder.take(MAX_PLAIN + 1).read_to_end(&mut plain).map_err(|_| VaultError::Corrupt)?;
+    decoder
+        .take(MAX_PLAIN + 1)
+        .read_to_end(&mut plain)
+        .map_err(|_| VaultError::Corrupt)?;
     if plain.len() as u64 > MAX_PLAIN {
         return Err(VaultError::Corrupt);
     }

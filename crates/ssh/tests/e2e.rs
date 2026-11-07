@@ -15,11 +15,11 @@
 
 use std::sync::Mutex;
 
-use secrecy::SecretString;
 use ibc_ssh::{
     connect, AuthMethod, ConnectStep, Hop, HostKeyDecision, HostKeyInfo, KbdInteractiveRequest,
     KnownHosts, KnownKey, Prompter, PtyRequest, ShellOutput, SshError,
 };
+use secrecy::SecretString;
 
 fn env(k: &str) -> Option<String> {
     std::env::var(k).ok()
@@ -39,7 +39,10 @@ struct Hosts(Mutex<Vec<(String, KnownKey)>>);
 impl KnownHosts for Hosts {
     fn lookup(&self, p: &str) -> Result<Vec<KnownKey>, String> {
         let g = self.0.lock().map_err(|e| e.to_string())?;
-        Ok(g.iter().filter(|(h, _)| h == p).map(|(_, k)| k.clone()).collect())
+        Ok(g.iter()
+            .filter(|(h, _)| h == p)
+            .map(|(_, k)| k.clone())
+            .collect())
     }
     fn add(&self, p: &str, k: &KnownKey) -> Result<(), String> {
         let mut g = self.0.lock().map_err(|e| e.to_string())?;
@@ -62,7 +65,12 @@ impl Prompter for Ui {
     }
     async fn keyboard_interactive(&self, r: KbdInteractiveRequest) -> Option<Vec<SecretString>> {
         let a = self.kbd_answer.clone()?;
-        Some(r.prompts.iter().map(|_| SecretString::from(a.clone())).collect())
+        Some(
+            r.prompts
+                .iter()
+                .map(|_| SecretString::from(a.clone()))
+                .collect(),
+        )
     }
     async fn passphrase(&self, _: &str) -> Option<SecretString> {
         None
@@ -104,7 +112,11 @@ async fn password_auth_exec() {
     }
     let hosts = Hosts::default();
     let c = connect(
-        vec![hop(&need("TL_SSH_PORT"), &host(), vec![pw(&need("TL_SSH_PASSWORD"))])],
+        vec![hop(
+            &need("TL_SSH_PORT"),
+            &host(),
+            vec![pw(&need("TL_SSH_PASSWORD"))],
+        )],
         &hosts,
         &accept(),
     )
@@ -122,7 +134,11 @@ async fn wrong_password_fails() {
         return;
     }
     let r = connect(
-        vec![hop(&need("TL_SSH_PORT"), &host(), vec![pw("definitely-wrong")])],
+        vec![hop(
+            &need("TL_SSH_PORT"),
+            &host(),
+            vec![pw("definitely-wrong")],
+        )],
         &Hosts::default(),
         &accept(),
     )
@@ -141,7 +157,11 @@ async fn unknown_key_rejected_is_cancelled() {
         kbd_answer: None,
     };
     let r = connect(
-        vec![hop(&need("TL_SSH_PORT"), &host(), vec![pw(&need("TL_SSH_PASSWORD"))])],
+        vec![hop(
+            &need("TL_SSH_PORT"),
+            &host(),
+            vec![pw(&need("TL_SSH_PASSWORD"))],
+        )],
         &Hosts::default(),
         &ui,
     )
@@ -158,7 +178,11 @@ async fn changed_host_key_blocks() {
     let hosts = Hosts::default();
     let port = need("TL_SSH_PORT");
     let h = host();
-    let pat = if port == "22" { h.clone() } else { format!("[{h}]:{port}") };
+    let pat = if port == "22" {
+        h.clone()
+    } else {
+        format!("[{h}]:{port}")
+    };
     hosts
         .add(
             &pat,
@@ -170,7 +194,12 @@ async fn changed_host_key_blocks() {
             },
         )
         .expect("add");
-    let r = connect(vec![hop(&port, &h, vec![pw(&need("TL_SSH_PASSWORD"))])], &hosts, &accept()).await;
+    let r = connect(
+        vec![hop(&port, &h, vec![pw(&need("TL_SSH_PASSWORD"))])],
+        &hosts,
+        &accept(),
+    )
+    .await;
     assert!(matches!(r, Err(SshError::HostKeyChanged(_))), "{r:?}");
 }
 
@@ -186,9 +215,13 @@ async fn key_auth() {
         passphrase: None,
         identity_label: "test".into(),
     };
-    let c = connect(vec![hop(&need("TL_SSH_KEY_PORT"), &host(), vec![m])], &Hosts::default(), &accept())
-        .await
-        .expect("connect");
+    let c = connect(
+        vec![hop(&need("TL_SSH_KEY_PORT"), &host(), vec![m])],
+        &Hosts::default(),
+        &accept(),
+    )
+    .await
+    .expect("connect");
     assert_eq!(c.exec("echo ok", 64).await.expect("exec").stdout, b"ok\n");
 }
 
@@ -199,13 +232,20 @@ async fn keyboard_interactive_auth() {
         return;
     }
     let c = connect(
-        vec![hop(&need("TL_SSH_KBD_PORT"), &host(), vec![AuthMethod::KeyboardInteractive])],
+        vec![hop(
+            &need("TL_SSH_KBD_PORT"),
+            &host(),
+            vec![AuthMethod::KeyboardInteractive],
+        )],
         &Hosts::default(),
         &accept(),
     )
     .await
     .expect("connect");
-    assert_eq!(c.exec("echo ok", 64).await.expect("exec").exit_status, Some(0));
+    assert_eq!(
+        c.exec("echo ok", 64).await.expect("exec").exit_status,
+        Some(0)
+    );
 }
 
 #[tokio::test]
@@ -215,7 +255,9 @@ async fn jump_through_bastion() {
         return;
     }
     let key = |label: &str| AuthMethod::Key {
-        pem: zeroize::Zeroizing::new(std::fs::read_to_string(need("TL_SSH_KEY_FILE")).expect("key file")),
+        pem: zeroize::Zeroizing::new(
+            std::fs::read_to_string(need("TL_SSH_KEY_FILE")).expect("key file"),
+        ),
         passphrase: None,
         identity_label: label.into(),
     };
@@ -223,8 +265,13 @@ async fn jump_through_bastion() {
         hop(&need("TL_SSH_BASTION_PORT"), &host(), vec![key("bastion")]),
         hop("22", &need("TL_SSH_INTERNAL_HOST"), vec![key("internal")]),
     ];
-    let c = connect(chain, &Hosts::default(), &accept()).await.expect("connect");
-    assert_eq!(c.exec("echo inner", 64).await.expect("exec").stdout, b"inner\n");
+    let c = connect(chain, &Hosts::default(), &accept())
+        .await
+        .expect("connect");
+    assert_eq!(
+        c.exec("echo inner", 64).await.expect("exec").stdout,
+        b"inner\n"
+    );
 }
 
 #[tokio::test]
@@ -234,7 +281,11 @@ async fn shell_resize_and_throughput() {
         return;
     }
     let c = connect(
-        vec![hop(&need("TL_SSH_PORT"), &host(), vec![pw(&need("TL_SSH_PASSWORD"))])],
+        vec![hop(
+            &need("TL_SSH_PORT"),
+            &host(),
+            vec![pw(&need("TL_SSH_PASSWORD"))],
+        )],
         &Hosts::default(),
         &accept(),
     )

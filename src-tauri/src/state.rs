@@ -30,15 +30,25 @@ impl<K, V> Default for Registry<K, V> {
 impl<K: Eq + Hash + Copy, V: Clone> Registry<K, V> {
     /// Inserts / replaces.
     pub fn insert(&self, k: K, v: V) {
-        self.0.lock().unwrap_or_else(PoisonError::into_inner).insert(k, v);
+        self.0
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .insert(k, v);
     }
     /// Clone of the value.
     pub fn get(&self, k: &K) -> Option<V> {
-        self.0.lock().unwrap_or_else(PoisonError::into_inner).get(k).cloned()
+        self.0
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .get(k)
+            .cloned()
     }
     /// Removes and returns.
     pub fn remove(&self, k: &K) -> Option<V> {
-        self.0.lock().unwrap_or_else(PoisonError::into_inner).remove(k)
+        self.0
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .remove(k)
     }
     /// Number of entries.
     pub fn len(&self) -> usize {
@@ -141,9 +151,12 @@ impl AllowedRoots {
     /// True when `p` is under a root, or an ancestor of one (so the UI can go "up").
     #[must_use]
     pub fn allows(&self, p: &Path, allow_ancestors: bool) -> bool {
-        let Ok(c) = std::fs::canonicalize(p) else { return false };
+        let Ok(c) = std::fs::canonicalize(p) else {
+            return false;
+        };
         let g = self.0.lock().unwrap_or_else(PoisonError::into_inner);
-        g.iter().any(|r| c.starts_with(r) || (allow_ancestors && r.starts_with(&c)))
+        g.iter()
+            .any(|r| c.starts_with(r) || (allow_ancestors && r.starts_with(&c)))
     }
 }
 
