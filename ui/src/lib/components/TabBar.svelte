@@ -1,6 +1,8 @@
 <script lang="ts">
   import {
     FolderOpen,
+    LayoutGrid,
+    PanelRight,
     PanelLeftClose,
     PanelLeftOpen,
     Plus,
@@ -41,6 +43,13 @@
     aria-pressed={ui.sidebarOpen}
     title="{ui.sidebarOpen ? m.sidebar_hide() : m.sidebar_show()} ({mod('B')})"
     >{#if ui.sidebarOpen}<PanelLeftClose size={16} />{:else}<PanelLeftOpen size={16} />{/if}</button
+  >
+  <button
+    class="icon-btn overview"
+    onclick={() => (sessions.activeId = null)}
+    aria-label={m.dash_title()}
+    aria-pressed={sessions.activeId === null}
+    title={m.dash_title()}><LayoutGrid size={16} /></button
   >
   <span class="sep" aria-hidden="true"></span>
   <div class="tabs" role="tablist" aria-label={m.tabs_label()} data-tauri-drag-region>
@@ -87,6 +96,15 @@
             ><FolderOpen size={14} />{m.tab_files()}</button
           >
         </div>
+      {/if}
+      {#if active.kind === 'terminal'}
+        <button
+          class="icon-btn"
+          onclick={() => ui.toggleInspector()}
+          aria-label={m.stat_inspector()}
+          aria-pressed={ui.inspectorOpen}
+          title={m.stat_inspector()}><PanelRight size={16} /></button
+        >
       {/if}
       <button
         class="icon-btn"
@@ -202,6 +220,12 @@
   }
   .bar > .icon-btn[aria-pressed='true'] {
     color: var(--muted);
+  }
+  .bar > .overview[aria-pressed='true'],
+  .tools .icon-btn[aria-pressed='true'] {
+    background: var(--surface);
+    color: var(--accent);
+    box-shadow: var(--card-shadow);
   }
   .tools {
     display: flex;

@@ -14,6 +14,25 @@ export interface Toast {
 class UiState {
   sidebarOpen = $state(true);
   sidebarWidth = $state(264);
+  inspectorOpen = $state(false);
+
+  constructor() {
+    try {
+      this.inspectorOpen = localStorage.getItem('ibc.ui.inspectorOpen') === 'true';
+    } catch {
+      /* storage unavailable */
+    }
+  }
+
+  toggleInspector(): void {
+    this.inspectorOpen = !this.inspectorOpen;
+    try {
+      localStorage.setItem('ibc.ui.inspectorOpen', String(this.inspectorOpen));
+    } catch {
+      /* storage unavailable */
+    }
+  }
+
   paletteOpen = $state(false);
   settingsOpen = $state(false);
   editor = $state.raw<EditorTarget | null>(null);

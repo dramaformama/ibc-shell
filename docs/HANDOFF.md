@@ -74,25 +74,20 @@ docs          PLAN, STATUS, contracts (заморожены, менять тол
 2. Главный экран **«Сводка»** с карточками подключённых серверов: кольца CPU и RAM, сеть ↑↓, ядра, RAM, диск, аптайм.
 3. Цветные карточки разделов.
 
-**Бэкенд** (делал отдельный агент, ветка `worktree-agent-a4fad7d4956fdd500`, worktree `.claude/worktrees/agent-a4fad7d4956fdd500`; если её уже слили в `main`, этот пункт закрыт):
-- Команда `stats_sample(session_id) -> HostStats` выполняет один exec-канал на уже открытом SSH-соединении терминала.
-- Скрипт читает `/proc/stat`, `/proc/net/dev`, `/proc/diskstats` дважды с `sleep 1`, затем `/proc/meminfo`, `loadavg`, `uptime`, `df -kP /`, `nproc`, `os-release`, `ps … --sort=-pcpu | head -9`, температуру.
-- Парсинг в `crates/ssh/src/stats.rs`. Команда стоит в `PASSIVE_COMMANDS`, чтобы опрос не сбрасывал автоблокировку.
-- Нужны ADR-009 и запись в `docs/contracts/ipc.md`, плюс мок в `ui/src/lib/api/mock`.
-- Поля `HostStats`, от которых зависит UI: `cpu_pct, cores, cpu_cores[], cpu_user, cpu_system, cpu_nice, cpu_iowait, cpu_steal, load1, load5, load15, mem_total, mem_used, mem_cached, swap_total, swap_used, disk_total, disk_used, net_rx_bps, net_tx_bps, disk_read_bps, disk_write_bps, uptime_s, os_name?, temp_c?, procs[{pid,user,cpu,mem_bytes,command}]`.
-- Проверь, что агент закончил: `git -C .claude/worktrees/agent-a4fad7d4956fdd500 log main..HEAD` и `git status`. Прогони весь гейт, затем слей, затем удали worktree и ветку.
+**Обновление Codex, 2026-11-07:** бэкенд и `wip/stats-ui` уже были слиты в `main` до начала продолжения (HEAD `155b01d`); дополнительных worktree нет.
 
-**UI** (ветка `wip/stats-ui`, ещё не в `main`, потому что без бэкенда не проходит `pnpm check`):
-- Готово:
-  - `ui/src/lib/stores/stats.svelte.ts` — опрос раз в 2 с, пока есть наблюдатель, история 60 точек, ключ — session id.
-  - `ui/src/lib/stats/` — `Ring.svelte` (кольцо), `Spark.svelte` (SVG-график), `CoreBars.svelte` (сегменты по ядрам), `format.ts` (+тест), `Inspector.svelte` (колонка 320 px с карточками CPU, нагрузки, памяти, сети, диска и процессов), `ServerCard.svelte` (карточка для «Сводки»).
-  - `sessions.sessionIds` и `groupSession()`; `TerminalView` сообщает session id после подключения.
-  - Строки i18n `stat_*`, `dash_*`, `unit_*` в обоих языках.
-- Осталось:
-  1. Слить бэкенд, затем `git merge wip/stats-ui`, подогнать имена полей и команды под реальный `bindings.ts` (`api.statsSample`, тип `HostStats`, `error.code === 'Unsupported' | 'NotFound'`).
-  2. Встроить `Inspector` в `ui/src/routes/(app)/+page.svelte`. Сейчас терминалы монтируются в `.stage` абсолютным слоем; нужна обёртка: слева область терминала (`position: relative`), справа `<Inspector group={…}>`, когда активен вид «Терминал» и включён `ui.inspectorOpen`. Флаг хранить в localStorage. Кнопку (иконка `PanelRight` или `Gauge`) поставить в `TabBar.svelte` в блок `.tools` рядом с «Терминал / Файлы».
-  3. «Сводка»: первая постоянная кнопка в полосе вкладок (иконка `LayoutGrid` или `Gauge`), активна при `sessions.activeId === null`. Экран — сетка `ServerCard` (`grid-template-columns: repeat(auto-fill, minmax(340px, 1fr))`), заголовок крупный, как в SwiftServer (`m.dash_title()`, 28–34 px, жирный), вверху плашки «Всего / В сети / Не в сети». Если серверов нет — нынешний приветственный экран.
-  4. Скриншоты в светлой и тёмной теме в мок-режиме; `impeccable detect` по изменённым файлам; весь гейт; коммит.
+Интеграция завершена:
+- В `+page.svelte` терминалы остаются смонтированными в относительной `.content`, справа показывается `Inspector`, только для активного терминала.
+- В `TabBar.svelte` кнопка «Сводка» рядом с переключателем боковой панели; кнопка инспектора рядом с «Терминал / Файлы». Видимость хранится в `ibc.ui.inspectorOpen`.
+- `stats/Dashboard.svelte`: карточки открытых серверов, счётчики «Всего / В сети / Не в сети», возврат к серверу по клику. Без серверов — приветственный экран.
+- Реальные bindings допускают `null` для float-метрик: UI показывает «—», графики сохраняют разрывы. `Unsupported` прекращает опрос до повторного открытия вида.
+- Опрос общий для наблюдателей; переключение инспектор ↔ сводка не запускает параллельных циклов. Регрессионные тесты в `stats.svelte.test.ts`.
+- Обновлены README на обоих языках и ручные проверки метрик в TESTING.
+
+Проверено: `cargo clippy --workspace --all-targets -- -D warnings`, `IBC_BIG_MIB=8 cargo test --workspace`, `cargo deny check`, UI check / test (67 тестов) / lint / build. Для SSH mock_server понадобился запуск вне sandbox (локальный TCP bind); Docker SSH e2e остаются штатно ignored без `TL_E2E=1`. Скриншоты мок-интерфейса: `/private/tmp/ibc-stats-{inspector,overview}-{light,dark}.png`; проверены переходы сводка ↔ терминал ↔ файлы и сохранение переключателя. CLI `impeccable` в окружении отсутствует, `detect` не запускался.
+
+Следующий шаг: ручная приёмка метрик на настоящем Linux-сервере (включая отсутствие влияния опроса на автоблокировку); затем известные проблемы 4.2. Docker-идеи ниже пока не реализовывать без отдельного выбора владельца.
+
 - Дальше в духе SwiftServer (по желанию владельца, по одному): панель Docker (контейнеры: статус, образ, порты, CPU/RAM; через `docker ps`/`docker stats --no-stream` exec), карта мира с задержкой до серверов, пинг (RTT) в карточке, сниппеты, проброс портов (Фаза 3), Touch ID перед показом паролей.
 
 ### 4.2 Известные проблемы

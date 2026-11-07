@@ -9,13 +9,13 @@ const EVERY_MS = 2000;
 
 export interface Series {
   latest: HostStats | null;
-  cpu: number[];
-  mem: number[];
-  load1: number[];
-  load5: number[];
-  load15: number[];
-  rx: number[];
-  tx: number[];
+  cpu: (number | null)[];
+  mem: (number | null)[];
+  load1: (number | null)[];
+  load5: (number | null)[];
+  load15: (number | null)[];
+  rx: (number | null)[];
+  tx: (number | null)[];
   /** The server cannot report metrics (not Linux, no /proc). */
   unsupported: boolean;
 }
@@ -31,12 +31,13 @@ const empty = (): Series => ({
   tx: [],
   unsupported: false
 });
-const push = (a: number[], v: number) => [...a.slice(-(HISTORY - 1)), v];
+const push = (a: (number | null)[], v: number | null) => [...a.slice(-(HISTORY - 1)), v];
 
 class StatsStore {
   /** Keyed by session id. */
   data = $state<Record<string, Series>>({});
   #watchers = new Map<string, number>();
+  #running = new Set<string>();
 
   get(sid: SessionId | null): Series | null {
     return sid ? (this.data[sid] ?? null) : null;
@@ -46,8 +47,14 @@ class StatsStore {
   watch(sid: SessionId): () => void {
     const n = this.#watchers.get(sid) ?? 0;
     this.#watchers.set(sid, n + 1);
-    if (n === 0) void this.#loop(sid);
+    if (!this.#running.has(sid)) {
+      this.#running.add(sid);
+      void this.#loop(sid).finally(() => this.#running.delete(sid));
+    }
+    let stopped = false;
     return () => {
+      if (stopped) return;
+      stopped = true;
       const left = (this.#watchers.get(sid) ?? 1) - 1;
       if (left <= 0) this.#watchers.delete(sid);
       else this.#watchers.set(sid, left);
@@ -59,7 +66,8 @@ class StatsStore {
     let failures = 0;
     while (this.#watchers.has(sid)) {
       const r = await api.statsSample(sid);
-      const s = this.data[sid] ?? empty();
+      if (!this.#watchers.has(sid)) break;
+      const s: Series = this.data[sid] ?? empty();
       if (r.status === 'ok') {
         failures = 0;
         const d = r.data;
@@ -78,11 +86,11 @@ class StatsStore {
         failures++;
         if (r.error.code === 'Unsupported') this.data[sid] = { ...s, unsupported: true };
         // A closed session or a server that cannot report: stop quietly.
-        if (r.error.code === 'NotFound' || failures >= 5) break;
+        if (r.error.code === 'Unsupported' || r.error.code === 'NotFound' || failures >= 5) break;
       }
       await new Promise((ok) => setTimeout(ok, failures ? EVERY_MS * 4 : EVERY_MS));
     }
-    this.#watchers.delete(sid);
+    if (!this.#watchers.has(sid)) delete this.data[sid];
   }
 
   forget(sid: SessionId): void {

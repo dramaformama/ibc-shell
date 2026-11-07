@@ -1,6 +1,8 @@
 <script lang="ts">
+  import { pct } from './format';
+
   /** Per-core load as rows of segments (SwiftServer-style), one row per core. */
-  let { cores }: { cores: number[] } = $props();
+  let { cores }: { cores: (number | null)[] } = $props();
   const SEG = 24;
   const lit = (p: number) => Math.round((Math.min(100, Math.max(0, p)) / 100) * SEG);
   const tone = (i: number, p: number) =>
@@ -9,14 +11,14 @@
 
 <div class="bars">
   {#each cores as p, c (c)}
-    {@const n = lit(p)}
+    {@const n = lit(p ?? 0)}
     <div class="row">
       <div class="segs" aria-hidden="true">
-        {#each { length: SEG } as _, i (i)}
-          <span class={i < n ? tone(i, p) : ''}></span>
+        {#each Array.from({ length: SEG }, (_, i) => i) as i (i)}
+          <span class={i < n ? tone(i, p ?? 0) : ''}></span>
         {/each}
       </div>
-      <span class="v tnum">{Math.round(p)}<small>%</small></span>
+      <span class="v tnum">{pct(p)}<small>%</small></span>
     </div>
   {/each}
 </div>

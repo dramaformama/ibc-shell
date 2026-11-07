@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bytes, rate, uptime } from './format';
+import { bytes, decimal, loadColor, pct, rate, uptime } from './format';
 
 describe('stats format', () => {
   it('formats sizes and rates', () => {
@@ -7,6 +7,13 @@ describe('stats format', () => {
     expect(bytes(452 * 1024 ** 2)).toBe('452 M');
     expect(bytes(512)).toBe('512 B');
     expect(rate(4.01 * 1024 ** 2)).toEqual(['4.0', 'M/s']);
+  });
+  it('distinguishes missing metrics from idle values', () => {
+    expect(pct(null)).toBe('—');
+    expect(pct(0)).toBe('0');
+    expect(decimal(null)).toBe('—');
+    expect(decimal(0)).toBe('0.00');
+    expect(loadColor(null)).toBe('var(--muted)');
   });
   it('formats uptime', () => {
     expect(uptime(6 * 86400 + 2 * 3600)).toBe('6 d 2 h');

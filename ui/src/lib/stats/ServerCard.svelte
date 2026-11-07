@@ -14,7 +14,8 @@
   $effect(() => {
     if (sid) return stats.watch(sid);
   });
-  const d = $derived(stats.get(sid)?.latest ?? null);
+  const series = $derived(stats.get(sid));
+  const d = $derived(series?.latest ?? null);
   const phase = $derived(sessions.groupPhase(group));
 </script>
 
@@ -32,7 +33,9 @@
       <span><Clock size={12} />{uptime(d.uptime_s, m.unit_d(), m.unit_h(), m.unit_m())}</span>
     </div>
     <div class="body">
-      <div class="g"><span class="cap">{m.stat_cpu()}</span><Ring value={d.cpu_pct} label={m.stat_cpu()} /></div>
+      <div class="g">
+        <span class="cap">{m.stat_cpu()}</span><Ring value={d.cpu_pct} label={m.stat_cpu()} />
+      </div>
       <div class="g">
         <span class="cap">{m.stat_ram()}</span>
         <Ring value={d.mem_total ? (d.mem_used / d.mem_total) * 100 : 0} label={m.stat_ram()} />
@@ -44,7 +47,9 @@
       </div>
     </div>
   {:else}
-    <p class="wait">{sid ? m.stat_waiting() : m.stat_no_session()}</p>
+    <p class="wait">
+      {series?.unsupported ? m.stat_unsupported() : sid ? m.stat_waiting() : m.stat_no_session()}
+    </p>
   {/if}
 </button>
 

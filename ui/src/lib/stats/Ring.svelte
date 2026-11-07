@@ -2,14 +2,24 @@
   import { loadColor, pct } from './format';
 
   /** Circular gauge with the value in the middle (CPU / RAM). */
-  let { value, size = 64, label }: { value: number; size?: number; label: string } = $props();
+  let {
+    value,
+    size = 64,
+    label
+  }: { value: number | null; size?: number; label: string } = $props();
 
   const r = $derived(size / 2 - 5);
   const c = $derived(2 * Math.PI * r);
   const color = $derived(loadColor(value));
 </script>
 
-<div class="ring" style:width="{size}px" style:height="{size}px" role="img" aria-label="{label} {pct(value)}%">
+<div
+  class="gauge-ring"
+  style:width="{size}px"
+  style:height="{size}px"
+  role="img"
+  aria-label="{label} {pct(value)}%"
+>
   <svg viewBox="0 0 {size} {size}" width={size} height={size} aria-hidden="true">
     <circle cx={size / 2} cy={size / 2} {r} class="track" style:stroke={color} />
     <circle
@@ -19,7 +29,7 @@
       class="bar"
       style:stroke={color}
       stroke-dasharray={c}
-      stroke-dashoffset={c * (1 - Math.min(100, Math.max(0, value)) / 100)}
+      stroke-dashoffset={c * (1 - Math.min(100, Math.max(0, value ?? 0)) / 100)}
       transform="rotate(-90 {size / 2} {size / 2})"
     />
   </svg>
@@ -27,7 +37,7 @@
 </div>
 
 <style>
-  .ring {
+  .gauge-ring {
     position: relative;
     display: grid;
     place-items: center;

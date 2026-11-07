@@ -29,10 +29,17 @@ export function uptime(s: number, d = 'd', h = 'h', m = 'm'): string {
   return `${mins} ${m}`;
 }
 
-export const pct = (v: number): string => `${Math.round(Math.max(0, Math.min(100, v)))}`;
+/** Missing samples are distinct from zero load. */
+export const pct = (v: number | null): string =>
+  v == null ? '—' : `${Math.round(Math.max(0, Math.min(100, v)))}`;
+
+/** Load average or process CPU, retaining the requested precision. */
+export const decimal = (v: number | null, digits = 2): string =>
+  v == null ? '—' : v.toFixed(digits);
 
 /** Ring / bar colour by load: calm → busy → hot. */
-export function loadColor(p: number): string {
+export function loadColor(p: number | null): string {
+  if (p == null) return 'var(--muted)';
   if (p >= 85) return 'var(--danger)';
   if (p >= 60) return 'var(--c-yellow)';
   return 'var(--c-cyan)';

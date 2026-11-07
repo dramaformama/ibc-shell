@@ -13,7 +13,7 @@
   import { sessions, type TabGroup } from '$lib/stores/sessions.svelte';
   import { stats } from '$lib/stores/stats.svelte';
   import CoreBars from './CoreBars.svelte';
-  import { bytes, pct, rate, uptime } from './format';
+  import { bytes, decimal, pct, rate, uptime } from './format';
   import Ring from './Ring.svelte';
   import Spark from './Spark.svelte';
 
@@ -52,10 +52,22 @@
       <p class="big tnum">{pct(d.cpu_pct)}<small>%</small></p>
       <CoreBars cores={d.cpu_cores} />
       <dl class="legend tnum">
-        <div><dt>{m.stat_user()}</dt><dd>{pct(d.cpu_user)}%</dd></div>
-        <div><dt>{m.stat_system()}</dt><dd>{pct(d.cpu_system)}%</dd></div>
-        <div><dt>{m.stat_iowait()}</dt><dd>{pct(d.cpu_iowait)}%</dd></div>
-        <div><dt>{m.stat_steal()}</dt><dd>{pct(d.cpu_steal)}%</dd></div>
+        <div>
+          <dt>{m.stat_user()}</dt>
+          <dd>{pct(d.cpu_user)}%</dd>
+        </div>
+        <div>
+          <dt>{m.stat_system()}</dt>
+          <dd>{pct(d.cpu_system)}%</dd>
+        </div>
+        <div>
+          <dt>{m.stat_iowait()}</dt>
+          <dd>{pct(d.cpu_iowait)}%</dd>
+        </div>
+        <div>
+          <dt>{m.stat_steal()}</dt>
+          <dd>{pct(d.cpu_steal)}%</dd>
+        </div>
       </dl>
     </section>
 
@@ -70,7 +82,7 @@
       />
       <div class="kv tnum">
         <span>{m.stat_current_load()}</span>
-        <b>{d.load1.toFixed(2)} / {d.load5.toFixed(2)} / {d.load15.toFixed(2)}</b>
+        <b>{decimal(d.load1)} / {decimal(d.load5)} / {decimal(d.load15)}</b>
       </div>
     </section>
 
@@ -82,7 +94,8 @@
           <b>{m.stat_used({ used: bytes(d.mem_used), total: bytes(d.mem_total) })}</b>
           <span>{m.stat_cached()} {bytes(d.mem_cached)}</span>
           {#if d.swap_total}<span
-              >{m.stat_swap()} {m.stat_used({ used: bytes(d.swap_used), total: bytes(d.swap_total) })}</span
+              >{m.stat_swap()}
+              {m.stat_used({ used: bytes(d.swap_used), total: bytes(d.swap_total) })}</span
             >{/if}
         </div>
       </div>
@@ -129,7 +142,7 @@
             <tr>
               <td class="muted">{p.pid}</td>
               <td class="cmd" title="{p.command} · {p.user}">{p.command}</td>
-              <td>{p.cpu.toFixed(1)}</td>
+              <td>{decimal(p.cpu, 1)}</td>
               <td>{bytes(p.mem_bytes)}</td>
             </tr>
           {/each}

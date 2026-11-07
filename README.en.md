@@ -22,6 +22,7 @@ Nested folders, country flags, a terminal that stays out of your way, and secret
 - **Honest security.** Host-key changes are a hard block, never auto-accepted. The vault state is always visible.
   No accounts, no cloud, nothing phones home.
 - **Keyboard first.** Command palette on <kbd>⌘K</kbd> / <kbd>Ctrl K</kbd>. Russian and English UI.
+- **Live server status.** Overview cards show CPU, RAM and network activity; an inspector beside the terminal adds load, disk and processes. Linux, through the existing SSH connection, with no agent to install.
 - **Quiet design.** Content first, the terminal is the hero. Light and dark themes.
 
 ## Download

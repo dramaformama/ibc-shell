@@ -316,5 +316,8 @@
   "dash_title": "Overview",
   "dash_servers": "{count} connected",
   "dash_empty_title": "No servers connected",
-  "dash_empty_hint": "Open a server from the sidebar — its live status appears here."
+  "dash_empty_hint": "Open a server from the sidebar — its live status appears here.",
+  "dash_total": "Total",
+  "dash_online": "Online",
+  "dash_offline": "Offline"
 }

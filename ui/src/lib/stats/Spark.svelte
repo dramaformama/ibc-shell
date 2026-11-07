@@ -1,7 +1,7 @@
 <script lang="ts">
   /** Smooth multi-series line chart over the sample history (newest on the right). */
   interface Series {
-    values: number[];
+    values: (number | null)[];
     color: string;
     fill?: boolean;
   }
@@ -9,25 +9,53 @@
 
   const W = 300;
   const top = $derived(
-    Math.max(max ?? 0, ...series.flatMap((s) => s.values), 0.0001) * (max ? 1 : 1.15)
+    Math.max(
+      max ?? 0,
+      ...series.flatMap((s) => s.values.filter((v): v is number => v !== null)),
+      0.0001
+    ) * (max ? 1 : 1.15)
   );
 
-  function path(vs: number[], close: boolean): string {
+  function path(vs: (number | null)[], close: boolean): string {
     if (vs.length < 2) return '';
     const step = W / (vs.length - 1);
-    const pts = vs.map((v, i) => [i * step, height - (v / top) * (height - 4) - 2] as const);
-    let d = `M${pts[0]![0]},${pts[0]![1]}`;
-    for (let i = 1; i < pts.length; i++) {
-      const [x0, y0] = pts[i - 1]!;
-      const [x1, y1] = pts[i]!;
-      const mx = (x0 + x1) / 2;
-      d += ` C${mx},${y0} ${mx},${y1} ${x1},${y1}`;
-    }
-    return close ? `${d} L${W},${height} L0,${height} Z` : d;
+    const parts: string[] = [];
+    let segment = '';
+    let first = 0;
+    let prev: [number, number] | null = null;
+    const finish = () => {
+      if (prev && segment)
+        parts.push(close ? `${segment} L${prev[0]},${height} L${first},${height} Z` : segment);
+      prev = null;
+      segment = '';
+    };
+    vs.forEach((v, i) => {
+      if (v == null) {
+        finish();
+        return;
+      }
+      const x = i * step;
+      const y = height - (v / top) * (height - 4) - 2;
+      if (prev) {
+        const mx = (prev[0] + x) / 2;
+        segment += ` C${mx},${prev[1]} ${mx},${y} ${x},${y}`;
+      } else {
+        first = x;
+        segment = `M${x},${y}`;
+      }
+      prev = [x, y];
+    });
+    finish();
+    return parts.join(' ');
   }
 </script>
 
-<svg viewBox="0 0 {W} {height}" preserveAspectRatio="none" style:height="{height}px" aria-hidden="true">
+<svg
+  viewBox="0 0 {W} {height}"
+  preserveAspectRatio="none"
+  style:height="{height}px"
+  aria-hidden="true"
+>
   {#each [0.25, 0.5, 0.75] as g (g)}
     <line x1="0" x2={W} y1={height * g} y2={height * g} class="grid" />
   {/each}
