@@ -160,6 +160,11 @@ export const commands = {
 	transferConflictReply: (pendingId: ConflictId, choice: ConflictChoice, applyToAll: boolean) => typedError<null, ApiError>(__TAURI_INVOKE("transfer_conflict_reply", { pendingId, choice, applyToAll })),
 	/**  Subscribes to all transfer events (replaces the previous subscriber). */
 	transfersSubscribe: (onEvent: Channel<TransferEvent>) => typedError<null, ApiError>(__TAURI_INVOKE("transfers_subscribe", { onEvent })),
+	/**
+	 *  One-shot sample of the remote Linux host over the session's existing SSH connection
+	 *  (exec channel, independent of the shell). Takes ~1 s. Passive for auto-lock.
+	 */
+	statsSample: (sessionId: SessionId) => typedError<HostStats, ApiError>(__TAURI_INVOKE("stats_sample", { sessionId })),
 	/**  Version / platform / arch. */
 	appInfo: () => typedError<AppInfo, ApiError>(__TAURI_INVOKE("app_info")),
 	/**  Opens an http/https URL in the system browser (validated). */
@@ -619,6 +624,62 @@ export type HostPatch = {
 	tag_ids?: TagId[] | null,
 };
 
+/**  Snapshot of host metrics. Percentages 0–100, memory/disk in bytes, rates in bytes/s. */
+export type HostStats = {
+	/**  Total CPU busy %. */
+	cpu_pct: number | null,
+	/**  Logical cores. */
+	cores: number,
+	/**  Busy % per core. */
+	cpu_cores: (number | null)[],
+	/**  User %. */
+	cpu_user: number | null,
+	/**  System (kernel + irq) %. */
+	cpu_system: number | null,
+	/**  Nice %. */
+	cpu_nice: number | null,
+	/**  IO-wait %. */
+	cpu_iowait: number | null,
+	/**  Steal %. */
+	cpu_steal: number | null,
+	/**  Load average, 1 min. */
+	load1: number | null,
+	/**  Load average, 5 min. */
+	load5: number | null,
+	/**  Load average, 15 min. */
+	load15: number | null,
+	/**  RAM total. */
+	mem_total: number,
+	/**  RAM used (total − available). */
+	mem_used: number,
+	/**  Page cache. */
+	mem_cached: number,
+	/**  Swap total. */
+	swap_total: number,
+	/**  Swap used. */
+	swap_used: number,
+	/**  Root filesystem size. */
+	disk_total: number,
+	/**  Root filesystem used. */
+	disk_used: number,
+	/**  Network receive rate (all non-loopback interfaces). */
+	net_rx_bps: number,
+	/**  Network transmit rate. */
+	net_tx_bps: number,
+	/**  Disk read rate (whole disks). */
+	disk_read_bps: number,
+	/**  Disk write rate (whole disks). */
+	disk_write_bps: number,
+	/**  Uptime, seconds. */
+	uptime_s: number,
+	/**  `PRETTY_NAME` of the OS. */
+	os_name: string | null,
+	/**  Temperature of thermal zone 0, °C. */
+	temp_c: number | null,
+	/**  Top 8 processes by CPU. */
+	procs: ProcRow[],
+};
+
 /**  Identity as seen by the UI: no secrets, no secret ids. */
 export type IdentityDto = {
 	/**  Id. */
@@ -770,6 +831,20 @@ export type PortForward = {
 	auto_start: boolean,
 	/**  Label. */
 	label: string | null,
+};
+
+/**  One process row (top by CPU). */
+export type ProcRow = {
+	/**  Process id. */
+	pid: number,
+	/**  Owner (sanitized). */
+	user: string,
+	/**  CPU % as reported by `ps`. */
+	cpu: number | null,
+	/**  Resident memory, bytes. */
+	mem_bytes: number,
+	/**  Command name (sanitized, ≤ 128 chars). */
+	command: string,
 };
 
 /**  Quick connect target (`user@host:port` from the palette). */

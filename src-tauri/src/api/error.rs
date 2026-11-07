@@ -79,7 +79,7 @@ impl From<ibc_shell_ssh::SshError> for ApiError {
             E::Cancelled => Self::Cancelled,
             E::InvalidChain => Self::JumpCycle,
             E::KnownHosts(_) => Self::Internal("known hosts backend failure".into()),
-            E::Unimplemented => Self::Unsupported,
+            E::Unimplemented | E::Unsupported => Self::Unsupported,
         }
     }
 }

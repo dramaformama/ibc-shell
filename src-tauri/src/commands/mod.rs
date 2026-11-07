@@ -5,5 +5,6 @@ pub mod catalog;
 pub mod identity;
 pub mod session;
 pub mod sftp;
+pub mod stats;
 pub mod tree;
 pub mod vault;

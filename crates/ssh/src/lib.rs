@@ -12,6 +12,8 @@ mod hostkey;
 pub mod policy;
 mod session;
 mod shell;
+mod stats;
+mod stats_parse;
 mod verify;
 
 pub use config::{
@@ -23,6 +25,7 @@ pub use hostkey::{
 };
 pub use session::{Connection, ExecOutput, SubsystemStream, CREDIT_WINDOW};
 pub use shell::{Shell, ShellOutput};
+pub use stats::{sample_stats, HostStats, ProcRow};
 
 /// SSH errors. Messages never contain credentials.
 #[derive(Debug, thiserror::Error)]
@@ -61,6 +64,9 @@ pub enum SshError {
     /// Not implemented yet (Phase 3 forwards).
     #[error("not implemented")]
     Unimplemented,
+    /// Remote host is not Linux (no usable `/proc`).
+    #[error("unsupported remote system")]
+    Unsupported,
 }
 
 /// Connects through `chain` (jump hosts first, target last; each hop's host key is verified
