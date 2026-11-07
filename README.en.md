@@ -84,6 +84,7 @@ The plan lives in [docs/PLAN.md](docs/PLAN.md) (Russian), current progress in [d
 
 Passwords, private keys and passphrases never reach the UI layer except for the one thing you type.
 A changed host key blocks the connection. Remote strings are never rendered as HTML, and remote file names are sanitized before touching your disk.
+The update check reads the public GitHub releases page, sends nothing about you, and can be turned off in Settings.
 Details: [docs/contracts/security.md](docs/contracts/security.md).
 
 ## License

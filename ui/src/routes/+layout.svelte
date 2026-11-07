@@ -17,7 +17,7 @@
   // Load data when the vault opens; wipe it when it locks.
   $effect(() => {
     if (vault.state === 'Unlocked') {
-      void settings.load();
+      void settings.load().then(() => settings.checkUpdate());
       void tree.load();
     } else if (vault.state === 'Locked') {
       tree.data = { folders: [], hosts: [] };

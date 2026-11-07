@@ -138,6 +138,25 @@
         >
       </section>
 
+      <label class="row">
+        <span class="lbl">{m.settings_update_check()}</span>
+        <input
+          type="checkbox"
+          checked={settings.updateCheck}
+          onchange={(e) => settings.setUpdateCheck(e.currentTarget.checked)}
+        />
+      </label>
+      <p class="note">{m.settings_update_note()}</p>
+      {#if settings.update}
+        {@const u = settings.update}
+        <div class="row">
+          <span class="lbl">{m.update_available({ version: u.version })}</span>
+          <button type="button" class="btn" onclick={() => void api.openExternal(u.url)}
+            >{m.update_open()}</button
+          >
+        </div>
+      {/if}
+
       {#if info}
         <p class="note tnum">{m.app_name()} {info.version} · {info.platform} {info.arch}</p>
       {/if}

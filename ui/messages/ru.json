@@ -254,5 +254,9 @@
   "sftp_transfers": "Передачи",
   "settings_autolock": "Автоблокировка при бездействии",
   "settings_autolock_never": "Никогда",
-  "settings_autolock_minutes": "{n} мин"
+  "settings_autolock_minutes": "{n} мин",
+  "settings_update_check": "Проверять обновления",
+  "settings_update_note": "Читает публичную страницу релизов на GitHub. Ничего о вас не отправляется.",
+  "update_available": "Доступна версия {version}",
+  "update_open": "Открыть на GitHub"
 }

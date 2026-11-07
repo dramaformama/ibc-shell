@@ -1,6 +1,7 @@
 /** User settings: theme, language, remembered layout, recent flags. */
 import { api } from '$lib/api';
 import { getLocale, setLocale } from '$lib/paraglide/runtime.js';
+import { checkForUpdate, UPDATE_CHECK_KEY, type UpdateInfo } from '$lib/util/update';
 import { AUTOLOCK_DEFAULT, AUTOLOCK_KEY, parseAutolock } from '$lib/util/autolock';
 import { ui } from './ui.svelte';
 
@@ -30,6 +31,10 @@ class SettingsStore {
   recentFlags = $state.raw<string[]>([]);
   /** Idle minutes before the vault locks (0 = never). */
   autolockMinutes = $state(AUTOLOCK_DEFAULT);
+  /** Whether to look for a newer release on GitHub at start. */
+  updateCheck = $state(true);
+  /** A newer release, once found. */
+  update = $state.raw<UpdateInfo | null>(null);
 
   constructor() {
     if (typeof matchMedia !== 'undefined')
@@ -43,11 +48,13 @@ class SettingsStore {
   }
 
   async load(): Promise<void> {
-    const [width, recent, autolock] = await Promise.all([
+    const [width, recent, autolock, upd] = await Promise.all([
       api.settingsGet('ui.sidebar_width'),
       api.settingsGet('ui.flag_recent'),
-      api.settingsGet(AUTOLOCK_KEY)
+      api.settingsGet(AUTOLOCK_KEY),
+      api.settingsGet(UPDATE_CHECK_KEY)
     ]);
+    if (upd.status === 'ok' && upd.data === false) this.updateCheck = false;
     if (autolock.status === 'ok')
       this.autolockMinutes = parseAutolock(autolock.data ?? AUTOLOCK_DEFAULT);
     if (width.status === 'ok' && typeof width.data === 'number')
@@ -74,6 +81,21 @@ class SettingsStore {
   /** Changes the language; paraglide reloads the document. */
   setLanguage(locale: 'en' | 'ru'): void {
     void setLocale(locale);
+  }
+
+  setUpdateCheck(on: boolean): void {
+    this.updateCheck = on;
+    void api.settingsSet(UPDATE_CHECK_KEY, on);
+    if (on) void this.checkUpdate();
+    else this.update = null;
+  }
+
+  /** Looks for a newer release (no-op when disabled or already found). */
+  async checkUpdate(): Promise<void> {
+    if (!this.updateCheck || this.update) return;
+    const info = await api.appInfo();
+    if (info.status !== 'ok') return;
+    this.update = await checkForUpdate(info.data.version);
   }
 
   setAutolock(minutes: number): void {

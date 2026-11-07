@@ -254,5 +254,9 @@
   "sftp_transfers": "Transfers",
   "settings_autolock": "Auto-lock when idle",
   "settings_autolock_never": "Never",
-  "settings_autolock_minutes": "{n} min"
+  "settings_autolock_minutes": "{n} min",
+  "settings_update_check": "Check for updates",
+  "settings_update_note": "Reads the public GitHub releases page. Nothing about you is sent.",
+  "update_available": "Version {version} is available",
+  "update_open": "Open on GitHub"
 }

@@ -96,3 +96,7 @@ Typed passwords / passphrases / kbd answers arrive as `SecretInput` (`#[serde(tr
 8. CSP unchanged or ADR exists.
 9. RNG: only OsRng / `getrandom`.
 10. New deps reviewed (licence, maintenance, unsafe usage).
+
+## Update check (ADR-008)
+- On start (vault unlocked) the UI reads `https://api.github.com/repos/dramaformama/ibc-shell/releases/latest` (GET, no credentials, no referrer, no identifiers, 8 s timeout). Setting `app.update_check` (default on) turns it off in Settings.
+- CSP `connect-src` allows exactly this one extra host (`https://api.github.com`). Nothing is downloaded or installed; if a newer stable release exists, Settings shows a link that opens via `open_external`. Links outside `github.com/dramaformama/ibc-shell/releases/` are replaced by the releases page.
