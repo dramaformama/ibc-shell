@@ -68,7 +68,14 @@ impl Store {
             }
             tx.execute(
                 &format!("INSERT INTO known_host({KH_COLS}) VALUES(?1,?2,?3,?4,?5,?6)"),
-                params![KnownHostId::new_v7(), kh.host_pattern, kh.key_type, kh.key_blob, kh.fingerprint, now_ms()],
+                params![
+                    KnownHostId::new_v7(),
+                    kh.host_pattern,
+                    kh.key_type,
+                    kh.key_blob,
+                    kh.fingerprint,
+                    now_ms()
+                ],
             )?;
             Ok(())
         })

@@ -177,7 +177,7 @@ impl<K: KnownHosts, P: Prompter> VerifyCtx<'_, K, P> {
                     self.error = Some(SshError::Cancelled);
                     return false;
                 }
-                self.after_accept(decision, &pattern, key_type, blob, fp)
+                self.after_accept(decision, &pattern, key_type, &blob, fp)
             }
         }
     }
@@ -189,10 +189,10 @@ impl<K: KnownHosts, P: Prompter> VerifyCtx<'_, K, P> {
         decision: HostKeyDecision,
         pattern: &str,
         key_type: String,
-        blob: Vec<u8>,
+        blob: &[u8],
         fp: String,
     ) -> bool {
-        match self.verdict(pattern, &key_type, &blob) {
+        match self.verdict(pattern, &key_type, blob) {
             None => false,
             Some(Verdict::Known) => true,
             Some(Verdict::Changed(old)) => {
@@ -204,14 +204,14 @@ impl<K: KnownHosts, P: Prompter> VerifyCtx<'_, K, P> {
                 let entry = KnownKey {
                     id: String::new(),
                     key_type: key_type.clone(),
-                    key_blob: blob.clone(),
+                    key_blob: blob.to_vec(),
                     fingerprint: fp.clone(),
                 };
                 let Err(e) = self.known.add(pattern, &entry) else {
                     return true;
                 };
                 // Lost a race with another writer: report a change if that is what it was.
-                self.error = Some(match self.verdict(pattern, &key_type, &blob) {
+                self.error = Some(match self.verdict(pattern, &key_type, blob) {
                     Some(Verdict::Changed(old)) => self.changed(key_type, old, fp),
                     _ => SshError::KnownHosts(e),
                 });

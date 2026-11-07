@@ -62,28 +62,31 @@ mod tests {
     #[test]
     fn parses_like_the_ui() {
         let m = |v: serde_json::Value| timeout_from_setting(Some(&v));
-        assert_eq!(m(json!(5)), Some(Duration::from_secs(300)));
+        assert_eq!(m(json!(5)), Some(Duration::from_mins(5)));
         assert_eq!(m(json!(0)), None);
-        assert_eq!(m(json!(1.4)), Some(Duration::from_secs(60)));
+        assert_eq!(m(json!(1.4)), Some(Duration::from_mins(1)));
         for bad in [json!(-1), json!(100_000), json!("5"), json!(null)] {
-            assert_eq!(m(bad), Some(Duration::from_secs(900)));
+            assert_eq!(m(bad), Some(Duration::from_mins(15)));
         }
-        assert_eq!(timeout_from_setting(None), Some(Duration::from_secs(900)));
+        assert_eq!(timeout_from_setting(None), Some(Duration::from_mins(15)));
     }
 
     #[test]
     fn store_setting_reaches_the_vault() {
         let store = Arc::new(Store::open_in_memory().unwrap());
-        let vault = Vault::new(store.clone(), Arc::new(ibc_vault::MemoryKeyStore::default()));
+        let vault = Vault::new(
+            store.clone(),
+            Arc::new(ibc_vault::MemoryKeyStore::default()),
+        );
         vault.init(ibc_vault::VaultMode::OsKeychain, None).unwrap();
         assert_eq!(
             apply_from_store(&store, &vault),
-            Some(Duration::from_secs(900))
+            Some(Duration::from_mins(15))
         );
         store.setting_set(AUTOLOCK_KEY, &json!(5)).unwrap();
         assert_eq!(
             apply_from_store(&store, &vault),
-            Some(Duration::from_secs(300))
+            Some(Duration::from_mins(5))
         );
         store.setting_set(AUTOLOCK_KEY, &json!(0)).unwrap();
         assert_eq!(apply_from_store(&store, &vault), None);

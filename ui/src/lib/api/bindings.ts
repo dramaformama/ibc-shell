@@ -75,7 +75,7 @@ export const commands = {
 	knownHostDelete: (id: KnownHostId) => typedError<null, ApiError>(__TAURI_INVOKE("known_host_delete", { id })),
 	/**  Reads a UI setting. */
 	settingsGet: (key: string) => typedError<Value | null, ApiError>(__TAURI_INVOKE("settings_get", { key })),
-	/**  Writes a UI setting. */
+	/**  Writes a UI setting; `security.autolock_minutes` is applied to the vault at once (ADR-007). */
 	settingsSet: (key: string, value: Value) => typedError<null, ApiError>(__TAURI_INVOKE("settings_set", { key, value })),
 	/**  Lock state, mode, biometric availability. */
 	vaultStatus: () => typedError<VaultStatus, ApiError>(__TAURI_INVOKE("vault_status")),
@@ -87,10 +87,16 @@ export const commands = {
 	vaultLock: () => typedError<null, ApiError>(__TAURI_INVOKE("vault_lock")),
 	/**  Rewraps the DEK. */
 	vaultChangePassword: (oldPassword: string, newPassword: string) => typedError<null, ApiError>(__TAURI_INVOKE("vault_change_password", { oldPassword, newPassword })),
-	/**  Writes a `.tlvault` backup (password ≥ 10 chars). */
-	vaultExport: (path: string, password: string) => typedError<null, ApiError>(__TAURI_INVOKE("vault_export", { path, password })),
-	/**  Merges a `.tlvault` backup; emits `tree://changed`. */
-	vaultImport: (path: string, password: string) => typedError<ImportSummary, ApiError>(__TAURI_INVOKE("vault_import", { path, password })),
+	/**
+	 *  Shows the native "save" dialog (backend side, ADR-007) and writes a `.tlvault` backup
+	 *  there (password ≥ 10 chars). The webview never names the path. `false` = cancelled.
+	 */
+	vaultExport: (password: string) => typedError<boolean, ApiError>(__TAURI_INVOKE("vault_export", { password })),
+	/**
+	 *  Shows the native "open" dialog (backend side, ADR-007) and merges the chosen `.tlvault`
+	 *  backup; emits `tree://changed`. `null` = cancelled.
+	 */
+	vaultImport: (password: string) => typedError<ImportSummary | null, ApiError>(__TAURI_INVOKE("vault_import", { password })),
 	/**
 	 *  Starts connecting to a stored host. Resolves as soon as the session task is spawned;
 	 *  progress, prompts and failure arrive on `on_event`, terminal output on `on_data`.

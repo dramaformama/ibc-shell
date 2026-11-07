@@ -22,7 +22,7 @@ impl Default for Idle {
 }
 
 /// `security.autolock_minutes` default (15 min).
-pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(15 * 60);
+pub const DEFAULT_TIMEOUT: Duration = Duration::from_mins(15);
 
 impl Idle {
     fn with<R>(&self, f: impl FnOnce(&mut State) -> R) -> R {

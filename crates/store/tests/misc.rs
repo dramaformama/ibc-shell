@@ -137,7 +137,10 @@ fn known_host_add_new_never_replaces_a_key() {
     s.known_host_add_new(kh("ssh-ed25519", 1)).unwrap();
     // Different key, same or other type: refused, stored key untouched.
     for k in [kh("ssh-ed25519", 2), kh("ecdsa-sha2-nistp256", 3)] {
-        assert!(matches!(s.known_host_add_new(k), Err(StoreError::Conflict(_))));
+        assert!(matches!(
+            s.known_host_add_new(k),
+            Err(StoreError::Conflict(_))
+        ));
     }
     let found = s.known_host_lookup("h.x").unwrap();
     assert_eq!(found.len(), 1);
