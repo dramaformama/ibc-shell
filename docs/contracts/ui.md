@@ -16,7 +16,7 @@ Minimal, quiet chrome, content first. One accent color. No gradients, no heavy s
 - Sizes: 12 / 13 (base) / 15 / 18. Radius: 6 (controls), 10 (cards/dialogs). Spacing 4-pt grid.
 - Dark (default): bg `#0E0F12`, surface `#16181D`, surface-2 `#1D2026`, border `#262A31`, text `#E6E8EB`, muted `#8B929C`, accent `#5B8CFF`, ok `#3CCB7F`, warn `#F5B547`, danger `#F06161`.
 - Light: bg `#FAFAFB`, surface `#FFFFFF`, surface-2 `#F2F3F5`, border `#E3E5E8`, text `#16181D`, muted `#6B7280`, same accents slightly darker.
-- Terminal themes shipped: ibc server Dark, ibc server Light, Solarized Dark/Light, Dracula-like "Night" (own palette, no trademark), Nord-like "Frost" (own palette). Theme = 16 ANSI + fg/bg/cursor/selection.
+- Terminal themes shipped: iBC Shell Dark, iBC Shell Light, Solarized Dark/Light, Dracula-like "Night" (own palette, no trademark), Nord-like "Frost" (own palette). Theme = 16 ANSI + fg/bg/cursor/selection.
 
 ## Layout (desktop)
 ```

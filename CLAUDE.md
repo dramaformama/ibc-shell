@@ -1,8 +1,8 @@
-# ibc server — project rules for Claude Code
+# iBC Shell — project rules for Claude Code
 
 Cross-platform SSH + SFTP client (macOS, Windows, Linux, iOS, Android).
 Goals: lightweight, minimal, beautiful, fast, modern, secure. Server folders + country flags.
-Name: "ibc server" (crates `ibc-*`, identifier `app.ibcserver`).
+Name: "iBC Shell" (crates `ibc-*`, identifier `app.ibcserver`).
 
 - Full plan & phases: `docs/PLAN.md` (Russian, for humans + orchestrator).
 - Source of truth for code: `docs/contracts/*.md` (FROZEN after Phase 0; changes only via ADR in `docs/adr/`).

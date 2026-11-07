@@ -1,4 +1,11 @@
-# ibc server
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/logo/logo-white.svg">
+    <img src="docs/brand/logo/logo-dark.svg" alt="iBC Shell" height="72">
+  </picture>
+</p>
+
+# iBC Shell
 
 **English** · [Русский](README.md)
 

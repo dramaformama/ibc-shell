@@ -1,4 +1,4 @@
-//! ibc server app shell: commands, channels, state, capabilities.
+//! iBC Shell app shell: commands, channels, state, capabilities.
 
 use std::sync::Arc;
 

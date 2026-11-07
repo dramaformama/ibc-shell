@@ -73,8 +73,8 @@ export function toPatch(before: DefaultsForm, after: DefaultsForm): Partial<Defa
 
 /** Terminal themes shipped (ui.md). Names are proper nouns, not translated. */
 export const TERM_THEMES = [
-  { id: 'ibc-dark', name: 'ibc server Dark' },
-  { id: 'ibc-light', name: 'ibc server Light' },
+  { id: 'ibc-dark', name: 'iBC Shell Dark' },
+  { id: 'ibc-light', name: 'iBC Shell Light' },
   { id: 'solarized-dark', name: 'Solarized Dark' },
   { id: 'solarized-light', name: 'Solarized Light' },
   { id: 'night', name: 'Night' },

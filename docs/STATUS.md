@@ -1,6 +1,6 @@
 # STATUS (orchestrator keeps ≤ 40 lines)
 
-Name: ibc server (crates ibc-*, id app.ibcserver). Phase 1 DONE (G1 passed). Next: Phase 2.
+Name: iBC Shell (crates ibc-*, id app.ibcserver). Phase 1 DONE (G1 passed). Next: Phase 2.
 Contracts: FROZEN v1
 
 ## Done

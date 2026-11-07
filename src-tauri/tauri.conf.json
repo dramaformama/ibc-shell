@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "ibc server",
+  "productName": "iBC Shell",
   "version": "0.1.0",
   "identifier": "app.ibcserver.desktop",
   "build": {
@@ -14,7 +14,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "ibc server",
+        "title": "iBC Shell",
         "width": 1100,
         "height": 720,
         "minWidth": 480,
@@ -29,6 +29,6 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": ["icons/icon.png"]
+    "icon": ["icons/32x32.png","icons/128x128.png","icons/128x128@2x.png","icons/icon.icns","icons/icon.ico"]
   }
 }
