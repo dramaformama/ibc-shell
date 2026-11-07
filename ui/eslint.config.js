@@ -5,7 +5,15 @@ import globals from 'globals';
 import ts from 'typescript-eslint';
 
 export default ts.config(
-  { ignores: ['build/', '.svelte-kit/', 'node_modules/', 'src/lib/api/bindings.ts'] },
+  {
+    ignores: [
+      'build/',
+      '.svelte-kit/',
+      'node_modules/',
+      'src/lib/api/bindings.ts',
+      'src/lib/paraglide/'
+    ]
+  },
   js.configs.recommended,
   ...ts.configs.recommended,
   ...svelte.configs['flat/recommended'],
@@ -13,6 +21,10 @@ export default ts.config(
   ...svelte.configs['flat/prettier'],
   {
     languageOptions: { globals: { ...globals.browser, ...globals.node } }
+  },
+  {
+    // Local, throwaway Sets (selection math, drag keys) are not reactive state.
+    rules: { 'svelte/prefer-svelte-reactivity': 'off' }
   },
   {
     files: ['**/*.svelte', '**/*.svelte.ts'],

@@ -4,16 +4,18 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite dev",
-    "build": "vite build",
+    "dev": "pnpm i18n && vite dev",
+    "build": "pnpm i18n && vite build",
     "preview": "vite preview",
-    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "check": "pnpm i18n && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "lint": "prettier --check . && eslint .",
     "format": "prettier --write .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "i18n": "paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@inlang/paraglide-js": "^3.2.0",
     "@sveltejs/adapter-static": "^4.0.1",
     "@sveltejs/kit": "^3.1.1",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
@@ -33,6 +35,8 @@
     "vitest": "^5.1.0"
   },
   "dependencies": {
-    "@tauri-apps/api": "^2.12.4"
+    "@lucide/svelte": "^1.69.0",
+    "@tauri-apps/api": "^2.12.4",
+    "bits-ui": "^2.20.6"
   }
 }

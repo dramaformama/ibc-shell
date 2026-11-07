@@ -6,3 +6,4 @@ ui/.svelte-kit/
 src-tauri/gen/
 *.log
 .env
+ui/src/lib/paraglide/
