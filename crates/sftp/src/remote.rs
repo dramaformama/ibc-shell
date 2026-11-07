@@ -46,7 +46,14 @@ pub(crate) fn map_err(e: &CErr) -> SftpError {
                 SftpError::Protocol(format!("{c}: {msg}"))
             }
         },
-        other => SftpError::Protocol(other.to_string().chars().take(160).collect()),
+        other => SftpError::Protocol(
+            other
+                .to_string()
+                .chars()
+                .filter(|c| !c.is_control())
+                .take(160)
+                .collect(),
+        ),
     }
 }
 

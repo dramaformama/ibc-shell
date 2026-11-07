@@ -32,19 +32,59 @@ Nested folders, country flags, a terminal that stays out of your way, and secret
   <img src="docs/brand/screenshots/overview-light.png" alt="iBC Shell — Overview" width="1440">
 </picture>
 
+Overview: folders, server availability, search.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/brand/screenshots/status-dark.png">
+  <img src="docs/brand/screenshots/status-light.png" alt="iBC Shell — Server status" width="1440">
+</picture>
+
+Server status: per-core CPU, memory, disk, network, connections.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/brand/screenshots/docker-dark.png">
+  <img src="docs/brand/screenshots/docker-light.png" alt="iBC Shell — Docker" width="1440">
+</picture>
+
+Docker across all connected servers: state, ports, load, start, stop, restart.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/brand/screenshots/logs-dark.png">
+  <img src="docs/brand/screenshots/logs-light.png" alt="iBC Shell — Container logs" width="1440">
+</picture>
+
+Container logs in their own colours, with wrapped lines.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/brand/screenshots/domains-dark.png">
+  <img src="docs/brand/screenshots/domains-light.png" alt="iBC Shell — Domains" width="1440">
+</picture>
+
+SSL certificate expiry for the domains on every server.
+
 Demo mode: sample servers and metrics.
+
+## What's new
+
+- **Docker.** A server's containers with state, ports and load; start, stop and restart (stop and restart ask first); logs. The Docker tab shows every connected server at once.
+- **SSL certificates.** Finds Let's Encrypt, nginx, Apache and Caddy certificates, shows expiry and warns ahead. The Domains tab gathers them from all servers.
+- **macOS menu-bar icon.** A short summary of your servers, one click to jump to a server. Can be turned off in settings.
+- **Per-core CPU load** split into user, system, nice, iowait and steal.
+- **Snippets without opening a server.** A tab of their own, run on one or several servers.
+- **Folders on the overview**, a folder filter, connect a whole folder.
+- **Everything over the SSH connection that is already open.** Nothing is installed on the server and no ports are opened.
 
 ## Download
 
 Installers are on the [Releases page](https://github.com/dramaformama/ibc-shell/releases/latest), with a `SHA256SUMS.txt` next to them to verify the download.
 
-| Platform             | File                         | State             |
-| -------------------- | ---------------------------- | ----------------- |
-| macOS, Apple Silicon | `iBC Shell_…_aarch64.dmg`    | built in CI       |
-| macOS, Intel         | `iBC Shell_…_x64.dmg`        | built in CI       |
-| Windows 10/11        | `iBC Shell_…_x64-setup.exe`  | built in CI       |
-| Linux                | `.AppImage` and `.deb`       | built in CI       |
-| iOS, Android         | —                            | planned (Phase 4) |
+| Platform             | File                        | State             |
+| -------------------- | --------------------------- | ----------------- |
+| macOS, Apple Silicon | `iBC Shell_…_aarch64.dmg`   | built in CI       |
+| macOS, Intel         | `iBC Shell_…_x64.dmg`       | built in CI       |
+| Windows 10/11        | `iBC Shell_…_x64-setup.exe` | built in CI       |
+| Linux                | `.AppImage` and `.deb`      | built in CI       |
+| iOS, Android         | —                           | planned (Phase 4) |
 
 The builds are not signed with a paid certificate, so the system warns on first launch. That is expected; check the sum from `SHA256SUMS.txt`.
 
@@ -56,16 +96,17 @@ A release is made by a tag: `git tag v0.1.0 && git push origin v0.1.0`. The [wor
 
 ## What works today
 
-| Area                                                                              | State                                      |
-| --------------------------------------------------------------------------------- | ------------------------------------------ |
-| Encrypted vault (Argon2id + XChaCha20-Poly1305), host store, folder tree          | done, tested                               |
-| SSH client: password, key, keyboard-interactive, host-key checks, jump hosts      | done, tested against real OpenSSH          |
-| SFTP engine: queue, resume, pause, conflict policies, remote-to-remote            | done, tested                               |
-| Terminal UI (xterm.js tabs, search, paste safety)                                 | done, not yet run against the real backend |
-| SFTP UI (two panes, transfer queue)                                               | done, not yet run against the real backend |
-| App shell wiring (Tauri commands)                                                 | in progress                                |
-| Port forwarding, `ssh_config` import, key manager, split panes, snippets, backups | planned (Phase 3)                          |
-| Mobile                                                                            | planned (Phase 4)                          |
+| Area                                                                           | State                        |
+| ------------------------------------------------------------------------------ | ---------------------------- |
+| Encrypted vault (Argon2id + XChaCha20-Poly1305), host store, folder tree       | done, tested                 |
+| SSH client: password, key, keyboard-interactive, host-key checks, jump hosts   | done, tested against OpenSSH |
+| SFTP engine: queue, resume, pause, conflict policies, remote-to-remote         | done, tested                 |
+| Terminal, files, overview, server status, Docker, SSL, snippets, menu-bar icon | done, working in the app     |
+| Installers for macOS, Windows, Linux                                           | built in CI                  |
+| Port forwarding, `ssh_config` import, key manager, split panes, backups        | planned (Phase 3)            |
+| Mobile                                                                         | planned (Phase 4)            |
+
+Tested on a Mac. Docker and SSL are checked on demo data, not yet on a real server. The Windows and Linux builds have not been run on real machines.
 
 Nothing here is benchmarked against other clients yet. Numbers will go in `docs/bench.md` once they are measured.
 
@@ -105,4 +146,4 @@ Details: [docs/contracts/security.md](docs/contracts/security.md).
 
 ## License
 
-MIT, as declared in `Cargo.toml`.
+MIT, see [LICENSE](LICENSE).

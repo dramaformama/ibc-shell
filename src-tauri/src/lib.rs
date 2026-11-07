@@ -19,6 +19,7 @@ pub mod tray;
 #[cfg(not(desktop))]
 #[path = "tray_stub.rs"]
 pub mod tray;
+pub mod window;
 
 /// Opens the store in the app data dir and builds [`state::AppState`].
 fn init_state(app: &tauri::AppHandle) -> Result<state::AppState, Box<dyn std::error::Error>> {
@@ -29,11 +30,27 @@ fn init_state(app: &tauri::AppHandle) -> Result<state::AppState, Box<dyn std::er
     Ok(state::AppState::new(store, vault))
 }
 
+/// Release builds drop the panic message (it could carry data from a secret-handling frame);
+/// the location stays for diagnosis. Debug builds keep the default hook.
+fn install_panic_hook() {
+    if cfg!(debug_assertions) {
+        return;
+    }
+    std::panic::set_hook(Box::new(|info| {
+        if let Some(loc) = info.location() {
+            eprintln!("ibc-shell panicked at {}:{}", loc.file(), loc.line());
+        } else {
+            eprintln!("ibc-shell panicked");
+        }
+    }));
+}
+
 /// Builds and runs the Tauri application.
 ///
 /// # Panics
 /// Tauri aborts the process if the runtime cannot start.
 pub fn run() {
+    install_panic_hook();
     let specta = api::builder();
     let typed = specta.invoke_handler();
     let raw: Box<dyn Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync> =
@@ -61,6 +78,7 @@ pub fn run() {
             autolock::apply_from_store(&st.store, &st.vault);
             autolock::spawn_sweeper(app.handle().clone(), st.vault.clone());
             app.manage(st);
+            window::create_main(app)?;
             Ok(())
         })
         .run(tauri::generate_context!());

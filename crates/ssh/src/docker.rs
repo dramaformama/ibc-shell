@@ -172,7 +172,8 @@ fn clean_log(s: &str) -> String {
                 let mut params = String::new();
                 for d in chars.by_ref() {
                     if ('@'..='~').contains(&d) {
-                        let sgr = d == 'm' && params.chars().all(|p| p.is_ascii_digit() || p == ';');
+                        let sgr =
+                            d == 'm' && params.chars().all(|p| p.is_ascii_digit() || p == ';');
                         if sgr && params.len() <= 32 {
                             out.push_str("\u{1b}[");
                             out.push_str(&params);
@@ -338,7 +339,10 @@ mod tests {
         assert!(valid_id("a1b2c3d4e5f6"));
         assert!(!valid_id("web; rm -rf /"));
         assert!(!valid_id("abc"));
-        assert_eq!(clean_log("\u{1b}[31mred\u{1b}[0m ok\r\n"), "\u{1b}[31mred\u{1b}[0m ok\n");
+        assert_eq!(
+            clean_log("\u{1b}[31mred\u{1b}[0m ok\r\n"),
+            "\u{1b}[31mred\u{1b}[0m ok\n"
+        );
         assert_eq!(clean_log("\u{1b}[2Jx\u{1b}]0;t\u{7}y"), "x]0;ty");
         assert_eq!(size("1.5KiB"), Some(1536));
     }

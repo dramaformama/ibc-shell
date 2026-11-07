@@ -168,8 +168,10 @@ fn import_from_path(
     if bytes.len() > MAX_KEY_FILE {
         return Err(ApiError::Validation("key file too large".into()));
     }
-    let pem = String::from_utf8(bytes.to_vec())
-        .map_err(|_| ApiError::Validation("invalid key".into()))?;
+    // `from_utf8` on the borrowed bytes: a failure leaves no unzeroized copy behind.
+    let pem = std::str::from_utf8(&bytes)
+        .map_err(|_| ApiError::Validation("invalid key".into()))?
+        .to_owned();
     let label = path
         .file_name()
         .map_or_else(|| "key".to_owned(), |n| n.to_string_lossy().into_owned());
