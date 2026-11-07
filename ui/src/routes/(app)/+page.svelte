@@ -7,6 +7,8 @@
   import { mod } from '$lib/util/platform';
 
   const tab = $derived(sessions.active);
+  // SFTP is lazy-loaded (ui.md performance rules); one screen per SFTP tab.
+  const loadSftp = () => import('$lib/sftp/SftpScreen.svelte');
 </script>
 
 <!-- Terminal tabs are mounted by TerminalHost (lazy); SFTP content is mounted here by sftp-ui. -->
@@ -14,7 +16,11 @@
   {#await import('./term/TerminalHost.svelte') then { default: TerminalHost }}
     <TerminalHost />
   {/await}
-  {#if tab && tab.kind !== 'terminal'}
+  {#if tab?.kind === 'sftp'}
+    {#await loadSftp() then { default: SftpScreen }}
+      {#key tab.id}<SftpScreen {tab} />{/key}
+    {/await}
+  {:else if tab && tab.kind !== 'terminal'}
     <div class="host-card">
       <Flag code={tab.flag} size={20} />
       <span>{tab.label}</span>
@@ -41,6 +47,9 @@
     min-height: 0;
     display: grid;
     place-items: center;
+  }
+  .stage[data-tab-kind='sftp'] {
+    display: flex;
   }
   .welcome {
     display: grid;
