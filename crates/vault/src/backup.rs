@@ -73,8 +73,14 @@ pub(crate) fn export(vault: &Vault, path: &Path, password: &SecretString) -> Res
 
     let tmp = path.with_extension("tlvault.tmp");
     let write = || -> std::io::Result<()> {
+        // Remove a stale tmp (a symlink is unlinked, never followed), then create exclusively.
+        match std::fs::symlink_metadata(&tmp) {
+            Ok(_) => std::fs::remove_file(&tmp)?,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => return Err(e),
+        }
         let mut opts = std::fs::OpenOptions::new();
-        opts.write(true).create(true).truncate(true);
+        opts.write(true).create_new(true);
         #[cfg(unix)]
         std::os::unix::fs::OpenOptionsExt::mode(&mut opts, 0o600);
         let mut f = opts.open(&tmp)?;
@@ -108,6 +114,8 @@ fn decrypt(path: &Path, password: &SecretString) -> Result<Payload> {
         return Err(VaultError::Corrupt);
     }
     let params = KdfParams::from_cbor(&bytes[14..14 + kdf_len])?;
+    // Attacker-chosen cost must not exhaust memory/CPU before authentication.
+    params.check_backup_bounds()?;
     let key = params.derive(password)?;
     let (header, ct) = bytes.split_at(header_len);
     let nonce = &header[header_len - NONCE_LEN..];

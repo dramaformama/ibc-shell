@@ -12,6 +12,10 @@ use crate::{Result, VaultError};
 
 /// `XChaCha20` nonce length.
 pub const NONCE_LEN: usize = 24;
+/// Max Argon2 memory (KiB) accepted from a backup file: 256 MiB.
+pub const BACKUP_MAX_M: u32 = 262_144;
+/// Max Argon2 iterations accepted from a backup file.
+pub const BACKUP_MAX_T: u32 = 10;
 /// Poly1305 tag length.
 pub const TAG_LEN: usize = 16;
 
@@ -96,6 +100,14 @@ impl KdfParams {
     /// Custom cost with a fresh salt.
     pub fn with_cost(m: u32, t: u32, p: u32) -> Result<Self> {
         Ok(Self { m, t, p, salt: random_bytes::<16>()?.to_vec() })
+    }
+
+    /// Extra bound for params read from an (untrusted) backup file: m <= 256 MiB, t <= 10.
+    pub fn check_backup_bounds(&self) -> Result<()> {
+        if self.m > BACKUP_MAX_M || self.t > BACKUP_MAX_T {
+            return Err(VaultError::Corrupt);
+        }
+        Ok(())
     }
 
     /// Derives a 32-byte key. Params read from disk are bounds-checked first.

@@ -13,7 +13,11 @@ pub(crate) fn map_russh(e: &russh::Error) -> SshError {
         }
         E::IO(io) => SshError::Network(format!("{:?}", io.kind())),
         E::Disconnect | E::HUP | E::SendError => SshError::Network("disconnected".into()),
-        other => SshError::Protocol(other.to_string()),
+        // Never forward free-form text from the library: fixed strings only.
+        E::NotAuthenticated | E::WrongServerSig | E::Kex | E::Inconsistent => {
+            SshError::Protocol("protocol violation".into())
+        }
+        _ => SshError::Protocol("protocol error".into()),
     }
 }
 
@@ -32,6 +36,20 @@ mod tests {
                 assert_eq!(s, "ConnectionRefused");
             }
             other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn other_errors_use_fixed_strings() {
+        for e in [
+            russh::Error::Inconsistent,
+            russh::Error::Version,
+            russh::Error::Keys(russh::keys::Error::CouldNotReadKey),
+        ] {
+            match map_russh(&e) {
+                SshError::Protocol(s) => assert!(s == "protocol violation" || s == "protocol error", "{s}"),
+                other => panic!("{other:?}"),
+            }
         }
     }
 

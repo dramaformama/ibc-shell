@@ -24,22 +24,35 @@ const TCP_TIMEOUT: Duration = Duration::from_secs(15);
 /// Maximum chain length (up to 3 jump hosts + target).
 pub(crate) const MAX_HOPS: usize = 4;
 
-/// Runs `fut` while serving host key verification requests from the handler.
+/// Network phases without user interaction (key exchange, `none` probe) must finish within this.
+/// Time spent waiting for the user (host key prompts) does not count.
+const PHASE_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// Runs `fut` while serving host key verification requests from the handler. Fails with
+/// [`SshError::Timeout`] if `limit` passes without progress; the clock restarts after every
+/// served verification request so user prompts never time out.
 async fn drive<T, F, K, P>(
     fut: F,
     rx: &mut mpsc::UnboundedReceiver<VerifyReq>,
     ctx: &mut VerifyCtx<'_, K, P>,
-) -> T
+    limit: Duration,
+) -> Result<T, SshError>
 where
     F: Future<Output = T>,
     K: KnownHosts,
     P: Prompter,
 {
     tokio::pin!(fut);
+    let sleep = tokio::time::sleep(limit);
+    tokio::pin!(sleep);
     loop {
         tokio::select! {
-            out = &mut fut => return out,
-            Some(req) = rx.recv() => ctx.handle(req).await,
+            out = &mut fut => return Ok(out),
+            Some(req) = rx.recv() => {
+                ctx.handle(req).await;
+                sleep.as_mut().reset(tokio::time::Instant::now() + limit);
+            }
+            () = &mut sleep => return Err(SshError::Timeout),
         }
     }
 }
@@ -87,13 +100,25 @@ where
     };
     let cfg = client_config(hop.keepalive_s, hop.legacy_algorithms);
     prompter.progress(&hop.label, ConnectStep::Handshake);
-    let connected = drive(client::connect_stream(cfg, stream, handler), &mut rx, &mut ctx).await;
+    let connected = drive(
+        client::connect_stream(cfg, stream, handler),
+        &mut rx,
+        &mut ctx,
+        PHASE_TIMEOUT,
+    )
+    .await?;
     let mut handle = match connected {
         Ok(h) => h,
         Err(e) => return Err(ctx.error.take().unwrap_or_else(|| map_russh(&e))),
     };
     // The `none` probe waits for the key exchange and tells us which methods are offered.
-    let probe = drive(handle.authenticate_none(hop.username.clone()), &mut rx, &mut ctx).await;
+    let probe = drive(
+        handle.authenticate_none(hop.username.clone()),
+        &mut rx,
+        &mut ctx,
+        PHASE_TIMEOUT,
+    )
+    .await?;
     prompter.progress(&hop.label, ConnectStep::Authenticating);
     let remaining = match probe {
         Ok(AuthResult::Success) => None,
@@ -167,4 +192,58 @@ where
     }
     let last = handles.pop().ok_or(SshError::InvalidChain)?;
     Ok(Connection::new(last, handles, banner))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::KbdInteractiveRequest;
+    use crate::hostkey::{HostKeyDecision, HostKeyInfo, KnownKey};
+    use secrecy::SecretString;
+
+    struct NoKnown;
+    impl KnownHosts for NoKnown {
+        fn lookup(&self, _: &str) -> Result<Vec<KnownKey>, String> {
+            Ok(Vec::new())
+        }
+        fn add(&self, _: &str, _: &KnownKey) -> Result<(), String> {
+            Ok(())
+        }
+    }
+    struct NoPrompt;
+    #[allow(clippy::unused_async_trait_impl)]
+    impl Prompter for NoPrompt {
+        fn progress(&self, _: &str, _: ConnectStep) {}
+        async fn confirm_unknown_host(&self, _: HostKeyInfo) -> HostKeyDecision {
+            HostKeyDecision::Reject
+        }
+        async fn keyboard_interactive(&self, _: KbdInteractiveRequest) -> Option<Vec<SecretString>> {
+            None
+        }
+        async fn passphrase(&self, _: &str) -> Option<SecretString> {
+            None
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn drive_times_out_on_silent_peer() {
+        let (_tx, mut rx) = mpsc::unbounded_channel::<VerifyReq>();
+        let (known, prompter) = (NoKnown, NoPrompt);
+        let mut ctx = VerifyCtx { host: "h", port: 22, known: &known, prompter: &prompter, error: None };
+        let r = drive(std::future::pending::<()>(), &mut rx, &mut ctx, Duration::from_secs(30)).await;
+        assert!(matches!(r, Err(SshError::Timeout)));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn drive_returns_value_in_time() {
+        let (_tx, mut rx) = mpsc::unbounded_channel::<VerifyReq>();
+        let (known, prompter) = (NoKnown, NoPrompt);
+        let mut ctx = VerifyCtx { host: "h", port: 22, known: &known, prompter: &prompter, error: None };
+        let fut = async {
+            tokio::time::sleep(Duration::from_secs(5)).await;
+            7
+        };
+        let r = drive(fut, &mut rx, &mut ctx, Duration::from_secs(30)).await;
+        assert!(matches!(r, Ok(7)));
+    }
 }

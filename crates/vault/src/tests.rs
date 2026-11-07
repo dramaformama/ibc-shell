@@ -273,3 +273,49 @@ fn key_generate_and_import() {
     assert_eq!(info, g.info);
     assert!(matches!(import_private_key(b"garbage", None), Err(KeyError::Invalid)));
 }
+
+#[test]
+fn backup_rejects_oversized_kdf_params_and_survives_stale_tmp() {
+    use crate::crypto::KdfParams;
+    let (_st, _ks, v) = setup();
+    v.init(VaultMode::OsKeychain, None).unwrap();
+    let dir = std::env::temp_dir().join(format!("tlvault-test-{}", SecretId::new_v7()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("b.tlvault");
+
+    // Stale tmp (even a symlink to a victim file) is replaced, never written through.
+    let victim = dir.join("victim");
+    std::fs::write(&victim, b"keep").unwrap();
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(&victim, path.with_extension("tlvault.tmp")).unwrap();
+    #[cfg(not(unix))]
+    std::fs::write(path.with_extension("tlvault.tmp"), b"stale").unwrap();
+    v.export_backup(&path, &pw("backup password")).unwrap();
+    assert_eq!(std::fs::read(&victim).unwrap(), b"keep");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        assert_eq!(std::fs::metadata(&path).unwrap().permissions().mode() & 0o777, 0o600);
+    }
+
+    // Header claiming m = 512 MiB is refused before any key derivation.
+    let good = std::fs::read(&path).unwrap();
+    let kdf_len = u32::from_be_bytes([good[10], good[11], good[12], good[13]]) as usize;
+    let mut p = KdfParams::from_cbor(&good[14..14 + kdf_len]).unwrap();
+    p.m = 524_288;
+    let cbor = p.to_cbor().unwrap();
+    let mut bad = good[..10].to_vec();
+    bad.extend_from_slice(&u32::try_from(cbor.len()).unwrap().to_be_bytes());
+    bad.extend_from_slice(&cbor);
+    bad.extend_from_slice(&good[14 + kdf_len..]);
+    let bp = dir.join("big.tlvault");
+    std::fs::write(&bp, &bad).unwrap();
+    assert!(matches!(v.import_backup(&bp, &pw("backup password")), Err(VaultError::Corrupt)));
+    p.m = 65_536;
+    p.t = 11;
+    assert!(p.check_backup_bounds().is_err());
+    p.t = 10;
+    p.m = 262_144;
+    assert!(p.check_backup_bounds().is_ok());
+    std::fs::remove_dir_all(dir).unwrap();
+}

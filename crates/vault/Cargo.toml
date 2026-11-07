@@ -23,7 +23,7 @@ ciborium = "0.2"
 # zstd compression of the .tlvault payload.
 zstd = "0.13"
 # Key import (PEM PKCS#1/#8, OpenSSH, encrypted) and generation via the SSH stack's own parser.
-russh = "0.65"
+russh.workspace = true
 # Same ssh-key version russh uses; enables key generation (OS RNG) + RSA.
 ssh-key = { version = "=0.7.0-rc.11", features = ["rand_core", "getrandom", "rsa", "ed25519"] }
 
