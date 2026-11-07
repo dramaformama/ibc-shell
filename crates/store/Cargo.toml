@@ -5,5 +5,12 @@ edition.workspace = true
 license.workspace = true
 publish = false
 
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
+specta.workspace = true
+
 [lints]
 workspace = true

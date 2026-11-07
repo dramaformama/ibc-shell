@@ -1,5 +1,5 @@
 # Contract: security
-Status: DRAFT → `FROZEN v1` after Phase 0.
+Status: `FROZEN v1` (2026-11-07). Changes only via ADR, bump to `v1.x`. Crypto parameters: ADR-003.
 
 ## Vault key hierarchy
 - **DEK**: 32 random bytes (OsRng). Encrypts every secret: `XChaCha20-Poly1305(key=DEK, nonce=random 24B, aad="tl/secret/v1"||secret_id)`.
@@ -10,6 +10,42 @@ Status: DRAFT → `FROZEN v1` after Phase 0.
 - Password change = rewrap DEK only. Secrets untouched.
 - Unlocked DEK held in `secrecy::SecretBox<[u8;32]>`, zeroized on lock/drop. Auto-lock: idle 15 min (setting, 0 = never), OS sleep/screen lock (desktop events where available), app backgrounded > 60 s on mobile.
 - Biometric: mobile — keychain/keystore item with user-presence requirement holds KEK; desktop (Phase 3) — Touch ID via LocalAuthentication gating keychain read; Windows Hello via `UserConsentVerifier`.
+
+## Vault public API (crates/vault/src/lib.rs, keystore.rs)
+```rust
+pub enum VaultState { Uninitialized, Locked, Unlocked }          // IPC VaultStatus.state
+pub enum VaultMode { OsKeychain, MasterPassword }                 // IPC VaultStatus.mode / vault_init
+pub struct ImportSummary { folders, hosts, identities, tags, snippets, forwards, known_hosts, skipped: u32 }
+pub enum VaultError { Locked, AlreadyInitialized, Uninitialized, WrongPassword, WeakPassword, Corrupt,
+                      UnsupportedVersion(u16), Store(StoreError), KeyStore(KeyStoreError), Io(String), Unimplemented }
+pub struct Vault;   // Send + Sync, manual Debug; all methods blocking (Argon2) → bridge calls via spawn_blocking
+impl Vault {
+  pub fn new(store: Arc<Store>, keystore: Arc<dyn KeyStore>) -> Self;     // starts Locked/Uninitialized
+  pub fn state(&self) -> Result<VaultState>;   pub fn mode(&self) -> Result<Option<VaultMode>>;
+  pub fn biometric_available(&self) -> bool;
+  pub fn init(&self, mode: VaultMode, password: Option<&SecretString>) -> Result<()>;  // leaves Unlocked
+  pub fn unlock_with_password(&self, pw: &SecretString) -> Result<()>;
+  pub fn unlock_with_keystore(&self) -> Result<()>;
+  pub fn lock(&self);                                                      // zeroize DEK, idempotent
+  pub fn change_password(&self, old: &SecretString, new: &SecretString) -> Result<()>; // rewrap only
+  pub fn put_secret(&self, plaintext: &[u8]) -> Result<SecretId>;
+  pub fn get_secret(&self, id: SecretId) -> Result<Zeroizing<Vec<u8>>>;
+  pub fn delete_secret(&self, id: SecretId) -> Result<()>;
+  pub fn export_backup(&self, path: &Path, password: &SecretString) -> Result<()>;           // ≥ 10 chars
+  pub fn import_backup(&self, path: &Path, password: &SecretString) -> Result<ImportSummary>;
+}
+pub trait KeyStore: Send + Sync {          // keystore.rs; desktop/iOS: OsKeyring (keyring crate); Android: mobile plugin
+  fn wrap_dek(&self, dek: &SecretBox<[u8; 32]>) -> Result<Vec<u8>, KeyStoreError>;   // → vault_meta.dek_wrap_os
+  fn unwrap_dek(&self, wrapped: &[u8]) -> Result<SecretBox<[u8; 32]>, KeyStoreError>; // may show biometric prompt
+  fn reset(&self) -> Result<(), KeyStoreError>;
+  fn biometric_available(&self) -> bool;
+}
+pub enum KeyStoreError { NotFound, Cancelled, Platform(String), Unimplemented }
+```
+Bridge maps `VaultError::Locked → ApiError::VaultLocked`, `WrongPassword → WrongPassword`, `WeakPassword → Validation`, rest → `Internal` (sanitized).
+
+## IPC secret inputs
+Typed passwords / passphrases / kbd answers arrive as `SecretInput` (`#[serde(transparent)] SecretString`, TS `string`, redacted `Debug`) or `Option<SecretString>` fields with `#[specta(type = Option<String>)]`. They are never echoed, logged, or returned.
 
 ## Backup format `.tlvault`
 `magic "TLVAULT\0" | u16 version=1 | kdf params (CBOR) | salt 16B | nonce 24B | ciphertext(XChaCha20-Poly1305, aad=header bytes) of zstd(CBOR{folders,hosts,identities WITH decrypted secrets,tags,snippets,forwards,known_hosts})`. Export password independent of vault password; min 10 chars, zxcvbn-style strength hint in UI.

@@ -19,9 +19,10 @@ test:
     cargo test --workspace
     pnpm -C ui test
 
-# Regenerate ui/src/lib/api/bindings.ts (placeholder until P0.3)
+# Regenerate ui/src/lib/api/bindings.ts from the tauri-specta builder, then check mock coverage
 bindings:
-    @echo "bindings: not implemented yet (P0.3)"
+    cargo run -q -p termlite --example export_bindings
+    node scripts/check-mock-coverage.mjs
 
 # Docker integration tests (placeholder until tests/docker exists)
 e2e:

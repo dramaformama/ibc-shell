@@ -1,5 +1,12 @@
 # Contract: UI
-Status: DRAFT → `FROZEN v1` after Phase 0.
+Status: `FROZEN v1` (2026-11-07). Changes only via ADR, bump to `v1.x`. Flags: ADR-005.
+
+## API access
+UI code imports only `$lib/api` (`api: Api`, `apiEvents: ApiEvents`, all DTO types). `VITE_API=real` → Rust bridge
+(`bindings.ts` + `raw.ts`), otherwise the in-memory mock (`mock.ts`: seed folders de/nl/fi + nested, 12 hosts,
+2 identities; vault password `termlite`, `?vault=new` = onboarding; echo terminal with `help`, `colors`, `flood`, `exit`;
+hosts labelled "new key" / "changed key" / "2FA" exercise TOFU, hard block, keyboard-interactive). Never import
+`bindings.ts` directly from components.
 
 ## Design principles
 Minimal, quiet chrome, content first. One accent color. No gradients, no heavy shadows. Motion ≤ 150 ms, `prefers-reduced-motion` respected. Everything reachable by keyboard.

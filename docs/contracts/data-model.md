@@ -1,5 +1,6 @@
 # Contract: data model (crates/store)
-Status: DRAFT → architect sets `FROZEN v1` at end of Phase 0.
+Status: `FROZEN v1` (2026-11-07). Changes only via ADR, bump to `v1.x`.
+Exact Rust types: `crates/store/src/{ids,tree,catalog,resolve,error}.rs` + `lib.rs` (skeleton) — they ARE the contract; this file explains them.
 
 ## IDs & time
 - All IDs: UUID v7, stored as 16-byte BLOB, exposed to UI as lowercase hyphenated string.
@@ -106,7 +107,8 @@ CREATE INDEX idx_folder_parent ON folder(parent_id, sort_key);
 ## Inheritance resolution
 ```rust
 pub struct Resolved<T> { pub value: T, pub source: Source }
-pub enum Source { Host, Folder(FolderId), Default }
+#[serde(tag = "kind", content = "id", rename_all = "lowercase")]   // TS {kind:"host"} | {kind:"folder", id} | {kind:"default"}
+pub enum Source { Host, Folder(FolderId), Default }   // identity-provided username reports Default
 
 pub struct ResolvedHost {
   pub id: HostId, pub label: String, pub hostname: String,
@@ -124,40 +126,70 @@ Order: host field → nearest folder up the chain with non-NULL `d_*` (for flag:
 
 ## Public API (crates/store/src/lib.rs)
 ```rust
-pub struct Store;                       // owns a connection pool (r2d2-free: one writer Mutex<Connection> + read connections)
+pub struct Store;   // Send + Sync; one writer Mutex<Connection> + read connections (no r2d2)
+pub type Result<T, E = StoreError> = std::result::Result<T, E>;
+pub enum StoreError { NotFound, Validation(String), Cycle, TooDeep, JumpCycle, Conflict(String), Db(String),
+                      Unimplemented /* Phase 0 only; must not be returned after gate G1 */ }
 impl Store {
-  pub fn open(path: &Path) -> Result<Self, StoreError>;
-  pub fn open_in_memory() -> Result<Self, StoreError>;
+  pub fn open(path: &Path) -> Result<Self>;            // creates + migrates; WAL; foreign_keys=ON; 0600
+  pub fn open_in_memory() -> Result<Self>;
   // tree
-  pub fn tree_list(&self) -> Result<Tree, StoreError>;          // flat Vec<Node> with parent ids, sorted
-  pub fn folder_create(&self, input: FolderInput) -> Result<Folder, StoreError>;
-  pub fn folder_update(&self, id: FolderId, patch: FolderPatch) -> Result<Folder, StoreError>;
-  pub fn folder_move(&self, id: FolderId, parent: Option<FolderId>, after: Option<NodeRef>) -> Result<(), StoreError>;
-  pub fn folder_delete(&self, id: FolderId, mode: FolderDeleteMode) -> Result<(), StoreError>;
+  pub fn tree_list(&self) -> Result<Tree>;              // Tree { folders: Vec<Folder>, hosts: Vec<Host> }, sorted (parent, sort_key)
+  pub fn folder_create(&self, input: FolderInput) -> Result<Folder>;      // appended last among siblings
+  pub fn folder_update(&self, id: FolderId, patch: FolderPatch) -> Result<Folder>;
+  pub fn folder_move(&self, id: FolderId, parent: Option<FolderId>, after: Option<NodeRef>) -> Result<()>; // after=None → first
+  pub fn folder_delete(&self, id: FolderId, mode: FolderDeleteMode) -> Result<()>;
   // hosts
-  pub fn host_create(&self, input: HostInput) -> Result<Host, StoreError>;
-  pub fn host_update(&self, id: HostId, patch: HostPatch) -> Result<Host, StoreError>;
-  pub fn host_move(&self, id: HostId, folder: Option<FolderId>, after: Option<NodeRef>) -> Result<(), StoreError>;
-  pub fn host_duplicate(&self, id: HostId) -> Result<Host, StoreError>;
-  pub fn host_delete(&self, ids: &[HostId]) -> Result<(), StoreError>;
-  pub fn host_resolve(&self, id: HostId) -> Result<ResolvedHost, StoreError>;
-  pub fn host_search(&self, q: &str, limit: u32) -> Result<Vec<HostId>, StoreError>;
-  pub fn host_touch_connected(&self, id: HostId) -> Result<(), StoreError>;
-  // identities (metadata), tags, snippets, forwards, settings, known_hosts: CRUD in same style
-  pub fn known_host_lookup(&self, pattern: &str) -> Result<Vec<KnownHost>, StoreError>;
-  pub fn known_host_upsert(&self, kh: KnownHostInput) -> Result<(), StoreError>;
-  // raw secret rows for vault (vault never opens SQLite itself)
-  pub fn secret_put(&self, row: SecretRow) -> Result<(), StoreError>;
-  pub fn secret_get(&self, id: SecretId) -> Result<Option<SecretRow>, StoreError>;
-  pub fn secret_delete(&self, id: SecretId) -> Result<(), StoreError>;
-  pub fn vault_meta_get(&self, k: &str) -> Result<Option<Vec<u8>>, StoreError>;
-  pub fn vault_meta_set(&self, k: &str, v: &[u8]) -> Result<(), StoreError>;
+  pub fn host_create(&self, input: HostInput) -> Result<Host>;
+  pub fn host_update(&self, id: HostId, patch: HostPatch) -> Result<Host>;   // tag_ids: Some(v) replaces the set
+  pub fn host_move(&self, id: HostId, folder: Option<FolderId>, after: Option<NodeRef>) -> Result<()>;
+  pub fn host_duplicate(&self, id: HostId) -> Result<Host>;                  // label + " copy", placed right after
+  pub fn host_delete(&self, ids: &[HostId]) -> Result<()>;
+  pub fn host_resolve(&self, id: HostId) -> Result<ResolvedHost>;
+  pub fn host_search(&self, q: &str, limit: u32) -> Result<Vec<HostId>>;
+  pub fn host_touch_connected(&self, id: HostId) -> Result<()>;
+  // identities (metadata + secret ids; `Identity` has NO specta::Type → never sent over IPC)
+  pub fn identity_list(&self) -> Result<Vec<Identity>>;
+  pub fn identity_get(&self, id: IdentityId) -> Result<Identity>;
+  pub fn identity_create(&self, input: IdentityMetaInput) -> Result<Identity>;
+  pub fn identity_update(&self, id: IdentityId, patch: IdentityMetaPatch) -> Result<Identity>; // replaced secret rows deleted in same txn
+  pub fn identity_delete(&self, id: IdentityId) -> Result<()>;                // + its vault_secret rows (invariant 5)
+  // tags / snippets / forwards
+  pub fn tag_list(&self) -> Result<Vec<Tag>>;  tag_create(TagInput) -> Tag;  tag_update(TagId, TagPatch) -> Tag;  tag_delete(TagId);
+  pub fn snippet_list(&self, folder: Option<FolderId>) -> Result<Vec<Snippet>>;  // global + that folder
+  pub fn snippet_create(SnippetInput) -> Snippet;  snippet_update(SnippetId, SnippetPatch) -> Snippet;  snippet_delete(SnippetId);
+  pub fn forward_list(&self, host: Option<HostId>) -> Result<Vec<PortForward>>;
+  pub fn forward_create(ForwardInput) -> PortForward;  forward_update(ForwardId, ForwardPatch) -> PortForward;  forward_delete(ForwardId);
+  // known hosts
+  pub fn known_host_list(&self) -> Result<Vec<KnownHostSummary>>;           // IPC DTO, no key blob
+  pub fn known_host_lookup(&self, pattern: &str) -> Result<Vec<KnownHost>>; // full rows incl. key_blob
+  pub fn known_host_upsert(&self, kh: KnownHostInput) -> Result<()>;        // on (host_pattern, key_type)
+  pub fn known_host_delete(&self, id: KnownHostId) -> Result<()>;
+  // settings (JSON)
+  pub fn setting_get(&self, key: &str) -> Result<Option<serde_json::Value>>;
+  pub fn setting_set(&self, key: &str, value: &serde_json::Value) -> Result<()>;
+  // raw secret rows + meta for vault (vault never opens SQLite itself)
+  pub fn secret_put(&self, row: SecretRow) -> Result<()>;
+  pub fn secret_get(&self, id: SecretId) -> Result<Option<SecretRow>>;
+  pub fn secret_delete(&self, id: SecretId) -> Result<()>;
+  pub fn secret_ids(&self) -> Result<Vec<SecretId>>;
+  pub fn vault_meta_get(&self, k: &str) -> Result<Option<Vec<u8>>>;
+  pub fn vault_meta_set(&self, k: &str, v: &[u8]) -> Result<()>;
+  // backup (.tlvault) support
+  pub fn export_snapshot(&self) -> Result<Snapshot>;                         // one read txn; no secrets, no settings
+  pub fn import_snapshot(&self, snapshot: Snapshot) -> Result<ImportCounts>; // merge; existing ids skipped; one txn
 }
+pub const KNOWN_FLAGS: &[&str];   // crates/store/src/flags_list.rs (generated by flags agent; placeholder now)
 ```
-Note: vault depends on store's `SecretRow`/meta API only (allowed edge `vault → store`). `ssh`/`sftp` depend on neither.
+Note: vault depends on store's `SecretRow`/meta/snapshot API only (allowed edge `vault → store`). `ssh`/`sftp` depend on neither.
+IPC field names are snake_case; `IdentityKind` serializes `password|key|key_password|agent`, `ForwardKind` `local|remote|dynamic`,
+`NodeRef` `{kind:"folder"|"host", id}`, `FolderDeleteMode` `"MoveToParent"|"DeleteContents"`.
 
 ## Patch semantics
-`*Patch` fields are `Option<Option<T>>`: `None` = untouched, `Some(None)` = set NULL (inherit), `Some(Some(v))` = set. Serialized to TS as `T | null | undefined` (undefined = untouched).
+`*Patch` fields are `Option<Option<T>>`: `None` = untouched, `Some(None)` = set NULL (inherit), `Some(Some(v))` = set. Rust: `#[serde(default, deserialize_with = "store::patch::double_option")]` + `#[specta(type = Option<T>, optional)]`. TS: `field?: T | null` (absent = untouched, `null` = clear). Non-nullable patch fields (`name`, `label`, `hostname`, `expanded`) are plain `Option<T>`: absent or `null` = untouched.
 
 ## DB location
 `app_data_dir()/termlite.db` (Tauri path API). File permissions 0600 on unix.
+
+## crates/geo (optional, Phase 3)
+`pub fn lookup_country(ip: IpAddr) -> Result<Option<String>, GeoError>` — lowercase alpha-2, `None` for private/unknown; `GeoError::{Unavailable, Unimplemented}`. Feature-gated, off by default; not exposed over IPC in v1.

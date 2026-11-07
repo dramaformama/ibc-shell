@@ -1,82 +1,181 @@
 # Contract: IPC (src-tauri ↔ ui)
-Status: DRAFT → `FROZEN v1` after Phase 0. Commands are `#[tauri::command] #[specta::specta] async fn`, return `Result<T, ApiError>`.
+Status: `FROZEN v1` (2026-11-07). Changes only via ADR (`docs/adr/`), bump to `v1.x`.
+
+Commands are `#[tauri::command] #[specta::specta] async fn` returning `Result<T, ApiError>`.
+TS bindings are generated (`just bindings` → `ui/src/lib/api/bindings.ts`, never edited by hand);
+every command returns `{status:"ok", data} | {status:"error", error: ApiError}`
+(`ErrorHandlingMode::Result`). TS accessor = camelCase of the command (`tree_list` → `treeList`);
+argument names are camelCase in TS, snake_case in Rust. DTO fields stay snake_case.
+Numbers: `i64` unix millis and `u64` byte counts are exported as `number` (< 2^53, ADR-004).
+IDs are UUID v7 strings. UI code imports only `$lib/api` (`api`, `apiEvents`, types).
+
+## DTO sources (exact Rust definitions = the contract)
+| DTO (TS name) | Rust |
+|---|---|
+| `Tree`, `Folder`, `FolderDefaults`, `FolderInput`, `FolderPatch`, `FolderDefaultsPatch`, `Host`, `HostInput`, `HostPatch`, `NodeRef`, `FolderDeleteMode` | `crates/store/src/tree.rs` |
+| `IdentityKind`, `Tag`/`TagInput`/`TagPatch`, `Snippet`/`SnippetInput`/`SnippetPatch`, `PortForward`/`ForwardInput`/`ForwardPatch`/`ForwardKind`, `KnownHostSummary` | `crates/store/src/catalog.rs` |
+| `ResolvedHost`, `Resolved<T>`, `Source` | `crates/store/src/resolve.rs` |
+| `*Id` (FolderId, HostId, IdentityId, TagId, SnippetId, ForwardId, KnownHostId) | `crates/store/src/ids.rs` |
+| `VaultState`, `VaultMode`, `ImportSummary` | `crates/vault/src/lib.rs` |
+| `HostKeyInfo`, `HostKeyMismatch`, `ConnectStep`, `KbdPrompt`, `ForwardState` | `crates/ssh/src/{hostkey,config,session}.rs` |
+| `DirListing`, `Entry`, `EntryKind`, `TransferEvent`, `TransferId`, `ConflictId`, `ConflictPolicy`, `ConflictChoice`, `ConflictInfo` | `crates/sftp/src/{model,transfer}.rs` |
+| `ApiError` | `src-tauri/src/api/error.rs` |
+| `SessionId`, `SftpId`, `PendingId`, `IdentityDto`, `IdentityInput`, `IdentityPatchInput`, `VaultStatus`, `QuickConnect`, `SessionEvent`, `SftpTarget`, `Endpoint`, `TransferRequest`, `AppInfo` | `src-tauri/src/api/dto.rs` |
+| `VaultLocked`, `TreeChanged`, `UpdateAvailable` (events) | `src-tauri/src/api/events.rs` |
+
+Patch DTOs (`*Patch`): field absent = untouched, `null` = clear (inherit), value = set (`data-model.md` §Patch semantics).
+Secret inputs (`password`, `private_key_pem`, `passphrase`, kbd `answers`) are `SecretInput`/`SecretString` in Rust
+(TS `string`), redacted `Debug`, never returned.
 
 ## Errors
 ```rust
-#[derive(Serialize, specta::Type)]
 #[serde(tag = "code", content = "detail")]
 pub enum ApiError {
-  VaultLocked, WrongPassword, NotFound, Validation(String), Cycle, TooDeep,
-  HostKeyUnknown(HostKeyInfo),      // UI shows TOFU dialog then calls hostkey_accept
-  HostKeyChanged(HostKeyMismatch),  // UI shows red block, NO accept button in v1 (only "remove old key in Known hosts")
+  VaultLocked, WrongPassword, NotFound, Validation(String), Cycle, TooDeep, JumpCycle,
+  HostKeyUnknown(Box<HostKeyInfo>),     // non-interactive paths only; interactive = SessionEvent::HostKeyPrompt
+  HostKeyChanged(Box<HostKeyMismatch>), // red block, NO accept route in v1 (only delete in Known hosts)
   AuthFailed { methods_left: Vec<String> },
-  Network(String), Timeout, Sftp(String), Cancelled, Conflict(ConflictInfo), Internal(String) // message must not contain secrets
+  Network(String), Timeout, Sftp(String), Cancelled, Conflict(Box<ConflictInfo>),
+  Unsupported,                          // e.g. local_* on mobile
+  Internal(String),                     // sanitized; Phase 0 stubs return Internal("not implemented")
 }
 ```
 
 ## Commands — store / tree
 | command | args | returns |
 |---|---|---|
-| `tree_list` | — | `Tree { folders: FolderDto[], hosts: HostDto[] }` |
-| `folder_create` | `FolderInput` | `FolderDto` |
-| `folder_update` | `id, FolderPatch` | `FolderDto` |
-| `folder_move` | `id, parent: Id \| null, after: NodeRef \| null` | `()` |
-| `folder_delete` | `id, mode: "MoveToParent" \| "DeleteContents"` | `()` |
-| `host_create` / `host_update` / `host_duplicate` / `host_delete` / `host_move` | see data-model | `HostDto` / `()` |
-| `host_resolve` | `id` | `ResolvedHostDto` (each field `{value, source}`) |
-| `host_search` | `q, limit` | `Id[]` |
-| `identity_list` / `identity_create` / `identity_update` / `identity_delete` | `IdentityInput` contains `password?: string`, `private_key_pem?: string`, `passphrase?: string` — accepted ONCE, moved into `SecretString`, never returned | `IdentityDto` (no secrets: label, kind, key_algo, fingerprint, public_key) |
-| `identity_import_file` | `path` (from dialog plugin), `passphrase?` | `IdentityDto` |
-| `tag_*`, `snippet_*`, `forward_*`, `known_host_list` / `known_host_delete` | CRUD | DTOs |
-| `settings_get` / `settings_set` | `key, value: JSON` | JSON |
+| `tree_list` | — | `Tree` |
+| `folder_create` | `input: FolderInput` | `Folder` |
+| `folder_update` | `id: FolderId, patch: FolderPatch` | `Folder` |
+| `folder_move` | `id: FolderId, parent: FolderId \| null, after: NodeRef \| null` (null = first) | `null` |
+| `folder_delete` | `id: FolderId, mode: FolderDeleteMode` | `null` |
+| `host_create` | `input: HostInput` | `Host` |
+| `host_update` | `id: HostId, patch: HostPatch` | `Host` |
+| `host_duplicate` | `id: HostId` | `Host` |
+| `host_delete` | `ids: HostId[]` | `null` |
+| `host_move` | `id: HostId, folder: FolderId \| null, after: NodeRef \| null` | `null` |
+| `host_resolve` | `id: HostId` | `ResolvedHost` |
+| `host_search` | `q: string, limit: number` | `HostId[]` |
+| `identity_list` | — | `IdentityDto[]` |
+| `identity_create` | `input: IdentityInput` (secrets accepted ONCE → vault) | `IdentityDto` |
+| `identity_update` | `id: IdentityId, patch: IdentityPatchInput` | `IdentityDto` |
+| `identity_delete` | `id: IdentityId` | `null` |
+| `identity_import_file` | `path: string` (dialog plugin), `passphrase: string \| null` | `IdentityDto` |
+| `tag_list` | — | `Tag[]` |
+| `tag_create` | `input: TagInput` | `Tag` |
+| `tag_update` | `id: TagId, patch: TagPatch` | `Tag` |
+| `tag_delete` | `id: TagId` | `null` |
+| `snippet_list` | `folder_id: FolderId \| null` (global + that folder) | `Snippet[]` |
+| `snippet_create` | `input: SnippetInput` | `Snippet` |
+| `snippet_update` | `id: SnippetId, patch: SnippetPatch` | `Snippet` |
+| `snippet_delete` | `id: SnippetId` | `null` |
+| `forward_list` | `host_id: HostId \| null` | `PortForward[]` |
+| `forward_create` | `input: ForwardInput` | `PortForward` |
+| `forward_update` | `id: ForwardId, patch: ForwardPatch` | `PortForward` |
+| `forward_delete` | `id: ForwardId` | `null` |
+| `known_host_list` | — | `KnownHostSummary[]` |
+| `known_host_delete` | `id: KnownHostId` | `null` |
+| `settings_get` | `key: string` | JSON value \| `null` |
+| `settings_set` | `key: string, value: JSON` | `null` |
+
+`IdentityDto { id, label, username?, kind, key_algo?, key_fingerprint?, public_key?, has_password, has_passphrase, created_at, updated_at }` — no secrets, no secret ids.
 
 ## Commands — vault
-| `vault_status` | — | `{ state: "Uninitialized" \| "Locked" \| "Unlocked", mode: "OsKeychain" \| "MasterPassword", biometric_available: bool }` |
-| `vault_init` | `mode, password?` | `()` |
-| `vault_unlock` | `password?` (absent = keychain/biometric) | `()` |
-| `vault_lock` | — | `()` |
-| `vault_change_password` | `old, new` | `()` |
-| `vault_export` / `vault_import` | `path, password` | `()` / `ImportSummary` |
+| command | args | returns |
+|---|---|---|
+| `vault_status` | — | `VaultStatus { state: "Uninitialized"\|"Locked"\|"Unlocked", mode: "OsKeychain"\|"MasterPassword"\|null, biometric_available }` |
+| `vault_init` | `mode: VaultMode, password: string \| null` | `null` (vault left unlocked) |
+| `vault_unlock` | `password: string \| null` (null = keychain / biometric) | `null` |
+| `vault_lock` | — | `null` (+ event `vault://locked`) |
+| `vault_change_password` | `old_password: string, new_password: string` | `null` |
+| `vault_export` | `path: string, password: string` (≥ 10 chars) | `null` |
+| `vault_import` | `path: string, password: string` | `ImportSummary` (+ event `tree://changed`) |
 
 ## Commands — sessions (SSH)
-| `session_open` | `host_id, cols, rows, on_data: Channel<Vec<u8>>, on_event: Channel<SessionEvent>` | `SessionId` |
-| `session_open_adhoc` | `QuickConnect { user, hostname, port }` + channels | `SessionId` |
-| `shell_write` | `session_id, data: Vec<u8>` — sent as `tauri::ipc::Request` raw body (InvokeBody::Raw), header `x-session-id` | `()` |
-| `shell_ack` | `session_id, bytes: u32` | `()` |
-| `shell_resize` | `session_id, cols, rows` | `()` |
-| `session_close` | `session_id` | `()` |
-| `session_reconnect` | `session_id` | `()` |
-| `hostkey_accept` | `pending_id, remember: bool` | `()` |
-| `kbd_interactive_reply` | `pending_id, answers: string[]` | `()` |
-| `passphrase_reply` | `pending_id, passphrase: string \| null` | `()` |
+| command | args | returns |
+|---|---|---|
+| `session_open` | `host_id, cols: u16, rows: u16, on_data: Channel<ArrayBuffer>, on_event: Channel<SessionEvent>` | `SessionId` |
+| `session_open_adhoc` | `target: QuickConnect {user?, hostname, port?}, cols, rows, on_data, on_event` | `SessionId` |
+| `shell_write` | RAW: body = bytes (`InvokeBody::Raw`), header `x-session-id` (TS: `api.shellWrite(sessionId, Uint8Array)`) | `null` |
+| `shell_ack` | `session_id, bytes: u32` | `null` |
+| `shell_resize` | `session_id, cols: u16, rows: u16` | `null` |
+| `session_close` | `session_id` (also cancels its pending prompts) | `null` |
+| `session_reconnect` | `session_id` (reuses channels) | `null` |
+| `hostkey_accept` | `pending_id, remember: bool` (unknown keys only; reject = `session_close`) | `null` |
+| `kbd_interactive_reply` | `pending_id, answers: string[] \| null` (null = cancel) | `null` |
+| `passphrase_reply` | `pending_id, passphrase: string \| null` (null = cancel) | `null` |
 
-`SessionEvent` (tagged enum): `Connecting{step}`, `HostKeyPrompt{pending_id, info}`, `KbdInteractive{pending_id, name, instruction, prompts:[{text, echo}]}`, `PassphrasePrompt{pending_id, identity_label}`, `Connected{server_banner?}`, `Disconnected{reason, can_reconnect}`, `ExitStatus{code}`, `ForwardStatus{forward_id, state, error?}`.
+`session_open*` resolves once the session task is spawned; everything else arrives on `on_event`.
+`SessionEvent` (tag `type`): `Connecting{step: ConnectStep, hop}`, `HostKeyPrompt{pending_id, info: HostKeyInfo}`,
+`KbdInteractive{pending_id, name, instruction, prompts: KbdPrompt[]}`, `PassphrasePrompt{pending_id, identity_label}`,
+`Connected{server_banner: string|null}`, `Failed{error: ApiError}` (before Connected: host key changed, auth, network),
+`Disconnected{reason, can_reconnect}`, `ExitStatus{code}`, `ForwardStatus{forward_id, state: ForwardState, error|null}`.
+`ConnectStep`: `Resolving | Connecting | Handshake | Authenticating | OpeningChannel`.
 
-### Streaming & backpressure (normative)
-- Rust → UI: `on_data` carries raw `Vec<u8>` (Channel serializes as ArrayBuffer — verify on Tauri version; if not, send via `tauri::ipc::Response::new(bytes)` pattern per ADR-004). Coalesce: flush when buffer ≥ 64 KiB or 8 ms elapsed.
-- Credit window: Rust stops reading from the SSH channel when unacked bytes > 1 MiB. UI calls `shell_ack(bytes)` from xterm `write(data, callback)` completion.
-- UI → Rust: keystrokes batched per animation frame.
+### Streaming & backpressure (normative, ADR-004)
+- Rust → UI: `on_data: Channel<RawBytes>`; `RawBytes` sends `InvokeResponseBody::Raw` → JS `ArrayBuffer` (TS `Channel<ArrayBuffer>`). `Channel<Vec<u8>>` is FORBIDDEN (JSON number array). Coalesce: flush when buffer ≥ 64 KiB or 8 ms elapsed.
+- Credit window: Rust stops reading the SSH channel when unacked bytes > 1 MiB (`termlite_ssh::CREDIT_WINDOW`). UI calls `shell_ack(bytes)` from xterm `write(data, callback)`.
+- UI → Rust: keystrokes batched per animation frame, sent via raw `shell_write`.
+
+### crates/ssh public API (bridge uses; `crates/ssh/src/lib.rs`)
+`connect(chain: Vec<Hop>, &impl KnownHosts, &impl Prompter) -> Result<Connection, SshError>` (jump hosts first, target last, ≤ 4 hops).
+`Connection { server_banner(), open_shell(PtyRequest) -> Shell, exec(cmd, max_output) -> ExecOutput, open_sftp() -> SubsystemStream (AsyncRead+AsyncWrite), start_forward(ForwardSpec) -> ForwardHandle, disconnect() }`.
+`Shell { read() -> Option<ShellOutput::{Data, ExitStatus}>, write(&[u8]), resize(cols, rows), ack(u32), close() }`.
+`KnownHosts { lookup(pattern) -> Vec<KnownKey>, add(pattern, &KnownKey) }` (pattern via `host_pattern(host, port)`).
+`Prompter { progress(hop, ConnectStep), confirm_unknown_host(HostKeyInfo) -> HostKeyDecision, keyboard_interactive(req) -> Option<Vec<SecretString>>, passphrase(label) -> Option<SecretString> }`.
+`AuthMethod::{Password, Key{pem, passphrase, identity_label}, Agent, KeyboardInteractive}` (redacted Debug).
+`SshError::{HostKeyChanged, AuthFailed{methods_left}, Network, Timeout, Cancelled, Negotiation, InvalidChain, KnownHosts, Protocol}`.
 
 ## Commands — SFTP
-| `sftp_open` | `session_id` (reuses SSH connection) or `host_id` | `SftpId` |
-| `sftp_list` | `sftp_id, path` | `DirListing { path, entries: Entry[] }` Entry = `{name, kind: "file"\|"dir"\|"symlink"\|"other", size, mtime, mode, link_target?}` |
-| `sftp_stat` / `sftp_mkdir` / `sftp_rename` / `sftp_remove` (recursive flag) / `sftp_chmod` / `sftp_realpath` | … | … |
-| `local_list` / `local_mkdir` / `local_rename` / `local_remove` | same shapes for local FS (desktop only) | … |
-| `transfer_enqueue` | `TransferRequest { src: Endpoint, dst: Endpoint, items: string[], conflict: ConflictPolicy }` Endpoint = `{kind:"local"} \| {kind:"remote", sftp_id}`; ConflictPolicy = `"Ask"\|"Overwrite"\|"Skip"\|"Rename"\|"ResumeIfSmaller"` | `TransferId[]` |
-| `transfer_pause` / `transfer_resume` / `transfer_cancel` / `transfer_retry` | `id` | `()` |
-| `transfer_conflict_reply` | `pending_id, choice, apply_to_all` | `()` |
-| `transfers_subscribe` | `on_event: Channel<TransferEvent>` | `()` |
+| command | args | returns |
+|---|---|---|
+| `sftp_open` | `target: SftpTarget ({kind:"session", session_id} \| {kind:"host", host_id}), on_event: Channel<SessionEvent>` | `SftpId` |
+| `sftp_close` | `sftp_id` | `null` |
+| `sftp_list` | `sftp_id, path` | `DirListing { path, entries: Entry[] }` |
+| `sftp_stat` | `sftp_id, path` | `Entry { name, kind: "file"\|"dir"\|"symlink"\|"other", size, mtime: ms\|null, mode, link_target\|null }` |
+| `sftp_mkdir` | `sftp_id, path` | `null` |
+| `sftp_rename` | `sftp_id, from, to` | `null` |
+| `sftp_remove` | `sftp_id, path, recursive: bool` | `null` |
+| `sftp_chmod` | `sftp_id, path, mode: u32` | `null` |
+| `sftp_realpath` | `sftp_id, path` (`"."` = home) | `string` |
+| `local_home` | — (registers home as allowed root; desktop only) | `string` |
+| `local_list` | `path` | `DirListing` |
+| `local_mkdir` | `path` | `null` |
+| `local_rename` | `from, to` | `null` |
+| `local_remove` | `path, recursive: bool` | `null` |
+| `transfer_enqueue` | `request: TransferRequest { src: Endpoint, dst: Endpoint, items: string[], dst_dir, conflict: ConflictPolicy }` | `TransferId[]` (one per item) |
+| `transfer_pause` | `id: TransferId` | `null` |
+| `transfer_resume` | `id: TransferId` | `null` |
+| `transfer_cancel` | `id: TransferId` | `null` |
+| `transfer_retry` | `id: TransferId` | `null` |
+| `transfer_conflict_reply` | `pending_id: ConflictId, choice: ConflictChoice, apply_to_all: bool` | `null` |
+| `transfers_subscribe` | `on_event: Channel<TransferEvent>` (replaces previous subscriber) | `null` |
 
-`TransferEvent`: `Queued`, `Started{id, total_bytes, files}`, `Progress{id, bytes_done, bytes_per_s}` (≤ 4 Hz per transfer), `Conflict{pending_id, info}`, `FileDone`, `Done{id}`, `Failed{id, error}`, `Paused`, `Cancelled`.
+`Endpoint = {kind:"local"} | {kind:"remote", sftp_id}`. `ConflictPolicy = "Ask"|"Overwrite"|"Skip"|"Rename"|"ResumeIfSmaller"`, `ConflictChoice = "Overwrite"|"Skip"|"Rename"|"Resume"`.
+`TransferEvent` (tag `type`): `Queued{id, src_path, dst_path}`, `Started{id, total_bytes, files}`, `Progress{id, bytes_done, bytes_per_s}` (≤ 4 Hz),
+`Conflict{id, pending_id, info: ConflictInfo}`, `FileDone{id, path, skipped}`, `Done{id}`, `Failed{id, message}`, `Paused{id}`, `Cancelled{id}`.
+
+### crates/sftp public API (`crates/sftp/src/lib.rs`)
+`Sftp::open(&Connection)`, `list/stat/mkdir/rename/remove(recursive)/chmod/realpath/close` (POSIX paths);
+`local::{home, list, mkdir, rename, remove}`; `sanitize::{sanitize_name, safe_join}`;
+`TransferEngine::new(TransferConfig{parallel_files: 3, pipeline_depth: 64, chunk_size: 32 KiB})` with `subscribe() -> mpsc::UnboundedReceiver<TransferEvent>`, `enqueue(TransferJob) -> Vec<TransferId>`, `pause/resume/cancel/retry(id)`, `conflict_reply(ConflictId, ConflictChoice, apply_to_all)`.
+`TransferJob { src: Endpoint::{Local, Remote(Arc<Sftp>)}, dst, items, dst_dir, conflict }` (engine-side Endpoint, mapped by the bridge).
 
 ## Commands — app
-| `app_info` | — | `{version, platform, arch}` |
-| `open_external` | `url` (http/https only, validated) | `()` |
+| command | args | returns |
+|---|---|---|
+| `app_info` | — | `AppInfo { version, platform, arch }` |
+| `open_external` | `url: string` (http/https only, validated) | `null` |
 
-## Global events (`app.emit`)
-`vault://locked`, `tree://changed` (after import), `update://available`.
+## Global events (`app.emit`, typed via tauri-specta `Event`)
+| event name | Rust type | payload | TS (`apiEvents.listen(...)`) |
+|---|---|---|---|
+| `vault://locked` | `VaultLocked` | `null` | `vaultLocked` |
+| `tree://changed` | `TreeChanged` | `null` | `treeChanged` |
+| `update://available` | `UpdateAvailable` | `{ version, notes: string\|null }` | `updateAvailable` |
 
 ## Rules
 - No command returns secret material. Ever.
-- Paths from UI are validated: remote paths are POSIX strings; local paths must come from dialog plugin or be under a path previously returned by `local_list`.
-- Every command has a mock in `ui/src/lib/api/mock.ts` with identical signature.
+- Paths from UI are validated: remote paths are POSIX strings; local paths must come from the dialog plugin, `local_home`, or be under a path previously returned by `local_list`.
+- Every command has a mock in `ui/src/lib/api/mock.ts` (key of `mockApi: Api`, type-checked against the bindings); `node scripts/check-mock-coverage.mjs` fails on any command in this file without a mock (run by `just bindings`).
+- `bindings_are_fresh` test in `src-tauri` fails when `bindings.ts` is stale.

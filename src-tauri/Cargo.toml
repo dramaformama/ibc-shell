@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
+default-run = "termlite"
 
 [lib]
 name = "termlite_lib"
@@ -14,6 +15,18 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = [] }
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+secrecy.workspace = true
+thiserror.workspace = true
+specta.workspace = true
+specta-typescript.workspace = true
+tauri-specta.workspace = true
+termlite-store.workspace = true
+termlite-vault.workspace = true
+termlite-ssh.workspace = true
+termlite-sftp.workspace = true
 
 [lints]
 workspace = true

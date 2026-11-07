@@ -1,0 +1,2 @@
+# Generated bindings are compared byte-for-byte by the bindings_are_fresh test.
+ui/src/lib/api/bindings.ts text eol=lf
