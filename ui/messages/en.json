@@ -446,7 +446,7 @@
   "dk_restart": "Restart",
   "dk_confirm_stop": "Stop “{name}”?",
   "dk_confirm_restart": "Restart “{name}”?",
-  "dk_confirm_body": "The container stops answering until it is back up. If a VPN runs through it, client connections drop.",
+  "dk_confirm_body": "The container stops answering until it is back up. Open connections to it will drop.",
   "dk_done": "Done: {name}",
   "dk_logs_title": "Logs · {name}",
   "dk_lines": "Lines",
