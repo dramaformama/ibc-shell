@@ -4,6 +4,14 @@ all-features = false
 [advisories]
 version = 2
 yanked = "deny"
+ignore = [
+  # rsa Marvin timing attack: no upstream fix. We only sign locally with the user's own RSA key
+  # (no remote party can time a decryption oracle). Revisit when russh moves to a fixed rsa.
+  { id = "RUSTSEC-2023-0071", reason = "client-side signing only, no decryption oracle exposed" },
+  # Unmaintained proc-macros pulled by specta (build time only, no runtime code).
+  { id = "RUSTSEC-2024-0436", reason = "paste: build-time proc macro via specta" },
+  { id = "RUSTSEC-2024-0370", reason = "proc-macro-error: build-time proc macro" },
+]
 
 [licenses]
 version = 2
@@ -13,6 +21,7 @@ confidence-threshold = 0.8
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
+allow-wildcard-paths = true
 
 [sources]
 unknown-registry = "deny"
