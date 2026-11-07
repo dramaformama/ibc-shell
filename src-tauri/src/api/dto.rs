@@ -3,10 +3,10 @@
 
 use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
-use termlite_sftp::{ConflictPolicy, TransferId};
-use termlite_ssh::{ConnectStep, ForwardState, HostKeyInfo, KbdPrompt};
-use termlite_store::{ForwardId, HostId, IdentityId, IdentityKind};
-use termlite_vault::{VaultMode, VaultState};
+use ibc_sftp::{ConflictPolicy, TransferId};
+use ibc_ssh::{ConnectStep, ForwardState, HostKeyInfo, KbdPrompt};
+use ibc_store::{ForwardId, HostId, IdentityId, IdentityKind};
+use ibc_vault::{VaultMode, VaultState};
 use uuid::Uuid;
 
 use super::error::ApiError;

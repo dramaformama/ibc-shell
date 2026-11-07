@@ -33,7 +33,7 @@ const OUT_SVG = join(ROOT, 'ui/static/flags');
 const OUT_TS = join(ROOT, 'ui/src/lib/flags/codes.ts');
 const OUT_RS = join(ROOT, 'crates/store/src/flags_list.rs');
 
-const work = mkdtempSync(join(tmpdir(), 'termlite-flags-'));
+const work = mkdtempSync(join(tmpdir(), 'ibc-flags-'));
 try {
 	const bytes = Buffer.from(await (await fetch(TARBALL_URL)).arrayBuffer());
 	const sha = createHash('sha256').update(bytes).digest('hex');

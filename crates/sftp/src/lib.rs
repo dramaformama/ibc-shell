@@ -16,7 +16,7 @@ mod model;
 pub mod sanitize;
 mod transfer;
 
-use termlite_ssh::Connection;
+use ibc_ssh::Connection;
 
 pub use model::{DirListing, Entry, EntryKind};
 pub use transfer::{
@@ -47,7 +47,7 @@ pub enum SftpError {
     Io(String),
     /// Underlying SSH failure.
     #[error(transparent)]
-    Ssh(#[from] termlite_ssh::SshError),
+    Ssh(#[from] ibc_ssh::SshError),
     /// Cancelled.
     #[error("cancelled")]
     Cancelled,

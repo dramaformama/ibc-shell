@@ -1,9 +1,11 @@
-target/
-node_modules/
-.DS_Store
-ui/build/
-ui/.svelte-kit/
-src-tauri/gen/
 *.log
+.DS_Store
+.claude/worktrees/
 .env
+node_modules/
+src-tauri/gen/
+target/
+tests/fixtures/keys/
+ui/.svelte-kit/
+ui/build/
 ui/src/lib/paraglide/

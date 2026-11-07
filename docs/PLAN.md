@@ -1,4 +1,4 @@
-# Termlite — план реализации
+# ibc server — план реализации
 
 > Рабочее название. Аналог Termius / мобильных SSH-клиентов: SSH-терминал + SFTP как в Termius, папки серверов, флаги стран у папок и хостов (как у hosts в Remnawave). Мультиплатформа: macOS, Windows, Linux, iOS, Android.
 

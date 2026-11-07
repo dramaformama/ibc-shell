@@ -1,8 +1,8 @@
 //! `ApiError`: the single error type of every IPC command.
 
 use serde::Serialize;
-use termlite_sftp::ConflictInfo;
-use termlite_ssh::{HostKeyInfo, HostKeyMismatch};
+use ibc_sftp::ConflictInfo;
+use ibc_ssh::{HostKeyInfo, HostKeyMismatch};
 
 /// IPC error. TS: `{ code: "...", detail?: ... }`. Messages must never contain secrets.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, specta::Type, thiserror::Error)]

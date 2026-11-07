@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
 use secrecy::SecretString;
-use termlite_store::{ImportCounts, SecretId, SecretRow, Snapshot, StoreError};
+use ibc_store::{ImportCounts, SecretId, SecretRow, Snapshot, StoreError};
 
 use crate::crypto;
 use crate::keys::{generate_key, import_private_key, KeyGenAlgo, KeyError};

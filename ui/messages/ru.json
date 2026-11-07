@@ -1,6 +1,6 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
-  "app_name": "Termlite",
+  "app_name": "ibc server",
   "welcome_hint": "Выберите хост в списке слева или нажмите сочетание ниже, чтобы найти или подключиться откуда угодно.",
   "action_cancel": "Отмена",
   "action_close": "Закрыть",

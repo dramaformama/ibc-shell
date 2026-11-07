@@ -4,7 +4,7 @@ Status: `FROZEN v1` (2026-11-07). Changes only via ADR, bump to `v1.x`. Flags: A
 ## API access
 UI code imports only `$lib/api` (`api: Api`, `apiEvents: ApiEvents`, all DTO types). `VITE_API=real` → Rust bridge
 (`bindings.ts` + `raw.ts`), otherwise the in-memory mock (`mock.ts`: seed folders de/nl/fi + nested, 12 hosts,
-2 identities; vault password `termlite`, `?vault=new` = onboarding; echo terminal with `help`, `colors`, `flood`, `exit`;
+2 identities; vault password `ibc-server`, `?vault=new` = onboarding; echo terminal with `help`, `colors`, `flood`, `exit`;
 hosts labelled "new key" / "changed key" / "2FA" exercise TOFU, hard block, keyboard-interactive). Never import
 `bindings.ts` directly from components.
 
@@ -16,7 +16,7 @@ Minimal, quiet chrome, content first. One accent color. No gradients, no heavy s
 - Sizes: 12 / 13 (base) / 15 / 18. Radius: 6 (controls), 10 (cards/dialogs). Spacing 4-pt grid.
 - Dark (default): bg `#0E0F12`, surface `#16181D`, surface-2 `#1D2026`, border `#262A31`, text `#E6E8EB`, muted `#8B929C`, accent `#5B8CFF`, ok `#3CCB7F`, warn `#F5B547`, danger `#F06161`.
 - Light: bg `#FAFAFB`, surface `#FFFFFF`, surface-2 `#F2F3F5`, border `#E3E5E8`, text `#16181D`, muted `#6B7280`, same accents slightly darker.
-- Terminal themes shipped: Termlite Dark, Termlite Light, Solarized Dark/Light, Dracula-like "Night" (own palette, no trademark), Nord-like "Frost" (own palette). Theme = 16 ANSI + fg/bg/cursor/selection.
+- Terminal themes shipped: ibc server Dark, ibc server Light, Solarized Dark/Light, Dracula-like "Night" (own palette, no trademark), Nord-like "Frost" (own palette). Theme = 16 ANSI + fg/bg/cursor/selection.
 
 ## Layout (desktop)
 ```

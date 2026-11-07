@@ -1,4 +1,4 @@
-//! Termlite app shell: commands, channels, state, capabilities.
+//! ibc server app shell: commands, channels, state, capabilities.
 
 pub mod api;
 pub mod commands;
@@ -26,7 +26,7 @@ pub fn run() {
         })
         .run(tauri::generate_context!());
     if let Err(err) = result {
-        eprintln!("termlite failed to start: {err}");
+        eprintln!("ibc-server failed to start: {err}");
         std::process::exit(1);
     }
 }
@@ -38,7 +38,7 @@ mod tests {
     fn bindings_are_fresh() {
         let committed =
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../ui/src/lib/api/bindings.ts");
-        let tmp = std::env::temp_dir().join(format!("termlite-bindings-{}.ts", std::process::id()));
+        let tmp = std::env::temp_dir().join(format!("ibc-bindings-{}.ts", std::process::id()));
         crate::api::export_bindings(&tmp).unwrap();
         let fresh = std::fs::read_to_string(&tmp).unwrap();
         let _ = std::fs::remove_file(&tmp);

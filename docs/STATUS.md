@@ -1,23 +1,18 @@
 # STATUS (orchestrator keeps ≤ 40 lines)
 
-Phase: 0 — DONE. Next: Phase 1 (store, vault, ssh-core, flags, ui-shell, qa).
+Name: ibc server (crates ibc-*, id app.ibcserver). Phase 1 DONE (G1 passed). Next: Phase 2.
 Contracts: FROZEN v1
-Last gate passed: G0 (clippy -D warnings, cargo test, pnpm check, mock coverage 73/73)
-
-## In progress
-- —
 
 ## Done
-- P0.1 scaffold (Tauri 2, SvelteKit adapter-static, Svelte 5, Tailwind 4, Cargo workspace)
-- P0.2/P0.3 contracts FROZEN v1, ADR-001..005, crate skeletons, bindings, mock.ts
-- P0.4 CI skeleton (.github/workflows/ci.yml; not yet run on GitHub)
-
-## Open contract change requests
-- —
+- P0: scaffold, contracts FROZEN v1, ADR-001..005, mock API, CI skeleton
+- P1: store (22 tests, tree_list 5000 hosts ≈2.2ms), vault (13), ssh (23 unit + 8/8 docker e2e), flags (19), ui-shell (32 tests, light default theme), docker test servers (2201-2205)
+- Security review vault+ssh: no blockers; MAJOR/MINOR fixed (ring instead of aws-lc, handshake timeout, etc.)
+- deny.toml: documented ignores (rsa Marvin, paste, proc-macro-error)
 
 ## Known issues / decisions pending
-- ADR-004 resolved: Channel<Vec<u8>> = JSON array → use RawBytes (ArrayBuffer); shell_write via raw.ts.
-- cargo-deny, docker not installed (docker needed for P1.QA e2e).
-- `pnpm tauri dev` window not yet launched.
-- Project agents (.claude/agents) not auto-loaded when session opened outside repo; run as general-purpose with model override + "read .claude/agents/<name>.md".
-- Confirm russh support: OpenSSH certs, sk-keys, mlkem768x25519 kex, Pageant.
+- paraglide compile fetches plugin from CDN (offline builds fail) — check/pin in Phase 2.
+- UI not verified: real-pointer DnD, context menu, settings, FlagPicker screenshots. FlagPicker ~270 rows unvirtualized.
+- UI missing: Forwards section, Snippets/Keys/Known hosts pages (Phase 3).
+- russh: no sk-keys, certificates not wired; keyboard-interactive answers can't be zeroized.
+- CI not yet run on GitHub; repo URL unknown (needed for README download links).
+- Project agents not auto-loaded: spawn general-purpose + model + "read .claude/agents/<name>.md".

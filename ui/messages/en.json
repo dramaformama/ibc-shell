@@ -1,6 +1,6 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
-  "app_name": "Termlite",
+  "app_name": "ibc server",
   "welcome_hint": "Pick a host in the sidebar, or press the shortcut below to find or connect anywhere.",
   "action_cancel": "Cancel",
   "action_close": "Close",

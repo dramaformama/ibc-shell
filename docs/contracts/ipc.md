@@ -114,7 +114,7 @@ pub enum ApiError {
 
 ### Streaming & backpressure (normative, ADR-004)
 - Rust → UI: `on_data: Channel<RawBytes>`; `RawBytes` sends `InvokeResponseBody::Raw` → JS `ArrayBuffer` (TS `Channel<ArrayBuffer>`). `Channel<Vec<u8>>` is FORBIDDEN (JSON number array). Coalesce: flush when buffer ≥ 64 KiB or 8 ms elapsed.
-- Credit window: Rust stops reading the SSH channel when unacked bytes > 1 MiB (`termlite_ssh::CREDIT_WINDOW`). UI calls `shell_ack(bytes)` from xterm `write(data, callback)`.
+- Credit window: Rust stops reading the SSH channel when unacked bytes > 1 MiB (`ibc_ssh::CREDIT_WINDOW`). UI calls `shell_ack(bytes)` from xterm `write(data, callback)`.
 - UI → Rust: keystrokes batched per animation frame, sent via raw `shell_write`.
 
 ### crates/ssh public API (bridge uses; `crates/ssh/src/lib.rs`)

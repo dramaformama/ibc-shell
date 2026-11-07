@@ -4,7 +4,7 @@
  * ipc.md by `node scripts/check-mock-coverage.mjs`).
  *
  * Seed: folders Germany (de) › Databases, Netherlands (nl), Finland (fi); 12 hosts; 2 identities.
- * Vault: starts Locked, password `termlite` (`?vault=new` → onboarding). Terminal: echo shell.
+ * Vault: starts Locked, password `ibc-server` (`?vault=new` → onboarding). Terminal: echo shell.
  */
 import * as catalog from './mock/catalog';
 import * as sftp from './mock/sftp';

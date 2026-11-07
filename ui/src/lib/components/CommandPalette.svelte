@@ -100,7 +100,7 @@
       run: () => {
         if (sessions.active)
           window.dispatchEvent(
-            new CustomEvent('termlite:paste', {
+            new CustomEvent('ibc:paste', {
               detail: { tabId: sessions.activeId, text: s.body }
             })
           );

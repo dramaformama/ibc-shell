@@ -1,6 +1,6 @@
 //! Vault commands (`ipc.md` §vault). Passwords arrive as `SecretInput`.
 
-use termlite_vault::{ImportSummary, VaultMode};
+use ibc_vault::{ImportSummary, VaultMode};
 
 use crate::api::dto::{SecretInput, VaultStatus};
 use crate::api::{ApiError, ApiResult};

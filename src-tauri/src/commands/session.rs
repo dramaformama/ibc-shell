@@ -1,7 +1,7 @@
 //! SSH session commands (`ipc.md` §sessions, §Streaming & backpressure).
 
 use tauri::ipc::{Channel, Request};
-use termlite_store::HostId;
+use ibc_store::HostId;
 
 use crate::api::dto::{PendingId, QuickConnect, SecretInput, SessionEvent, SessionId};
 use crate::api::stream::RawBytes;

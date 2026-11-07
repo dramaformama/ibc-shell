@@ -189,7 +189,7 @@ IPC field names are snake_case; `IdentityKind` serializes `password|key|key_pass
 `*Patch` fields are `Option<Option<T>>`: `None` = untouched, `Some(None)` = set NULL (inherit), `Some(Some(v))` = set. Rust: `#[serde(default, deserialize_with = "store::patch::double_option")]` + `#[specta(type = Option<T>, optional)]`. TS: `field?: T | null` (absent = untouched, `null` = clear). Non-nullable patch fields (`name`, `label`, `hostname`, `expanded`) are plain `Option<T>`: absent or `null` = untouched.
 
 ## DB location
-`app_data_dir()/termlite.db` (Tauri path API). File permissions 0600 on unix.
+`app_data_dir()/ibc.db` (Tauri path API). File permissions 0600 on unix.
 
 ## crates/geo (optional, Phase 3)
 `pub fn lookup_country(ip: IpAddr) -> Result<Option<String>, GeoError>` — lowercase alpha-2, `None` for private/unknown; `GeoError::{Unavailable, Unimplemented}`. Feature-gated, off by default; not exposed over IPC in v1.

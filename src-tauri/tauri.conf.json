@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Termlite",
+  "productName": "ibc server",
   "version": "0.1.0",
-  "identifier": "app.termlite.desktop",
+  "identifier": "app.ibcserver.desktop",
   "build": {
     "beforeDevCommand": "pnpm -C ui dev",
     "devUrl": "http://localhost:1420",
@@ -11,7 +11,7 @@
   },
   "app": {
     "windows": [
-      { "title": "Termlite", "width": 1100, "height": 720, "minWidth": 480, "minHeight": 360 }
+      { "title": "ibc server", "width": 1100, "height": 720, "minWidth": 480, "minHeight": 360 }
     ],
     "security": { "csp": null }
   },

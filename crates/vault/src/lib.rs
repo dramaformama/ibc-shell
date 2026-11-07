@@ -16,7 +16,7 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use secrecy::{ExposeSecret, SecretBox, SecretString};
 use serde::{Deserialize, Serialize};
 use subtle::ConstantTimeEq;
-use termlite_store::{SecretId, SecretRow, Store, StoreError};
+use ibc_store::{SecretId, SecretRow, Store, StoreError};
 use zeroize::Zeroizing;
 
 use crypto::{open_blob, seal_blob, KdfParams};

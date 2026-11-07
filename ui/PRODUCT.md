@@ -28,7 +28,7 @@ Desktop first: sidebar tree of folders/hosts + tabbed content (terminal, SFTP). 
 
 ## Capabilities and Constraints
 
-Contracts in docs/contracts/ui.md and ipc.md are FROZEN v1 (tokens, layout, components, keyboard). UI develops against ui/src/lib/api/mock.ts. Secrets never reach JS except one typed password/passphrase. Remote strings are never rendered as HTML. No heavy component libs, no CSS-in-JS, virtualize lists > 200 rows. Open decision: project name (working name "Termlite").
+Contracts in docs/contracts/ui.md and ipc.md are FROZEN v1 (tokens, layout, components, keyboard). UI develops against ui/src/lib/api/mock.ts. Secrets never reach JS except one typed password/passphrase. Remote strings are never rendered as HTML. No heavy component libs, no CSS-in-JS, virtualize lists > 200 rows. Open decision: project name (working name "ibc server").
 
 ## Brand Commitments
 

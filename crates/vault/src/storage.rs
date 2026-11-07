@@ -1,7 +1,7 @@
 //! Storage seam: the vault only needs raw meta/secret rows and snapshots. `Store` implements
 //! it; tests use an in-memory implementation.
 
-use termlite_store::{ImportCounts, SecretId, SecretRow, Snapshot, Store, StoreError};
+use ibc_store::{ImportCounts, SecretId, SecretRow, Snapshot, Store, StoreError};
 
 /// Persistence used by [`crate::Vault`].
 pub trait VaultStorage: Send + Sync {

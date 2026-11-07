@@ -1,7 +1,7 @@
 //! SFTP, local FS and transfer commands (`ipc.md` §SFTP).
 
 use tauri::ipc::Channel;
-use termlite_sftp::{ConflictChoice, ConflictId, DirListing, Entry, TransferEvent, TransferId};
+use ibc_sftp::{ConflictChoice, ConflictId, DirListing, Entry, TransferEvent, TransferId};
 
 use crate::api::dto::{SessionEvent, SftpId, SftpTarget, TransferIds, TransferRequest};
 use crate::api::{ApiError, ApiResult};

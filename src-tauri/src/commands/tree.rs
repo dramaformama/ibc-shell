@@ -1,6 +1,6 @@
 //! Folder / host tree commands (`ipc.md` §store / tree).
 
-use termlite_store::{
+use ibc_store::{
     Folder, FolderDeleteMode, FolderId, FolderInput, FolderPatch, Host, HostId, HostInput,
     HostPatch, NodeRef, ResolvedHost, Tree,
 };

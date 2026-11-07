@@ -1,12 +1,12 @@
 [package]
-name = "termlite-vault"
+name = "ibc-vault"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
 
 [dependencies]
-termlite-store.workspace = true
+ibc-store.workspace = true
 thiserror.workspace = true
 secrecy.workspace = true
 zeroize.workspace = true

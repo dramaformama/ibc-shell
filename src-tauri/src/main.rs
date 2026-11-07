@@ -1,6 +1,6 @@
-//! Termlite desktop entry point.
+//! ibc server desktop entry point.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    termlite_lib::run();
+    ibc_lib::run();
 }

@@ -1,12 +1,12 @@
 [package]
-name = "termlite-sftp"
+name = "ibc-sftp"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
 
 [dependencies]
-termlite-ssh.workspace = true
+ibc-ssh.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 uuid.workspace = true

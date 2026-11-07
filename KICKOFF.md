@@ -2,7 +2,7 @@
 
 ## 0. Подготовка (один раз)
 ```bash
-mkdir termlite && cd termlite && git init
+mkdir ibc-server && cd ibc-server && git init
 # скопировать сюда содержимое этого архива: CLAUDE.md, docs/, .claude/agents/
 git add -A && git commit -m "plan: contracts, agents"
 # нужны: rustup (stable), node 22 LTS, pnpm 9+, just, docker; для мобилок — Xcode / Android Studio + NDK
@@ -12,7 +12,7 @@ claude   # запуск в корне репо; модель основной с
 
 ## 1. Промпт Фазы 0 (вставить целиком)
 ```
-Ты оркестратор проекта Termlite. Прочитай CLAUDE.md, docs/PLAN.md (§0, §3, §6 Фаза 0) и docs/STATUS.md.
+Ты оркестратор проекта ibc server. Прочитай CLAUDE.md, docs/PLAN.md (§0, §3, §6 Фаза 0) и docs/STATUS.md.
 1) Сам выполни P0.1 (каркас). Убедись, что `pnpm tauri dev` и `cargo test --workspace` работают.
 2) Запусти сабагента architect на P0.2 + P0.3.
 3) Параллельно запусти release на P0.4.
@@ -23,7 +23,7 @@ claude   # запуск в корне репо; модель основной с
 
 ## 2. Промпт Фазы 1 (после /clear)
 ```
-Оркестратор Termlite. Прочитай CLAUDE.md, docs/STATUS.md, docs/PLAN.md §6 Фаза 1.
+Оркестратор ibc server. Прочитай CLAUDE.md, docs/STATUS.md, docs/PLAN.md §6 Фаза 1.
 Запусти ПАРАЛЛЕЛЬНО, каждого в своём worktree: store (P1.STORE), vault (P1.VAULT), ssh-core (P1.SSH), flags (P1.FLAGS), ui-shell (P1.UI), qa (P1.QA).
 vault зависит только от публичного API store — он уже есть со скелета Фазы 0.
 После завершения: смёрджи ветки по одной, после каждой — `cargo clippy` + тесты затронутого крейта.
@@ -33,7 +33,7 @@ BLOCKER → верни задачу владельцу с текстом зам�
 
 ## 3. Фаза 2
 ```
-Оркестратор Termlite. CLAUDE.md, STATUS.md, PLAN.md §6 Фаза 2.
+Оркестратор ibc server. CLAUDE.md, STATUS.md, PLAN.md §6 Фаза 2.
 Параллельно: tauri-bridge (P2.BRIDGE), sftp-core (P2.SFTP), ui-terminal (P2.TERM), ui-sftp (P2.SFTPUI).
 Когда sftp-core и tauri-bridge готовы — tauri-bridge подключает SFTP-команды (второй заход, SendMessage тому же агенту).
 Затем qa (P2.QA) + бенчмарки, security-reviewer по src-tauri и crates/sftp. Проверь чеклист PLAN §1.1 вручную вместе со мной: дай список из 15 шагов для ручной проверки.

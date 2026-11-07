@@ -6,7 +6,7 @@ use std::path::Path;
 
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
-use termlite_store::{SecretId, Snapshot};
+use ibc_store::{SecretId, Snapshot};
 use zeroize::{Zeroize, Zeroizing};
 
 use crate::crypto::{self, KdfParams, NONCE_LEN};

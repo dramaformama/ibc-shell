@@ -1,6 +1,6 @@
 //! Identities, tags, snippets, forwards, known hosts, settings (`ipc.md` §store / tree).
 
-use termlite_store::{
+use ibc_store::{
     FolderId, ForwardId, ForwardInput, ForwardPatch, HostId, IdentityId, KnownHostId,
     KnownHostSummary, PortForward, Snippet, SnippetId, SnippetInput, SnippetPatch, Tag, TagId,
     TagInput, TagPatch,

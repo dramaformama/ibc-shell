@@ -5,7 +5,7 @@ import { ui } from './ui.svelte';
 
 export type ThemeChoice = 'light' | 'dark' | 'system';
 
-const LS_THEME = 'termlite.theme';
+const LS_THEME = 'ibc.theme';
 
 function readTheme(): ThemeChoice {
   try {

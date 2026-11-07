@@ -2258,6 +2258,92 @@ dependencies = [
 ]
 
 [[package]]
+name = "ibc-geo"
+version = "0.1.0"
+dependencies = [
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "ibc-server"
+version = "0.1.0"
+dependencies = [
+ "ibc-sftp",
+ "ibc-ssh",
+ "ibc-store",
+ "ibc-vault",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "specta",
+ "specta-typescript",
+ "tauri",
+ "tauri-build",
+ "tauri-specta",
+ "thiserror 2.0.21",
+ "uuid",
+]
+
+[[package]]
+name = "ibc-sftp"
+version = "0.1.0"
+dependencies = [
+ "ibc-ssh",
+ "serde",
+ "specta",
+ "thiserror 2.0.21",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "ibc-ssh"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "russh",
+ "secrecy",
+ "serde",
+ "specta",
+ "thiserror 2.0.21",
+ "tokio",
+ "zeroize",
+]
+
+[[package]]
+name = "ibc-store"
+version = "0.1.0"
+dependencies = [
+ "rusqlite",
+ "rusqlite_migration",
+ "serde",
+ "serde_json",
+ "specta",
+ "thiserror 2.0.21",
+ "uuid",
+]
+
+[[package]]
+name = "ibc-vault"
+version = "0.1.0"
+dependencies = [
+ "argon2 0.5.3",
+ "chacha20poly1305",
+ "ciborium",
+ "ibc-store",
+ "keyring",
+ "russh",
+ "secrecy",
+ "serde",
+ "specta",
+ "ssh-key",
+ "subtle",
+ "thiserror 2.0.21",
+ "zeroize",
+ "zstd",
+]
+
+[[package]]
 name = "ico"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5284,92 +5370,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5fed54709c5b3a53d09bb1c113ea4f5ceafd1e772ddcb0030a82e1d56c087b08"
 dependencies = [
  "new_debug_unreachable",
-]
-
-[[package]]
-name = "termlite"
-version = "0.1.0"
-dependencies = [
- "secrecy",
- "serde",
- "serde_json",
- "specta",
- "specta-typescript",
- "tauri",
- "tauri-build",
- "tauri-specta",
- "termlite-sftp",
- "termlite-ssh",
- "termlite-store",
- "termlite-vault",
- "thiserror 2.0.21",
- "uuid",
-]
-
-[[package]]
-name = "termlite-geo"
-version = "0.1.0"
-dependencies = [
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "termlite-sftp"
-version = "0.1.0"
-dependencies = [
- "serde",
- "specta",
- "termlite-ssh",
- "thiserror 2.0.21",
- "tokio",
- "uuid",
-]
-
-[[package]]
-name = "termlite-ssh"
-version = "0.1.0"
-dependencies = [
- "bytes",
- "russh",
- "secrecy",
- "serde",
- "specta",
- "thiserror 2.0.21",
- "tokio",
- "zeroize",
-]
-
-[[package]]
-name = "termlite-store"
-version = "0.1.0"
-dependencies = [
- "rusqlite",
- "rusqlite_migration",
- "serde",
- "serde_json",
- "specta",
- "thiserror 2.0.21",
- "uuid",
-]
-
-[[package]]
-name = "termlite-vault"
-version = "0.1.0"
-dependencies = [
- "argon2 0.5.3",
- "chacha20poly1305",
- "ciborium",
- "keyring",
- "russh",
- "secrecy",
- "serde",
- "specta",
- "ssh-key",
- "subtle",
- "termlite-store",
- "thiserror 2.0.21",
- "zeroize",
- "zstd",
 ]
 
 [[package]]

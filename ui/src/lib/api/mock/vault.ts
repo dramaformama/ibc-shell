@@ -1,12 +1,12 @@
 /**
  * Mock: vault, app commands and the global event bus.
- * Vault starts `Locked` (MasterPassword). Password `termlite` unlocks; anything else →
+ * Vault starts `Locked` (MasterPassword). Password `ibc-server` unlocks; anything else →
  * `WrongPassword`. `?vault=new` in the URL starts `Uninitialized` (onboarding).
  */
 import type { ApiEvents, Commands, EventPayloads, VaultMode, VaultState } from '../types';
 import { delay, err, ok } from './state';
 
-const MOCK_PASSWORD = 'termlite';
+const MOCK_PASSWORD = 'ibc-server';
 
 const initialUninit =
   typeof location !== 'undefined' && new URLSearchParams(location.search).get('vault') === 'new';

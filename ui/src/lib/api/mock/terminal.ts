@@ -39,7 +39,7 @@ function ask<T>(s: Session, e: (pendingId: string) => SessionEvent): Promise<T |
 
 function banner(s: Session): void {
   out(s, '\x1b[2J\x1b[H');
-  out(s, `\x1b[1;36m  Termlite mock terminal\x1b[0m  \x1b[2m(no real SSH)\x1b[0m\r\n`);
+  out(s, `\x1b[1;36m  ibc server mock terminal\x1b[0m  \x1b[2m(no real SSH)\x1b[0m\r\n`);
   out(
     s,
     `  host \x1b[33m${s.hostname}\x1b[0m · user \x1b[35m${s.user}\x1b[0m · type \x1b[1mhelp\x1b[0m\r\n\r\n`

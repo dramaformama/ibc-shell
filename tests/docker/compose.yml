@@ -1,6 +1,6 @@
 # Test-only servers. Generate fixtures first: tests/docker/gen-fixtures.sh
 # user: tester  password: test-pw-123 (pass/kbd/evil)  keys: tests/fixtures/keys/*
-name: termlite-e2e
+name: ibc-e2e
 x-sshd: &sshd
   build: ./sshd
   volumes:

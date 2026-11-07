@@ -4,7 +4,7 @@ Status: `FROZEN v1` (2026-11-07). Changes only via ADR, bump to `v1.x`. Crypto p
 ## Vault key hierarchy
 - **DEK**: 32 random bytes (OsRng). Encrypts every secret: `XChaCha20-Poly1305(key=DEK, nonce=random 24B, aad="tl/secret/v1"||secret_id)`.
 - **KEK sources** (one or both):
-  - `OsKeychain`: random 32-byte KEK stored in OS keychain under service `app.termlite`, account `vault-kek-v1`. Android: KEK never leaves Keystore — DEK wrapped with Keystore AES-256-GCM key instead (own plugin).
+  - `OsKeychain`: random 32-byte KEK stored in OS keychain under service `app.ibcserver`, account `vault-kek-v1`. Android: KEK never leaves Keystore — DEK wrapped with Keystore AES-256-GCM key instead (own plugin).
   - `MasterPassword`: `Argon2id(password, salt=16B, m=65536 KiB, t=3, p=1, out=32)`. Params stored in `vault_meta` so they can be raised later. Mobile may use m=32768 if device RAM < 3 GB (record in meta).
 - `vault_meta` keys: `version`=1, `mode`, `kdf` (params+salt, CBOR), `dek_wrap_pw` (nonce||ct), `dek_wrap_os` (nonce||ct), `check` (encrypt constant "tl-ok" with DEK, to verify unlock).
 - Password change = rewrap DEK only. Secrets untouched.
