@@ -34,9 +34,9 @@ export const commands = {
 	hostSearch: (q: string, limit: number) => typedError<HostId[], ApiError>(__TAURI_INVOKE("host_search", { q, limit })),
 	/**  All identities (metadata only). */
 	identityList: () => typedError<IdentityDto[], ApiError>(__TAURI_INVOKE("identity_list")),
-	/**  Creates an identity; secrets go to the vault. Needs unlocked vault. */
+	/**  Creates an identity; secrets go straight into the vault. */
 	identityCreate: (input: IdentityInput) => typedError<IdentityDto, ApiError>(__TAURI_INVOKE("identity_create", { input })),
-	/**  Updates an identity. */
+	/**  Updates an identity; replaced secret rows are removed by the store in the same transaction. */
 	identityUpdate: (id: IdentityId, patch: IdentityPatchInput) => typedError<IdentityDto, ApiError>(__TAURI_INVOKE("identity_update", { id, patch })),
 	/**  Deletes an identity and its secrets. */
 	identityDelete: (id: IdentityId) => typedError<null, ApiError>(__TAURI_INVOKE("identity_delete", { id })),
@@ -58,7 +58,7 @@ export const commands = {
 	snippetUpdate: (id: SnippetId, patch: SnippetPatch) => typedError<Snippet, ApiError>(__TAURI_INVOKE("snippet_update", { id, patch })),
 	/**  Deletes a snippet. */
 	snippetDelete: (id: SnippetId) => typedError<null, ApiError>(__TAURI_INVOKE("snippet_delete", { id })),
-	/**  Forward rules (optionally for one host). */
+	/**  Forward rules of a host (or all). */
 	forwardList: (hostId: HostId | null) => typedError<PortForward[], ApiError>(__TAURI_INVOKE("forward_list", { hostId })),
 	/**  Creates a forward rule. */
 	forwardCreate: (input: ForwardInput) => typedError<PortForward, ApiError>(__TAURI_INVOKE("forward_create", { input })),
@@ -66,13 +66,13 @@ export const commands = {
 	forwardUpdate: (id: ForwardId, patch: ForwardPatch) => typedError<PortForward, ApiError>(__TAURI_INVOKE("forward_update", { id, patch })),
 	/**  Deletes a forward rule. */
 	forwardDelete: (id: ForwardId) => typedError<null, ApiError>(__TAURI_INVOKE("forward_delete", { id })),
-	/**  Known hosts. */
+	/**  Known hosts for the management screen (no key blobs). */
 	knownHostList: () => typedError<KnownHostSummary[], ApiError>(__TAURI_INVOKE("known_host_list")),
-	/**  Deletes a known host (only way to clear a changed-key block). */
+	/**  Deletes a known host (the only way to clear a changed-key block). */
 	knownHostDelete: (id: KnownHostId) => typedError<null, ApiError>(__TAURI_INVOKE("known_host_delete", { id })),
-	/**  Reads a setting (`null` = unset). */
+	/**  Reads a UI setting. */
 	settingsGet: (key: string) => typedError<Value | null, ApiError>(__TAURI_INVOKE("settings_get", { key })),
-	/**  Writes a setting. */
+	/**  Writes a UI setting. */
 	settingsSet: (key: string, value: Value) => typedError<null, ApiError>(__TAURI_INVOKE("settings_set", { key, value })),
 	/**  Lock state, mode, biometric availability. */
 	vaultStatus: () => typedError<VaultStatus, ApiError>(__TAURI_INVOKE("vault_status")),
@@ -80,7 +80,7 @@ export const commands = {
 	vaultInit: (mode: VaultMode, password: string | null) => typedError<null, ApiError>(__TAURI_INVOKE("vault_init", { mode, password })),
 	/**  Unlocks; `password = null` → keychain / biometric. */
 	vaultUnlock: (password: string | null) => typedError<null, ApiError>(__TAURI_INVOKE("vault_unlock", { password })),
-	/**  Locks (zeroizes DEK) and emits `vault://locked`. */
+	/**  Locks (zeroizes DEK) and emits `vault://locked`. Open sessions keep running. */
 	vaultLock: () => typedError<null, ApiError>(__TAURI_INVOKE("vault_lock")),
 	/**  Rewraps the DEK. */
 	vaultChangePassword: (oldPassword: string, newPassword: string) => typedError<null, ApiError>(__TAURI_INVOKE("vault_change_password", { oldPassword, newPassword })),

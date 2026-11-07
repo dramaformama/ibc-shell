@@ -27,6 +27,9 @@ ibc-store.workspace = true
 ibc-vault.workspace = true
 ibc-ssh.workspace = true
 ibc-sftp.workspace = true
+zeroize.workspace = true
+# Prompt timeouts + oneshot/mpsc in the session pump (rt is provided by Tauri).
+tokio = { workspace = true, features = ["time", "sync", "macros"] }
 
 [lints]
 workspace = true

@@ -1,7 +1,27 @@
 //! ibc server app shell: commands, channels, state, capabilities.
 
+use std::sync::Arc;
+
+use ibc_store::Store;
+use ibc_vault::{OsKeyring, Vault};
+use tauri::Manager;
+
 pub mod api;
 pub mod commands;
+pub mod connect;
+pub mod prompts;
+pub mod session_task;
+pub mod state;
+pub mod transfers;
+
+/// Opens the store in the app data dir and builds [`state::AppState`].
+fn init_state(app: &tauri::AppHandle) -> Result<state::AppState, Box<dyn std::error::Error>> {
+    let dir = app.path().app_data_dir()?;
+    std::fs::create_dir_all(&dir)?;
+    let store = Arc::new(Store::open(&dir.join("ibc.db"))?);
+    let vault = Arc::new(Vault::new(store.clone(), Arc::new(OsKeyring::new())));
+    Ok(state::AppState::new(store, vault))
+}
 
 /// Builds and runs the Tauri application.
 ///
@@ -22,6 +42,7 @@ pub fn run() {
         })
         .setup(move |app| {
             specta.mount_events(app);
+            app.manage(init_state(app.handle())?);
             Ok(())
         })
         .run(tauri::generate_context!());
