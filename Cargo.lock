@@ -2313,7 +2313,9 @@ dependencies = [
  "tauri-build",
  "tauri-specta",
  "thiserror 2.0.21",
+ "tokio",
  "uuid",
+ "zeroize",
 ]
 
 [[package]]

@@ -65,12 +65,66 @@ pub enum ApiError {
     Internal(String),
 }
 
-impl ApiError {
-    /// Phase 0 stub result.
-    pub(crate) fn unimplemented() -> Self {
-        Self::Internal("not implemented".into())
+/// Command result alias.
+pub type ApiResult<T> = Result<T, ApiError>;
+
+impl From<ibc_ssh::SshError> for ApiError {
+    fn from(e: ibc_ssh::SshError) -> Self {
+        use ibc_ssh::SshError as E;
+        match e {
+            E::HostKeyChanged(m) => Self::HostKeyChanged(m),
+            E::AuthFailed { methods_left } => Self::AuthFailed { methods_left },
+            E::Network(s) | E::Negotiation(s) | E::Protocol(s) => Self::Network(s),
+            E::Timeout => Self::Timeout,
+            E::Cancelled => Self::Cancelled,
+            E::InvalidChain => Self::JumpCycle,
+            E::KnownHosts(_) => Self::Internal("known hosts backend failure".into()),
+            E::Unimplemented => Self::Unsupported,
+        }
     }
 }
 
-/// Command result alias.
-pub type ApiResult<T> = Result<T, ApiError>;
+impl From<ibc_sftp::SftpError> for ApiError {
+    fn from(e: ibc_sftp::SftpError) -> Self {
+        use ibc_sftp::SftpError as E;
+        match e {
+            E::NotFound => Self::NotFound,
+            E::PermissionDenied => Self::Sftp("permission denied".into()),
+            E::AlreadyExists(info) => Self::Conflict(Box::new(info)),
+            E::UnsafePath(s) => Self::Validation(s),
+            E::Protocol(s) | E::Io(s) => Self::Sftp(s),
+            E::Ssh(e) => e.into(),
+            E::Cancelled => Self::Cancelled,
+            E::Unimplemented => Self::Unsupported,
+        }
+    }
+}
+
+impl From<ibc_store::StoreError> for ApiError {
+    fn from(e: ibc_store::StoreError) -> Self {
+        use ibc_store::StoreError as E;
+        match e {
+            E::NotFound => Self::NotFound,
+            E::Validation(s) | E::Conflict(s) => Self::Validation(s),
+            E::Cycle => Self::Cycle,
+            E::TooDeep => Self::TooDeep,
+            E::JumpCycle => Self::JumpCycle,
+            E::Db(_) => Self::Internal("database error".into()),
+            E::Unimplemented => Self::Unsupported,
+        }
+    }
+}
+
+impl From<ibc_vault::VaultError> for ApiError {
+    fn from(e: ibc_vault::VaultError) -> Self {
+        use ibc_vault::VaultError as E;
+        match e {
+            E::Locked => Self::VaultLocked,
+            E::WrongPassword => Self::WrongPassword,
+            E::WeakPassword => Self::Validation("weak password".into()),
+            E::Store(s) => s.into(),
+            E::Unimplemented => Self::Unsupported,
+            other => Self::Internal(other.to_string()),
+        }
+    }
+}

@@ -4,97 +4,67 @@ use ibc_store::{
     Folder, FolderDeleteMode, FolderId, FolderInput, FolderPatch, Host, HostId, HostInput,
     HostPatch, NodeRef, ResolvedHost, Tree,
 };
+use tauri::State;
 
-use crate::api::{ApiError, ApiResult};
+use crate::api::ApiResult;
+use crate::state::AppState;
 
-/// Whole tree (flat, sorted).
-#[tauri::command]
-#[specta::specta]
-pub async fn tree_list() -> ApiResult<Tree> {
-    Err(ApiError::unimplemented())
+macro_rules! store_cmd {
+    ($(#[$doc:meta])* $name:ident($($arg:ident: $ty:ty),*) -> $ret:ty => $call:ident($($pass:expr),*)) => {
+        $(#[$doc])*
+        #[tauri::command]
+        #[specta::specta]
+        pub async fn $name(state: State<'_, AppState>, $($arg: $ty),*) -> ApiResult<$ret> {
+            Ok(state.store.$call($($pass),*)?)
+        }
+    };
 }
 
-/// Creates a folder (last among siblings).
-#[tauri::command]
-#[specta::specta]
-pub async fn folder_create(input: FolderInput) -> ApiResult<Folder> {
-    Err(ApiError::unimplemented())
-}
-
-/// Updates folder fields.
-#[tauri::command]
-#[specta::specta]
-pub async fn folder_update(id: FolderId, patch: FolderPatch) -> ApiResult<Folder> {
-    Err(ApiError::unimplemented())
-}
-
-/// Moves a folder; `after = null` = first. Errors: `Cycle`, `TooDeep`.
-#[tauri::command]
-#[specta::specta]
-pub async fn folder_move(
-    id: FolderId,
-    parent: Option<FolderId>,
-    after: Option<NodeRef>,
-) -> ApiResult<()> {
-    Err(ApiError::unimplemented())
-}
-
-/// Deletes a folder.
-#[tauri::command]
-#[specta::specta]
-pub async fn folder_delete(id: FolderId, mode: FolderDeleteMode) -> ApiResult<()> {
-    Err(ApiError::unimplemented())
-}
-
-/// Creates a host (last in folder).
-#[tauri::command]
-#[specta::specta]
-pub async fn host_create(input: HostInput) -> ApiResult<Host> {
-    Err(ApiError::unimplemented())
-}
-
-/// Updates host fields.
-#[tauri::command]
-#[specta::specta]
-pub async fn host_update(id: HostId, patch: HostPatch) -> ApiResult<Host> {
-    Err(ApiError::unimplemented())
-}
-
-/// Duplicates a host right after the original.
-#[tauri::command]
-#[specta::specta]
-pub async fn host_duplicate(id: HostId) -> ApiResult<Host> {
-    Err(ApiError::unimplemented())
-}
-
-/// Deletes hosts (one transaction).
-#[tauri::command]
-#[specta::specta]
-pub async fn host_delete(ids: Vec<HostId>) -> ApiResult<()> {
-    Err(ApiError::unimplemented())
-}
-
-/// Moves a host; `after = null` = first.
-#[tauri::command]
-#[specta::specta]
-pub async fn host_move(
-    id: HostId,
-    folder: Option<FolderId>,
-    after: Option<NodeRef>,
-) -> ApiResult<()> {
-    Err(ApiError::unimplemented())
-}
-
-/// Resolves inheritance with per-field source.
-#[tauri::command]
-#[specta::specta]
-pub async fn host_resolve(id: HostId) -> ApiResult<ResolvedHost> {
-    Err(ApiError::unimplemented())
-}
-
-/// Full-text search; best match first.
-#[tauri::command]
-#[specta::specta]
-pub async fn host_search(q: String, limit: u32) -> ApiResult<Vec<HostId>> {
-    Err(ApiError::unimplemented())
-}
+store_cmd!(
+    /// Whole tree (flat, sorted).
+    tree_list() -> Tree => tree_list()
+);
+store_cmd!(
+    /// Creates a folder (last among siblings).
+    folder_create(input: FolderInput) -> Folder => folder_create(input)
+);
+store_cmd!(
+    /// Updates folder fields.
+    folder_update(id: FolderId, patch: FolderPatch) -> Folder => folder_update(id, patch)
+);
+store_cmd!(
+    /// Moves a folder; `after = null` = first. Errors: `Cycle`, `TooDeep`.
+    folder_move(id: FolderId, parent: Option<FolderId>, after: Option<NodeRef>) -> () => folder_move(id, parent, after)
+);
+store_cmd!(
+    /// Deletes a folder.
+    folder_delete(id: FolderId, mode: FolderDeleteMode) -> () => folder_delete(id, mode)
+);
+store_cmd!(
+    /// Creates a host (last in folder).
+    host_create(input: HostInput) -> Host => host_create(input)
+);
+store_cmd!(
+    /// Updates host fields.
+    host_update(id: HostId, patch: HostPatch) -> Host => host_update(id, patch)
+);
+store_cmd!(
+    /// Duplicates a host right after the original.
+    host_duplicate(id: HostId) -> Host => host_duplicate(id)
+);
+store_cmd!(
+    /// Deletes hosts (one transaction).
+    host_delete(ids: Vec<HostId>) -> () => host_delete(&ids)
+);
+store_cmd!(
+    /// Moves a host; `after = null` = first.
+    host_move(id: HostId, folder: Option<FolderId>, after: Option<NodeRef>) -> () => host_move(id, folder, after)
+);
+store_cmd!(
+    /// Resolves inheritance with per-field source.
+    host_resolve(id: HostId) -> ResolvedHost => host_resolve(id)
+);
+store_cmd!(
+    /// Full-text search; best match first.
+    host_search(q: String, limit: u32) -> Vec<HostId> => host_search(&q, limit)
+);
