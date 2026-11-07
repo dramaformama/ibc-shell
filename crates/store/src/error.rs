@@ -28,3 +28,33 @@ pub enum StoreError {
     #[error("not implemented")]
     Unimplemented,
 }
+
+impl From<rusqlite::Error> for StoreError {
+    fn from(e: rusqlite::Error) -> Self {
+        use rusqlite::ffi::{
+            SQLITE_CONSTRAINT_CHECK, SQLITE_CONSTRAINT_FOREIGNKEY, SQLITE_CONSTRAINT_PRIMARYKEY,
+            SQLITE_CONSTRAINT_UNIQUE,
+        };
+        match &e {
+            rusqlite::Error::QueryReturnedNoRows => Self::NotFound,
+            rusqlite::Error::SqliteFailure(f, msg) => {
+                let text = msg.clone().unwrap_or_else(|| f.to_string());
+                match f.extended_code {
+                    SQLITE_CONSTRAINT_UNIQUE | SQLITE_CONSTRAINT_PRIMARYKEY => Self::Conflict(text),
+                    SQLITE_CONSTRAINT_FOREIGNKEY => {
+                        Self::Validation("reference to a missing or in-use row".into())
+                    }
+                    SQLITE_CONSTRAINT_CHECK => Self::Validation(text),
+                    _ => Self::Db(text),
+                }
+            }
+            _ => Self::Db(e.to_string()),
+        }
+    }
+}
+
+impl From<rusqlite_migration::Error> for StoreError {
+    fn from(e: rusqlite_migration::Error) -> Self {
+        Self::Db(e.to_string())
+    }
+}
