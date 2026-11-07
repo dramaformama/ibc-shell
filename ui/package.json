@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "pnpm i18n && vite dev",
     "build": "pnpm i18n && vite build",
+    "dev:app": "pnpm i18n && vite dev --mode tauri",
+    "build:app": "pnpm i18n && vite build --mode tauri",
     "preview": "vite preview",
     "check": "pnpm i18n && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "lint": "prettier --check . && eslint .",

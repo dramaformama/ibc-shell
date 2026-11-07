@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "identifier": "app.ibcshell.desktop",
   "build": {
-    "beforeDevCommand": "pnpm -C ui dev",
+    "beforeDevCommand": "pnpm -C ui dev:app",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "pnpm -C ui build",
+    "beforeBuildCommand": "pnpm -C ui build:app",
     "frontendDist": "../ui/build"
   },
   "app": {
