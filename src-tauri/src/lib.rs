@@ -14,6 +14,11 @@ pub mod prompts;
 pub mod session_task;
 pub mod state;
 pub mod transfers;
+#[cfg(desktop)]
+pub mod tray;
+#[cfg(not(desktop))]
+#[path = "tray_stub.rs"]
+pub mod tray;
 
 /// Opens the store in the app data dir and builds [`state::AppState`].
 fn init_state(app: &tauri::AppHandle) -> Result<state::AppState, Box<dyn std::error::Error>> {

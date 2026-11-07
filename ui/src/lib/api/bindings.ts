@@ -173,6 +173,19 @@ export const commands = {
 	 *  location lookup (ADR-011). No connection is made; IP literals are returned as is.
 	 */
 	hostLookupIp: (hostId: HostId) => typedError<string[], ApiError>(__TAURI_INVOKE("host_lookup_ip", { hostId })),
+	/**  Docker containers with CPU / memory. Read-only; passive for auto-lock. */
+	dockerList: (sessionId: SessionId) => typedError<DockerReport, ApiError>(__TAURI_INVOKE("docker_list", { sessionId })),
+	/**  Last `lines` (20–2000) log lines of a container. Read-only. */
+	dockerLogs: (sessionId: SessionId, containerId: string, lines: number) => typedError<string, ApiError>(__TAURI_INVOKE("docker_logs", { sessionId, containerId, lines })),
+	/**  Starts, stops or restarts one container (the UI asks the user first). */
+	dockerAction: (sessionId: SessionId, containerId: string, action: DockerAction) => typedError<null, ApiError>(__TAURI_INVOKE("docker_action", { sessionId, containerId, action })),
+	/**  TLS certificates found on the server with their expiry. Read-only; passive for auto-lock. */
+	certList: (sessionId: SessionId) => typedError<CertReport, ApiError>(__TAURI_INVOKE("cert_list", { sessionId })),
+	/**
+	 *  Shows or updates the menu-bar icon with the given lines; `null` hides it (ADR-013).
+	 *  Sync on purpose: runs on the main thread, where native menus live.
+	 */
+	traySet: (menu: TrayMenu | null) => typedError<null, ApiError>(__TAURI_INVOKE("tray_set", { menu })),
 	/**  Version / platform / arch. */
 	appInfo: () => typedError<AppInfo, ApiError>(__TAURI_INVOKE("app_info")),
 	/**  Opens an http/https URL in the system browser (validated). */
@@ -181,6 +194,7 @@ export const commands = {
 
 /** Events */
 export const events = {
+	trayOpenHost: makeEvent<TrayOpenHost, TrayOpenHost>("tray://open-host"),
 	treeChanged: makeEvent<TreeChanged, TreeChanged>("tree://changed"),
 	updateAvailable: makeEvent<UpdateAvailable, UpdateAvailable>("update://available"),
 	vaultLocked: makeEvent<VaultLocked, VaultLocked>("vault://locked"),
@@ -240,6 +254,28 @@ export type AppInfo = {
 	arch: string,
 };
 
+/**  One certificate. */
+export type CertInfo = {
+	/**  File on the server. */
+	path: string,
+	/**  Subject CN followed by the other DNS names (≤ 20). */
+	names: string[],
+	/**  Issuer organisation (or CN). */
+	issuer: string | null,
+	/**  Expiry, Unix ms. */
+	not_after: number,
+};
+
+/**  Result of [`cert_list`]. */
+export type CertReport = {
+	/**  Certificates, soonest expiry first (same certificate in two places listed once). */
+	certs: CertInfo[],
+	/**  Places that exist but the login user may not read (needs root). */
+	denied: number,
+	/**  `openssl` is not installed. */
+	no_openssl: boolean,
+};
+
 /**  Answer to a conflict. */
 export type ConflictChoice = 
 /**  Replace. */
@@ -294,12 +330,76 @@ export type ConnectStep =
 /**  Opening PTY / shell / subsystem. */
 "OpeningChannel";
 
+/**  One container. */
+export type Container = {
+	/**  Short id (12 hex chars). */
+	id: string,
+	/**  Name. */
+	name: string,
+	/**  Image. */
+	image: string,
+	/**  `running`, `exited`, `restarting`, `paused`, `created`, `dead`. */
+	state: string,
+	/**  Human status, e.g. `Up 3 days (healthy)`. */
+	status: string,
+	/**  Published ports as `docker ps` prints them. */
+	ports: string,
+	/**  CPU % (running containers only). */
+	cpu_pct: number | null,
+	/**  Memory used, bytes. */
+	mem_bytes: number | null,
+	/**  Memory limit, bytes. */
+	mem_limit: number | null,
+};
+
+/**  One core's time split, % of that core (user / system incl. irq / nice / iowait / steal). */
+export type CoreSplit = {
+	/**  User %. */
+	user: number | null,
+	/**  System + irq + softirq %. */
+	system: number | null,
+	/**  Nice %. */
+	nice: number | null,
+	/**  IO-wait %. */
+	iowait: number | null,
+	/**  Steal %. */
+	steal: number | null,
+};
+
 /**  A directory listing. `path` is absolute and normalized (remote: POSIX). */
 export type DirListing = {
 	/**  Absolute path of the directory. */
 	path: string,
 	/**  Entries, unsorted (`.` and `..` excluded). */
 	entries: Entry[],
+};
+
+/**  Whether the Docker CLI could be used. */
+export type DockerAccess = 
+/**  Listed fine. */
+"Ok" | 
+/**  No `docker` command on the server. */
+"Missing" | 
+/**  The login user may not talk to the daemon (not root, not in the `docker` group). */
+"Denied" | 
+/**  The daemon is not running. */
+"Down";
+
+/**  A user-chosen container action. */
+export type DockerAction = 
+/**  `docker start`. */
+"Start" | 
+/**  `docker stop`. */
+"Stop" | 
+/**  `docker restart`. */
+"Restart";
+
+/**  Result of [`docker_list`]. */
+export type DockerReport = {
+	/**  Access state; `containers` is empty unless `Ok`. */
+	access: DockerAccess,
+	/**  Containers, running first. */
+	containers: Container[],
 };
 
 /**  Transfer endpoint. TS: `{kind:"local"} | {kind:"remote", sftp_id}`. */
@@ -650,6 +750,8 @@ export type HostStats = {
 	cores: number,
 	/**  Busy % per core. */
 	cpu_cores: (number | null)[],
+	/**  The same cores split by kind of time (same order as `cpu_cores`). */
+	cpu_core_split: CoreSplit[],
 	/**  User %. */
 	cpu_user: number | null,
 	/**  System (kernel + irq) %. */
@@ -1198,6 +1300,32 @@ export type TransferRequest = {
 	dst_dir: string,
 	/**  Conflict policy. */
 	conflict: ConflictPolicy,
+};
+
+/**  One server line. */
+export type TrayItem = {
+	/**  Host to open on click; `null` = a disabled caption. */
+	host_id: HostId | null,
+	/**  Text as shown. */
+	text: string,
+};
+
+/**  The whole menu, already translated by the UI. */
+export type TrayMenu = {
+	/**  Hover text. */
+	tooltip: string,
+	/**  Server lines (≤ 24). */
+	items: TrayItem[],
+	/**  "Open iBC Shell". */
+	open_label: string,
+	/**  "Quit". */
+	quit_label: string,
+};
+
+/**  A server line of the menu-bar icon was clicked; the UI opens that host's Status page. */
+export type TrayOpenHost = {
+	/**  Host to open. */
+	host_id: HostId,
 };
 
 /**  Whole tree, flat. Both lists sorted by (parent, `sort_key`). */

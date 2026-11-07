@@ -1,14 +1,65 @@
 <script lang="ts">
-  import { FolderPlus, LayoutGrid, Lock, Plus, Search, Settings } from '@lucide/svelte';
+  import {
+    Box,
+    FolderPlus,
+    LayoutGrid,
+    Lock,
+    Plus,
+    Search,
+    Settings,
+    ShieldCheck,
+    Zap
+  } from '@lucide/svelte';
+  import { services } from '$lib/services/services.svelte';
+  import { certTone, daysLeft } from '$lib/services/ports';
+  import { snippets } from '$lib/snippets/snippets.svelte';
   import * as m from '$lib/paraglide/messages.js';
   import { sessions } from '$lib/stores/sessions.svelte';
   import { tree } from '$lib/stores/tree.svelte';
   import { ui } from '$lib/stores/ui.svelte';
   import { vault } from '$lib/stores/vault.svelte';
   import { mod } from '$lib/util/platform';
+  import Logo from './Logo.svelte';
   import Tree from './Tree.svelte';
 
   let { mac = false }: { mac?: boolean } = $props();
+
+  const running = $derived(
+    Object.values(services.docker).reduce(
+      (n, r) => n + r.containers.filter((c) => c.state === 'running').length,
+      0
+    )
+  );
+  const expiring = $derived(
+    Object.values(services.certs).reduce(
+      (n, r) => n + r.certs.filter((c) => certTone(daysLeft(c.not_after)) !== 'ok').length,
+      0
+    )
+  );
+  const pages = $derived([
+    {
+      id: 'overview' as const,
+      label: m.dash_title(),
+      icon: LayoutGrid,
+      count: tree.data.hosts.length,
+      alert: false
+    },
+    { id: 'docker' as const, label: m.dk_title(), icon: Box, count: running, alert: false },
+    {
+      id: 'domains' as const,
+      label: m.fleet_domains(),
+      icon: ShieldCheck,
+      count: expiring,
+      alert: true
+    },
+    {
+      id: 'snippets' as const,
+      label: m.panel_snippets(),
+      icon: Zap,
+      count: snippets.items.length,
+      alert: false
+    }
+  ]);
 </script>
 
 <aside class="side" aria-label={m.sidebar_hosts()}>
@@ -18,15 +69,19 @@
     </button>
   </div>
   <nav aria-label={m.dash_title()}>
-    <button
-      class="nav-item"
-      aria-current={sessions.activeId === null ? 'page' : undefined}
-      onclick={() => (sessions.activeId = null)}
-    >
-      <LayoutGrid size={17} /><span>{m.dash_title()}</span><span class="nav-count tnum"
-        >{tree.data.hosts.length}</span
+    {#each pages as pg (pg.id)}
+      <button
+        class="nav-item"
+        aria-current={sessions.activeId === null && ui.page === pg.id ? 'page' : undefined}
+        onclick={() => {
+          ui.page = pg.id;
+          sessions.activeId = null;
+        }}
       >
-    </button>
+        <pg.icon size={17} /><span>{pg.label}</span>
+        {#if pg.count}<span class="nav-count tnum" class:alert={pg.alert}>{pg.count}</span>{/if}
+      </button>
+    {/each}
   </nav>
   <div class="section-heading">
     <h2 class="sect">{m.sidebar_hosts_section()}</h2>
@@ -45,6 +100,7 @@
   </div>
   <Tree />
   <footer>
+    <span class="brand"><Logo size={18} />iBC Shell</span>
     <span class="sp"></span>
     <button
       class="icon-btn"
@@ -78,7 +134,7 @@
     flex: none;
   }
   .top.mac {
-    padding-left: 78px;
+    padding-left: 84px;
   }
   .search {
     display: flex;
@@ -86,7 +142,7 @@
     gap: 8px;
     flex: 1;
     min-width: 0;
-    height: 28px;
+    height: var(--control-h);
     padding: 0 6px 0 10px;
     border: 1px solid transparent;
     border-radius: var(--r-control);
@@ -115,7 +171,7 @@
     align-items: center;
     gap: 10px;
     width: 100%;
-    height: 36px;
+    height: 34px;
     padding: 0 10px;
     border: 0;
     border-radius: var(--r-control);
@@ -140,6 +196,19 @@
     margin-left: auto;
     font-size: 11px;
     color: var(--muted);
+  }
+  .nav-count.alert {
+    min-width: 18px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--warn) 18%, transparent);
+    color: color-mix(in oklab, var(--warn) 70%, var(--text));
+    font-weight: 600;
+    text-align: center;
+  }
+  nav {
+    display: grid;
+    gap: 2px;
   }
   .section-heading {
     display: flex;
@@ -168,5 +237,16 @@
   }
   .sp {
     flex: 1;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding-left: 4px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    user-select: none;
   }
 </style>

@@ -12,6 +12,14 @@ pub struct VaultLocked;
 #[tauri_specta(event_name = "tree://changed")]
 pub struct TreeChanged;
 
+/// A server line of the menu-bar icon was clicked; the UI opens that host's Status page.
+#[derive(Clone, Debug, Serialize, Deserialize, specta::Type, tauri_specta::Event)]
+#[tauri_specta(event_name = "tray://open-host")]
+pub struct TrayOpenHost {
+    /// Host to open.
+    pub host_id: ibc_shell_store::HostId,
+}
+
 /// Signed update available.
 #[derive(Clone, Debug, Serialize, Deserialize, specta::Type, tauri_specta::Event)]
 #[tauri_specta(event_name = "update://available")]

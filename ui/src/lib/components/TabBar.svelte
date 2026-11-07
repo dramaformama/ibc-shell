@@ -1,14 +1,12 @@
 <script lang="ts">
   import {
-    Activity,
     FolderOpen,
     Gauge,
     LayoutGrid,
-    Zap,
     PanelLeftClose,
     PanelLeftOpen,
+    PanelRight,
     Plus,
-    Power,
     SquareTerminal,
     X
   } from '@lucide/svelte';
@@ -93,46 +91,42 @@
     <div class="tools">
       {#if active.hostId}
         <div class="seg" role="group" aria-label={m.tabs_label()}>
-          <button aria-pressed={active.kind === 'status'} onclick={() => switchKind('status')}
-            ><Gauge size={14} />{m.tab_status()}</button
+          <button
+            aria-pressed={active.kind === 'status'}
+            title={m.tab_status()}
+            onclick={() => switchKind('status')}
+            ><Gauge size={14} /><span class="lbl">{m.tab_status()}</span></button
           >
-          <button aria-pressed={active.kind === 'terminal'} onclick={() => switchKind('terminal')}
-            ><SquareTerminal size={14} />{m.tab_terminal()}</button
+          <button
+            aria-pressed={active.kind === 'terminal'}
+            title={m.tab_terminal()}
+            onclick={() => switchKind('terminal')}
+            ><SquareTerminal size={14} /><span class="lbl">{m.tab_terminal()}</span></button
           >
-          <button aria-pressed={active.kind === 'sftp'} onclick={() => switchKind('sftp')}
-            ><FolderOpen size={14} />{m.tab_files()}</button
+          <button
+            aria-pressed={active.kind === 'sftp'}
+            title={m.tab_files()}
+            onclick={() => switchKind('sftp')}
+            ><FolderOpen size={14} /><span class="lbl">{m.tab_files()}</span></button
           >
         </div>
       {/if}
       {#if active.kind === 'terminal'}
-        <span class="sep" aria-hidden="true"></span>
         <button
           class="icon-btn"
-          onclick={() => ui.showPanel('metrics')}
-          aria-label={m.panel_metrics()}
-          aria-pressed={ui.inspectorOpen && ui.panelTab === 'metrics'}
-          title={m.panel_metrics()}><Activity size={16} /></button
-        >
-        <button
-          class="icon-btn"
-          onclick={() => ui.showPanel('snippets')}
-          aria-label={m.panel_snippets()}
-          aria-pressed={ui.inspectorOpen && ui.panelTab === 'snippets'}
-          title={m.panel_snippets()}><Zap size={16} /></button
+          onclick={() => ui.toggleInspector()}
+          aria-label={m.panel_toggle()}
+          aria-pressed={ui.inspectorOpen}
+          title={m.panel_toggle()}><PanelRight size={16} /></button
         >
       {/if}
-      <button
-        class="icon-btn"
-        onclick={() => sessions.activeGroup && sessions.closeGroup(sessions.activeGroup)}
-        aria-label={m.tab_disconnect()}
-        title="{m.tab_disconnect()} ({mod('W')})"><Power size={15} /></button
-      >
     </div>
   {/if}
 </div>
 
 <style>
   .bar {
+    container-type: inline-size;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -143,7 +137,13 @@
     flex: none;
   }
   .bar.mac {
-    padding-left: 78px;
+    padding-left: 84px;
+  }
+  /* Narrow window: the view switcher keeps its icons, the tabs keep their names. */
+  @container (max-width: 1080px) {
+    .seg .lbl {
+      display: none;
+    }
   }
   .tabs {
     display: flex;
@@ -159,9 +159,10 @@
     position: relative;
     display: flex;
     align-items: center;
-    flex: none;
+    flex: 0 1 auto;
+    min-width: 86px;
     max-width: 220px;
-    height: 30px;
+    height: var(--control-h);
     border-radius: var(--r-control);
     color: var(--muted);
     transition:

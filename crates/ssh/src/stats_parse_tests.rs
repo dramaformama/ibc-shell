@@ -72,6 +72,10 @@ fn parses_full_report() {
     assert!((h.cpu_system - 100.0 * 35.0 / 130.0).abs() < 0.1);
     assert_eq!(h.cpu_cores.len(), 2);
     assert!((h.cpu_cores[0] - 100.0 * 80.0 / 90.0).abs() < 0.1);
+    assert_eq!(h.cpu_core_split.len(), 2);
+    let c = h.cpu_core_split[0];
+    let sum = c.user + c.system + c.nice + c.iowait + c.steal;
+    assert!(sum >= h.cpu_cores[0] - 0.1 && sum <= 100.1);
     assert_eq!(h.cores, 2);
     assert_eq!((h.net_rx_bps, h.net_tx_bps), (2000, 4000));
     assert_eq!((h.disk_read_bps, h.disk_write_bps), (200 * 512, 500 * 512));

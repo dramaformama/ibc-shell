@@ -1,9 +1,13 @@
 //! Bridge-owned IPC DTOs (types not owned by a core crate). Secret-bearing inputs use
 //! `SecretString` (typed as `string` in TS) and redact `Debug`.
 
+pub use crate::tray::{TrayItem, TrayMenu};
 use ibc_shell_sftp::{ConflictPolicy, TransferId};
+pub use ibc_shell_ssh::{
+    CertInfo, CertReport, Container, CoreSplit, DockerAccess, DockerAction, DockerReport, HostStats, Listener,
+    NetIface, PeerFlow, ProcRow,
+};
 use ibc_shell_ssh::{ConnectStep, ForwardState, HostKeyInfo, KbdPrompt};
-pub use ibc_shell_ssh::{HostStats, Listener, NetIface, PeerFlow, ProcRow};
 use ibc_shell_store::{ForwardId, HostId, IdentityId, IdentityKind};
 use ibc_shell_vault::{VaultMode, VaultState};
 use secrecy::SecretString;

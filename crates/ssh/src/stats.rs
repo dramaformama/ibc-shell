@@ -29,6 +29,21 @@ pub struct ProcRow {
     pub command: String,
 }
 
+/// One core's time split, % of that core (user / system incl. irq / nice / iowait / steal).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize, specta::Type)]
+pub struct CoreSplit {
+    /// User %.
+    pub user: f32,
+    /// System + irq + softirq %.
+    pub system: f32,
+    /// Nice %.
+    pub nice: f32,
+    /// IO-wait %.
+    pub iowait: f32,
+    /// Steal %.
+    pub steal: f32,
+}
+
 /// Throughput of one network interface.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, specta::Type)]
 pub struct NetIface {
@@ -53,6 +68,8 @@ pub struct HostStats {
     pub cores: u32,
     /// Busy % per core.
     pub cpu_cores: Vec<f32>,
+    /// The same cores split by kind of time (same order as `cpu_cores`).
+    pub cpu_core_split: Vec<CoreSplit>,
     /// User %.
     pub cpu_user: f32,
     /// System (kernel + irq) %.

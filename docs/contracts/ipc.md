@@ -22,7 +22,7 @@ IDs are UUID v7 strings. UI code imports only `$lib/api` (`api`, `apiEvents`, ty
 | `HostReachability` | `src-tauri/src/commands/probe.rs` (ADR-010) |
 | `ApiError` | `src-tauri/src/api/error.rs` |
 | `SessionId`, `SftpId`, `PendingId`, `IdentityDto`, `IdentityInput`, `IdentityPatchInput`, `VaultStatus`, `QuickConnect`, `SessionEvent`, `SftpTarget`, `Endpoint`, `TransferRequest`, `AppInfo` | `src-tauri/src/api/dto.rs` |
-| `VaultLocked`, `TreeChanged`, `UpdateAvailable` (events) | `src-tauri/src/api/events.rs` |
+| `VaultLocked`, `TreeChanged`, `UpdateAvailable`, `TrayOpenHost` (events) | `src-tauri/src/api/events.rs` |
 
 Patch DTOs (`*Patch`): field absent = untouched, `null` = clear (inherit), value = set (`data-model.md` §Patch semantics).
 Secret inputs (`password`, `private_key_pem`, `passphrase`, kbd `answers`) are `SecretInput`/`SecretString` in Rust
@@ -169,12 +169,21 @@ pub enum ApiError {
 | `host_lookup_ip` | `host_id` | `string[]` — IP addresses of the host name (IPv4 first, ≤ 4), DNS only, 3 s, no connection. Unlocked vault required, passive. For the map's opt-in location lookup. Errors: `VaultLocked`, `NotFound`, `Timeout`, `Network`. ADR-011. |
 | `stats_sample` | `session_id` | `HostStats` (~1 s: samples `/proc` twice, 1 s apart, over an exec channel of the session's connection). Errors: `NotFound`, `Network` (not connected), `Timeout` (8 s), `Unsupported` (non-Linux). Passive: does not reset auto-lock. |
 
-`HostStats` (percent 0–100, bytes, bytes/s; u64 → TS `number`): `cpu_pct, cores, cpu_cores: number[], cpu_user, cpu_system, cpu_nice, cpu_iowait, cpu_steal, load1, load5, load15, mem_total, mem_used (total − available), mem_cached, swap_total, swap_used, disk_total, disk_used (root fs), mem_free, net_rx_bps, net_tx_bps (non-lo), ifaces: NetIface[] (≤ 8, busiest first: name, rx_bps, tx_bps, rx_total, tx_total), disk_read_bps, disk_write_bps (whole disks), uptime_s, os_name: string|null, temp_c: number|null, procs: ProcRow[]` (top 8 by CPU), `listen: Listener[]` (≤ 32: proto, addr, port, process|null), `flows: PeerFlow[]` (≤ 40, busiest first: inbound, port, peer, conns, bytes_in, bytes_out — lifetime bytes of the open TCP connections), `conns: u32`, `full: bool`. Slow fields (`disk_total/used`, `os_name`, `cores`, `procs`, `listen`, `flows`, `conns`) are re-read every 15 s; in between the backend copies them from the session's last full sample (ADR-009 amendment 2026-11-07).
+`HostStats` (percent 0–100, bytes, bytes/s; u64 → TS `number`): `cpu_pct, cores, cpu_cores: number[], cpu_core_split: CoreSplit[]` (same order; `{ user, system, nice, iowait, steal }` %, ADR-012)`, cpu_user, cpu_system, cpu_nice, cpu_iowait, cpu_steal, load1, load5, load15, mem_total, mem_used (total − available), mem_cached, swap_total, swap_used, disk_total, disk_used (root fs), mem_free, net_rx_bps, net_tx_bps (non-lo), ifaces: NetIface[] (≤ 8, busiest first: name, rx_bps, tx_bps, rx_total, tx_total), disk_read_bps, disk_write_bps (whole disks), uptime_s, os_name: string|null, temp_c: number|null, procs: ProcRow[]` (top 8 by CPU), `listen: Listener[]` (≤ 32: proto, addr, port, process|null), `flows: PeerFlow[]` (≤ 40, busiest first: inbound, port, peer, conns, bytes_in, bytes_out — lifetime bytes of the open TCP connections), `conns: u32`, `full: bool`. Slow fields (`disk_total/used`, `os_name`, `cores`, `procs`, `listen`, `flows`, `conns`) are re-read every 15 s; in between the backend copies them from the session's last full sample (ADR-009 amendment 2026-11-07).
 `ProcRow { pid, user, cpu, mem_bytes, command }`. Server strings are stripped of control chars, ≤ 128 chars.
+
+## Commands — services (ADR-012)
+| command | args | returns |
+|---|---|---|
+| `docker_list` | `session_id` | `DockerReport { access: "Ok"\|"Missing"\|"Denied"\|"Down", containers: Container[] }` (≤ 150, running first; `Container { id (12 hex), name, image, state, status, ports, cpu_pct, mem_bytes, mem_limit }`, usage only for running ones). One `docker ps -a` + one `docker stats --no-stream` over an exec channel, 15 s. Read-only, passive. Errors: `NotFound`, `Network`, `Timeout`. |
+| `docker_logs` | `session_id, container_id: string, lines: u32` | `string` — last 20–2000 lines with timestamps, stdout+stderr; colour codes (SGR `ESC[…m`, digits and `;` only) kept for display, every other escape / control char stripped, ≤ 512 KiB, 12 s. Read-only. Unlocked vault required. Errors: `VaultLocked`, `NotFound`, `Network`, `Timeout`, `Validation` (bad id / CLI error line). |
+| `docker_action` | `session_id, container_id: string, action: "Start"\|"Stop"\|"Restart"` | `null` — the only state-changing command of this section; the UI confirms Stop / Restart first. Id must be 12–64 hex chars (passed to the CLI as an argument, never interpolated). 70 s. Unlocked vault required. Errors: as `docker_logs`. |
+| `cert_list` | `session_id` | `CertReport { certs: CertInfo[], denied: u32, no_openssl: bool }`, `CertInfo { path, names: string[] (CN first, ≤ 20), issuer: string\|null, not_after: i64 (Unix ms) }`, soonest first, duplicates merged. Reads only certificate files of Let's Encrypt `live`, nginx/Apache `ssl_certificate`/`SSLCertificateFile`, Caddy, `/root/cert` via `openssl x509` (public fields only), ≤ 48 files, 15 s. Read-only, passive. Errors: `NotFound`, `Network`, `Timeout`. |
 
 ## Commands — app
 | command | args | returns |
 |---|---|---|
+| `tray_set` | `menu: TrayMenu\|null` | `null` — shows/updates the menu-bar icon (`TrayMenu { tooltip, items: TrayItem[] (≤ 24), open_label, quit_label }`, `TrayItem { host_id: HostId\|null, text }`); `null` removes it. Strings are rendered as native menu text, control chars stripped, ≤ 120 chars. Vault lock drops the server lines on the backend side. Passive. ADR-013. |
 | `app_info` | — | `AppInfo { version, platform, arch }` |
 | `open_external` | `url: string` (http/https only, validated) | `null` |
 
@@ -184,6 +193,7 @@ pub enum ApiError {
 | `vault://locked` | `VaultLocked` | `null` | `vaultLocked` |
 | `tree://changed` | `TreeChanged` | `null` | `treeChanged` |
 | `update://available` | `UpdateAvailable` | `{ version, notes: string\|null }` | `updateAvailable` |
+| `tray://open-host` | `TrayOpenHost` | `{ host_id }` | `trayOpenHost` |
 
 ## Rules
 - No command returns secret material. Ever.

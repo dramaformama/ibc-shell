@@ -4,8 +4,10 @@
 //! (FROZEN v1). Must not depend on `store`/`vault`: credentials and known hosts come in via
 //! [`Hop`] / [`KnownHosts`]. Forwards are Phase 3 (`SshError::Unimplemented`).
 mod auth;
+mod certs;
 mod config;
 mod connect;
+mod docker;
 mod error;
 mod forward;
 mod hostkey;
@@ -17,8 +19,12 @@ mod stats_net;
 mod stats_parse;
 mod verify;
 
+pub use certs::{cert_list, CertInfo, CertReport};
 pub use config::{
     AuthMethod, ConnectStep, Hop, KbdInteractiveRequest, KbdPrompt, Prompter, PtyRequest,
+};
+pub use docker::{
+    docker_act, docker_list, docker_logs, Container, DockerAccess, DockerAction, DockerReport,
 };
 pub use forward::{ForwardHandle, ForwardSpec, ForwardState};
 pub use hostkey::{
@@ -26,7 +32,7 @@ pub use hostkey::{
 };
 pub use session::{Connection, ExecOutput, SubsystemStream, CREDIT_WINDOW};
 pub use shell::{Shell, ShellOutput};
-pub use stats::{sample_stats, HostStats, NetIface, ProcRow};
+pub use stats::{sample_stats, CoreSplit, HostStats, NetIface, ProcRow};
 pub use stats_net::{Listener, PeerFlow};
 
 /// SSH errors. Messages never contain credentials.

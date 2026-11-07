@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Logo from '$lib/components/Logo.svelte';
   import { onMount } from 'svelte';
   import {
     CircleHelp,
@@ -10,17 +11,19 @@
     Search,
     Server,
     Wifi,
-    WifiOff
+    WifiOff,
+    X
   } from '@lucide/svelte';
   import * as m from '$lib/paraglide/messages.js';
   import Flag from '$lib/flags/Flag.svelte';
   import { fleet } from '$lib/fleet/fleet.svelte';
   import { filterFleet, type Availability } from '$lib/fleet/model';
   import WorldMap from '$lib/map/WorldMap.svelte';
-  import { connectHost } from '$lib/stores/actions';
   import { recent } from '$lib/stores/recent.svelte';
   import { tree } from '$lib/stores/tree.svelte';
   import { ui } from '$lib/stores/ui.svelte';
+  import { connectHost, hostsInFolder } from '$lib/stores/actions';
+  import FolderStrip from './FolderStrip.svelte';
   import ServerCard from './ServerCard.svelte';
   import ServerGrid from './ServerGrid.svelte';
   import './dashboard.css';
@@ -45,7 +48,18 @@
   let filter = $state<'all' | Availability>('all');
   let scroller = $state<HTMLElement | null>(null);
   const servers = $derived(fleet.servers);
-  const shown = $derived(filterFleet(servers, query, filter));
+  let folderId = $state<string | null>(null);
+  const inFolder = $derived(folderId ? new Set<string>(hostsInFolder(folderId)) : null);
+  const folderName = $derived(
+    folderId ? (tree.data.folders.find((f) => f.id === folderId)?.name ?? null) : null
+  );
+  // A deleted folder stops filtering.
+  $effect(() => {
+    if (folderId && !folderName) folderId = null;
+  });
+  const shown = $derived(
+    filterFleet(servers, query, filter).filter((s) => !inFolder || inFolder.has(s.id))
+  );
   const live = $derived(shown.filter((s) => s.group));
   const rest = $derived(shown.filter((s) => !s.group));
   const online = $derived(servers.filter((s) => s.availability === 'online').length);
@@ -153,6 +167,8 @@
       {/each}
     </div>
 
+    <FolderStrip {servers} bind:selected={folderId} />
+
     {#if view === 'map'}
       <div class="sectionbar">
         <h2>{m.dash_view_map()} <span class="tnum">{shown.length}</span></h2>
@@ -177,7 +193,14 @@
       {/if}
       <div class="sectionbar">
         <h2>
-          {live.length ? m.dash_others() : m.dash_all()} <span class="tnum">{rest.length}</span>
+          {folderName ?? (live.length ? m.dash_others() : m.dash_all())}
+          <span class="tnum">{rest.length}</span>
+          {#if folderName}<button
+              class="clear-folder"
+              onclick={() => (folderId = null)}
+              aria-label={m.dash_folder_clear()}
+              title={m.dash_folder_clear()}><X size={13} /></button
+            >{/if}
         </h2>
         <label class="search"
           ><Search size={15} /><input
@@ -201,7 +224,7 @@
     <footer>{m.dash_checked_note()}</footer>
   {:else if tree.loaded}
     <div class="empty onboarding">
-      <div class="empty-icon"><Server size={30} /></div>
+      <Logo size={64} />
       <h2>{m.dash_empty_title()}</h2>
       <p>{m.dash_empty_hint()}</p>
       <div class="row">

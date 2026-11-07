@@ -48,6 +48,7 @@ pub fn spawn_sweeper(app: AppHandle, vault: Arc<Vault>) {
         loop {
             tokio::time::sleep(SWEEP).await;
             if vault.lock_if_idle() {
+                crate::tray::on_lock(&app);
                 let _ = VaultLocked.emit(&app);
             }
         }

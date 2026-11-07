@@ -10,15 +10,53 @@
   import { recent } from '$lib/stores/recent.svelte';
   import { lastSeen } from '$lib/stores/lastseen.svelte';
   import { geo } from '$lib/map/geoip.svelte';
-  import { connectInBackground } from '$lib/stores/actions';
+  import { connectHost, connectInBackground } from '$lib/stores/actions';
+  import { buildMenu, onTrayOpen, pushTray, type TrayEntry } from '$lib/tray/tray.svelte';
   import { snippets } from '$lib/snippets/snippets.svelte';
   import { stats } from '$lib/stores/stats.svelte';
+  import { services } from '$lib/services/services.svelte';
   import { vault } from '$lib/stores/vault.svelte';
   import { watchIdle } from '$lib/util/autolock';
 
   let { children } = $props();
 
-  onMount(() => void vault.refresh());
+  onMount(() => {
+    void vault.refresh();
+    const off = onTrayOpen((id) => {
+      if (vault.state === 'Unlocked') connectHost(id, 'status');
+    });
+    return () => void off.then((f) => f());
+  });
+
+  // Menu-bar icon: keep open servers sampled and send their lines (ADR-013).
+  $effect(() => {
+    if (vault.state !== 'Unlocked' || !settings.tray) return;
+    const stops = sessions.groups
+      .map((g) => sessions.groupSession(g))
+      .filter((sid): sid is string => !!sid)
+      .map((sid) => stats.watch(sid));
+    return () => stops.forEach((stop) => stop());
+  });
+  $effect(() => {
+    if (vault.state === 'Loading') return;
+    if (!settings.tray) return pushTray(null);
+    if (vault.state !== 'Unlocked') return pushTray(buildMenu([], true));
+    const entries: TrayEntry[] = [];
+    const open = new Set<string>();
+    for (const g of sessions.groups) {
+      const hostId = g.current.hostId;
+      if (!hostId) continue;
+      open.add(hostId);
+      const s = stats.get(sessions.groupSession(g));
+      const phase = sessions.groupPhase(g);
+      entries.push({ hostId, label: g.label, phase, d: s && !s.stale ? s.latest : null });
+    }
+    for (const id of lastSeen.watched) {
+      const h = tree.host(id);
+      if (h && !open.has(id)) entries.push({ hostId: id, label: h.label, phase: null, d: null });
+    }
+    pushTray(buildMenu(entries, false));
+  });
 
   // Load data when the vault opens; wipe it when it locks.
   $effect(() => {
@@ -35,6 +73,7 @@
       tree.loaded = false;
       sessions.clear();
       stats.clear();
+      services.clear();
       lastSeen.clear();
       geo.clear();
       snippets.clear();

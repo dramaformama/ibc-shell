@@ -4,10 +4,13 @@
   import SnippetsPanel from '$lib/snippets/SnippetsPanel.svelte';
   import type { TabGroup } from '$lib/stores/sessions.svelte';
   import { ui } from '$lib/stores/ui.svelte';
+  import ServicesPane from '$lib/services/ServicesPane.svelte';
+  import { sessions } from '$lib/stores/sessions.svelte';
   import MetricsPane from './MetricsPane.svelte';
 
   /** Inspector column next to the shell: live metrics or the snippet library. */
   let { group }: { group: TabGroup } = $props();
+  const sid = $derived(sessions.groupSession(group));
 </script>
 
 <aside class="panel" aria-label={m.stat_inspector()}>
@@ -34,6 +37,7 @@
   <div class="scroll">
     {#if ui.panelTab === 'metrics'}
       <MetricsPane {group} />
+      {#if sid}<ServicesPane {sid} compact />{/if}
     {:else}
       <SnippetsPanel />
     {/if}

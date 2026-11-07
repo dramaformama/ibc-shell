@@ -6,7 +6,8 @@
   gap: 6px;
   height: var(--control-h);
   padding: 0 12px;
-  border: 1px solid var(--border);
+  /* A defined edge: a faint border made white buttons look shorter than filled ones. */
+  border: 1px solid color-mix(in oklab, var(--text) 16%, transparent);
   border-radius: var(--r-control);
   background: var(--surface);
   color: var(--text);
@@ -107,7 +108,7 @@ textarea.input {
   font-size: 12px;
 }
 .btn-prominent {
-  height: 36px;
+  height: var(--control-h);
   padding: 0 14px;
 }
 .btn-tonal {

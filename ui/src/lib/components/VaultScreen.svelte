@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Logo from './Logo.svelte';
   import { Eye, EyeOff, KeyRound, Lock, ShieldCheck } from '@lucide/svelte';
   import * as m from '$lib/paraglide/messages.js';
   import { vault } from '$lib/stores/vault.svelte';
@@ -44,9 +45,13 @@
 </script>
 
 <main class="screen">
+  <div class="drag" data-tauri-drag-region></div>
   <form class="panel" onsubmit={submit} aria-labelledby="vault-title">
     <div class="mark" aria-hidden="true">
-      {#if fresh}<ShieldCheck size={22} />{:else}<Lock size={22} />{/if}
+      <Logo size={56} />
+      <span class="badge"
+        >{#if fresh}<ShieldCheck size={13} />{:else}<Lock size={13} />{/if}</span
+      >
     </div>
     <h1 id="vault-title">{fresh ? m.vault_welcome() : m.vault_locked_title()}</h1>
     <p class="lede">{fresh ? m.vault_welcome_hint() : m.vault_locked_hint()}</p>
@@ -137,6 +142,11 @@
 </main>
 
 <style>
+  .drag {
+    position: fixed;
+    inset: 0 0 auto;
+    height: var(--toolbar-h);
+  }
   .screen {
     height: 100%;
     display: grid;
@@ -150,14 +160,24 @@
     gap: 12px;
   }
   .mark {
-    width: 40px;
-    height: 40px;
+    position: relative;
+    width: 56px;
+    height: 56px;
+    margin-bottom: 6px;
+    filter: drop-shadow(0 6px 14px oklch(0 0 0 / 0.18));
+  }
+  .badge {
+    position: absolute;
+    right: -6px;
+    bottom: -6px;
     display: grid;
     place-items: center;
-    border-radius: var(--r-card);
-    background: var(--accent-soft);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--surface);
     color: var(--accent);
-    margin-bottom: 4px;
+    box-shadow: 0 0 0 0.5px var(--border);
   }
   h1 {
     margin: 0;

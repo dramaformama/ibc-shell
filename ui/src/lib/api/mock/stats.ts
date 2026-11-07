@@ -46,6 +46,13 @@ export const statsSample: Commands['statsSample'] = async () => {
     cpu_pct,
     cores: 8,
     cpu_cores,
+    cpu_core_split: cpu_cores.map((c, i) => ({
+      user: c * 0.62,
+      system: c * 0.26,
+      nice: i % 3 === 0 ? c * 0.04 : 0,
+      iowait: i % 4 === 1 ? Math.min(12, c * 0.15) : c * 0.03,
+      steal: c * 0.02
+    })),
     cpu_user: cpu_pct * 0.6,
     cpu_system: cpu_pct * 0.28,
     cpu_nice: 0,

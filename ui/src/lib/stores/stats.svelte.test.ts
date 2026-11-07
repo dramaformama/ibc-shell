@@ -8,6 +8,7 @@ const snapshot: HostStats = {
   cpu_pct: null,
   cores: 1,
   cpu_cores: [null],
+  cpu_core_split: [],
   cpu_user: null,
   cpu_system: null,
   cpu_nice: null,

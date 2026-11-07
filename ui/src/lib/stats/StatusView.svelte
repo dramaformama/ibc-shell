@@ -7,6 +7,7 @@
   import { sessions, type Tab } from '$lib/stores/sessions.svelte';
   import { tree } from '$lib/stores/tree.svelte';
   import { ui } from '$lib/stores/ui.svelte';
+  import ServicesPane from '$lib/services/ServicesPane.svelte';
   import MetricsPane from './MetricsPane.svelte';
 
   /** A server's own page: identity, quick actions and every metric as a card grid. */
@@ -14,6 +15,7 @@
   const group = $derived(sessions.groupOf(tab.id));
   const host = $derived(tab.hostId ? tree.host(tab.hostId) : null);
   const phase = $derived(group ? sessions.groupPhase(group) : 'disconnected');
+  const sid = $derived(group ? sessions.groupSession(group) : null);
 </script>
 
 {#if group}
@@ -56,6 +58,7 @@
       </div>
     </header>
     <MetricsPane {group} wide />
+    {#if sid}<ServicesPane {sid} />{/if}
   </section>
 {/if}
 
@@ -105,7 +108,8 @@
     font-size: 13px;
   }
   .acts .btn[aria-pressed='true'] {
-    background: color-mix(in oklab, var(--accent) 14%, var(--surface));
+    border-color: color-mix(in oklab, var(--accent) 40%, transparent);
+    background: color-mix(in oklab, var(--accent) 12%, var(--surface));
     color: var(--accent);
   }
   .acts {
@@ -117,10 +121,6 @@
   @container (max-width: 900px) {
     header {
       flex-wrap: wrap;
-    }
-    .acts .btn[aria-pressed='true'] {
-      background: color-mix(in oklab, var(--accent) 14%, var(--surface));
-      color: var(--accent);
     }
     .acts {
       width: 100%;

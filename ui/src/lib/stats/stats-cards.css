@@ -144,7 +144,7 @@
 }
 .cards .legend {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 4px;
   margin: 0;
   padding-top: 8px;
@@ -152,6 +152,11 @@
   font-size: 11px;
 }
 .cards .legend dt {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  white-space: nowrap;
   color: var(--muted);
 }
 .cards .legend dd {
@@ -314,4 +319,10 @@
 }
 .cards .muted {
   color: var(--muted);
+}
+.cards .legend dt i {
+  flex: none;
+  width: 6px;
+  height: 10px;
+  border-radius: 3px;
 }

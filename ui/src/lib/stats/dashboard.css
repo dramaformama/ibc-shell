@@ -32,9 +32,6 @@
   align-items: center;
   gap: 10px;
 }
-.dashboard .head-actions .seg button {
-  height: 32px;
-}
 .dashboard .recent {
   display: flex;
   align-items: center;
@@ -260,7 +257,11 @@
     gap: 14px;
   }
   .dashboard .head-actions {
-    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+  /* View switch on the left, the two create buttons together on the right. */
+  .dashboard .head-actions .seg {
+    margin-right: auto;
   }
   .dashboard h1 {
     font-size: 26px;
@@ -277,4 +278,20 @@
   .dashboard .search {
     width: 100%;
   }
+}
+.clear-folder {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-left: 4px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--hover);
+  color: var(--muted);
+  vertical-align: middle;
+  cursor: pointer;
+}
+.clear-folder:hover {
+  color: var(--text);
 }

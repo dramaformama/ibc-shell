@@ -61,3 +61,9 @@ export function ago(ts: number, locale: string, now = Date.now()): string {
 
 /** TCP connect time; 0 means under a millisecond (often a local proxy/VPN answering first). */
 export const ms = (v: number): string => (v < 1 ? '<1 ms' : `${v} ms`);
+
+/** Picks the plural form for `n` in `locale` (`one` / `few` / `many`; English uses one / many). */
+export function pluralForm(n: number, locale: string): 'one' | 'few' | 'many' {
+  const cat = new Intl.PluralRules(locale).select(n);
+  return cat === 'one' ? 'one' : cat === 'few' ? 'few' : 'many';
+}

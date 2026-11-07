@@ -8,6 +8,7 @@
  */
 import * as catalog from './mock/catalog';
 import * as geo from './mock/geo';
+import * as services from './mock/services';
 import * as sftp from './mock/sftp';
 import * as stats from './mock/stats';
 import * as term from './mock/terminal';
@@ -113,6 +114,12 @@ export const mockApi: Api = {
   statsSample: stats.statsSample,
   hostProbe: stats.hostProbe,
   hostLookupIp: geo.hostLookupIp,
+  // services
+  dockerList: services.dockerList,
+  dockerLogs: services.dockerLogs,
+  dockerAction: services.dockerAction,
+  certList: services.certList,
+  traySet: services.traySet,
   // app
   appInfo: vault.appInfo,
   openExternal: vault.openExternal

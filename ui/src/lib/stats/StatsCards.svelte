@@ -45,24 +45,18 @@
           height={56}
         />
       {/if}
-      <CoreBars cores={d.cpu_cores} columns={wide && d.cpu_cores.length > 4 ? 2 : 1} />
+      <CoreBars
+        cores={d.cpu_cores}
+        split={d.cpu_core_split}
+        columns={wide && d.cpu_cores.length > 4 ? 2 : 1}
+      />
       <dl class="legend tnum">
-        <div>
-          <dt>{m.stat_user()}</dt>
-          <dd>{pct(d.cpu_user)}%</dd>
-        </div>
-        <div>
-          <dt>{m.stat_system()}</dt>
-          <dd>{pct(d.cpu_system)}%</dd>
-        </div>
-        <div>
-          <dt>{m.stat_iowait()}</dt>
-          <dd>{pct(d.cpu_iowait)}%</dd>
-        </div>
-        <div>
-          <dt>{m.stat_steal()}</dt>
-          <dd>{pct(d.cpu_steal)}%</dd>
-        </div>
+        {#each [[m.stat_user(), d.cpu_user, 'var(--c-cyan)'], [m.stat_system(), d.cpu_system, 'var(--danger)'], [m.stat_nice(), d.cpu_nice, 'var(--c-green)'], [m.stat_iowait(), d.cpu_iowait, 'var(--c-purple)'], [m.stat_steal(), d.cpu_steal, 'var(--c-orange)']] as [label, v, color] (label)}
+          <div>
+            <dt><i style:background={color as string}></i>{label}</dt>
+            <dd>{pct(v as number | null)}%</dd>
+          </div>
+        {/each}
       </dl>
     </section>
 

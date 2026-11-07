@@ -67,6 +67,7 @@ pub async fn vault_unlock(
 #[specta::specta]
 pub async fn vault_lock(app: AppHandle, state: State<'_, AppState>) -> ApiResult<()> {
     state.vault.lock();
+    crate::tray::on_lock(&app);
     let _ = VaultLocked.emit(&app);
     Ok(())
 }

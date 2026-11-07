@@ -3,7 +3,14 @@
  * Contract: docs/contracts/ipc.md (FROZEN v1). Types come from the generated bindings.
  */
 import type { commands } from './bindings';
-import type { ApiError, SessionId, TreeChanged, UpdateAvailable, VaultLocked } from './bindings';
+import type {
+  ApiError,
+  SessionId,
+  TrayOpenHost,
+  TreeChanged,
+  UpdateAvailable,
+  VaultLocked
+} from './bindings';
 
 export type * from './bindings';
 
@@ -27,6 +34,7 @@ export interface EventPayloads {
   vaultLocked: VaultLocked;
   treeChanged: TreeChanged;
   updateAvailable: UpdateAvailable;
+  trayOpenHost: TrayOpenHost;
 }
 
 /** Global event subscription, identical for mock and real. Returns an unsubscribe function. */

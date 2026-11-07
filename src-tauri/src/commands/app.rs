@@ -1,6 +1,6 @@
 //! App commands (`ipc.md` §app).
 
-use crate::api::dto::AppInfo;
+use crate::api::dto::{AppInfo, TrayMenu};
 use crate::api::{ApiError, ApiResult};
 
 /// Version / platform / arch.
@@ -12,6 +12,15 @@ pub async fn app_info() -> ApiResult<AppInfo> {
         platform: std::env::consts::OS.to_owned(),
         arch: std::env::consts::ARCH.to_owned(),
     })
+}
+
+/// Shows or updates the menu-bar icon with the given lines; `null` hides it (ADR-013).
+/// Sync on purpose: runs on the main thread, where native menus live.
+#[tauri::command]
+#[specta::specta]
+#[allow(clippy::needless_pass_by_value)] // Tauri injects the handle by value.
+pub fn tray_set(app: tauri::AppHandle, menu: Option<TrayMenu>) -> ApiResult<()> {
+    crate::tray::apply(&app, menu).map_err(|_| ApiError::Internal("tray unavailable".into()))
 }
 
 /// True for a plain http/https URL without whitespace or control characters.

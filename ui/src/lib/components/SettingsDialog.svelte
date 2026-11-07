@@ -178,6 +178,16 @@
         </label>
         <p class="note">{m.settings_probe_note()}</p>
         <label class="row">
+          <span class="lbl">{m.settings_tray()}</span>
+          <input
+            type="checkbox"
+            role="switch"
+            checked={settings.tray}
+            onchange={(e) => settings.setTray(e.currentTarget.checked)}
+          />
+        </label>
+        <p class="note">{m.settings_tray_note()}</p>
+        <label class="row">
           <span class="lbl">{m.settings_update_check()}</span>
           <input
             type="checkbox"

@@ -17,6 +17,8 @@ class UiState {
   inspectorOpen = $state(false);
   /** Side panel page next to the terminal. */
   panelTab = $state<'metrics' | 'snippets'>('metrics');
+  /** What the main area shows when no server is selected. */
+  page = $state<'overview' | 'docker' | 'domains' | 'snippets'>('overview');
 
   constructor() {
     try {

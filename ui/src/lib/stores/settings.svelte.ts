@@ -10,6 +10,7 @@ export type ThemeChoice = 'light' | 'dark' | 'system';
 const LS_THEME = 'ibc.theme';
 const LS_ACCENT = 'ibc.accent';
 const PROBE_KEY = 'fleet.probe';
+const TRAY_KEY = 'ui.tray';
 
 /** Apple system accent colours offered in Settings (CSS in app.css). */
 export const ACCENTS = [
@@ -52,6 +53,15 @@ export function applyTheme(choice: ThemeChoice): void {
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
 }
 
+/** A remembered on/off switch that must be known before unlock (default on). */
+function readFlag(key: string): boolean {
+  try {
+    return localStorage.getItem(key) !== '0';
+  } catch {
+    return true;
+  }
+}
+
 class SettingsStore {
   theme = $state<ThemeChoice>(readTheme());
   accent = $state<Accent>(readAccent());
@@ -62,6 +72,8 @@ class SettingsStore {
   updateCheck = $state(true);
   /** TCP availability checks of saved servers on the overview (ADR-010). */
   probe = $state(true);
+  /** Menu-bar icon with a server summary (ADR-013). */
+  tray = $state(readFlag('ibc.tray'));
   /** A newer release, once found. */
   update = $state.raw<UpdateInfo | null>(null);
 
@@ -77,13 +89,15 @@ class SettingsStore {
   }
 
   async load(): Promise<void> {
-    const [width, recent, autolock, upd, probe] = await Promise.all([
+    const [width, recent, autolock, upd, probe, tray] = await Promise.all([
       api.settingsGet('ui.sidebar_width'),
       api.settingsGet('ui.flag_recent'),
       api.settingsGet(AUTOLOCK_KEY),
       api.settingsGet(UPDATE_CHECK_KEY),
-      api.settingsGet(PROBE_KEY)
+      api.settingsGet(PROBE_KEY),
+      api.settingsGet(TRAY_KEY)
     ]);
+    this.tray = !(tray.status === 'ok' && tray.data === false);
     if (probe.status === 'ok' && probe.data === false) this.probe = false;
     if (upd.status === 'ok' && upd.data === false) this.updateCheck = false;
     if (autolock.status === 'ok')
@@ -138,6 +152,16 @@ class SettingsStore {
     const info = await api.appInfo();
     if (info.status !== 'ok') return;
     this.update = await checkForUpdate(info.data.version);
+  }
+
+  setTray(on: boolean): void {
+    this.tray = on;
+    try {
+      localStorage.setItem('ibc.tray', on ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
+    void api.settingsSet(TRAY_KEY, on);
   }
 
   setProbe(on: boolean): void {

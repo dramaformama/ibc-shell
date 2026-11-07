@@ -128,6 +128,7 @@ class SnippetStore {
 
   /** Entry point for a click: asks for variables / servers when needed, else types at once. */
   run(snippet: Snippet, mode: 'here' | 'many' = 'here', execute = true): void {
+    if (mode === 'here' && !this.currentTarget().hostId) mode = 'many';
     if (mode === 'many' || parseVars(snippet.body).length) {
       this.pending = { snippet, mode, execute };
       return;

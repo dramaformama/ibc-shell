@@ -77,6 +77,17 @@ fn delta(a: &Jiffies, b: &Jiffies) -> Jiffies {
     d
 }
 
+fn split(d: &Jiffies) -> crate::stats::CoreSplit {
+    let total: u64 = d.iter().sum();
+    crate::stats::CoreSplit {
+        user: pct(d[0], total),
+        system: pct(d[2] + d[5] + d[6], total),
+        nice: pct(d[1], total),
+        iowait: pct(d[4], total),
+        steal: pct(d[7], total),
+    }
+}
+
 fn busy_pct(d: &Jiffies) -> f32 {
     let total: u64 = d.iter().sum();
     pct(total.saturating_sub(d[3] + d[4]), total)
@@ -234,6 +245,11 @@ pub(crate) fn parse_report(text: &str, full: bool) -> Result<HostStats, SshError
         .iter()
         .zip(&c2)
         .map(|(a, b)| busy_pct(&delta(a, b)))
+        .collect();
+    h.cpu_core_split = c1
+        .iter()
+        .zip(&c2)
+        .map(|(a, b)| split(&delta(a, b)))
         .collect();
     h.cores = get("NPROC")
         .trim()

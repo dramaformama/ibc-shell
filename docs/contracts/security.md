@@ -103,3 +103,10 @@ Typed passwords / passphrases / kbd answers arrive as `SecretInput` (`#[serde(tr
 
 ## Map location by IP (ADR-011)
 - Off by default (`map.geoip`). When on, the UI sends public server IP addresses (never names, labels or credentials) to `https://api.ipapi.is/?q=<ip>` (GET, no credentials, no referrer, 8 s timeout) and caches the answer in settings `map.geo`. Private/reserved addresses are skipped. CSP `connect-src` adds exactly `https://api.ipapi.is`.
+
+## Server services and the menu bar (ADR-012, ADR-013)
+- Docker / certificate reads run over the existing SSH connection; nothing is installed and no port is opened or bound (safe on VPN servers).
+- `docker_action` is the only state-changing call: container id validated as 12–64 hex, passed as an argument (never interpolated); Stop / Restart need confirmation; unlocked vault required.
+- Logs keep SGR colour codes only; rendered as text segments, never `{@html}`.
+- `cert_list` prints only public certificate fields; certificate files and keys never leave the server.
+- Tray menu text comes from the UI, control characters stripped, ≤ 120 chars; a vault lock removes every server line on the backend before the lock event.
