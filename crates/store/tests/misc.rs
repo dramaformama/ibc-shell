@@ -124,6 +124,27 @@ fn known_hosts_upsert_and_settings_meta() {
 }
 
 #[test]
+fn known_host_add_new_never_replaces_a_key() {
+    let s = Store::open_in_memory().unwrap();
+    let kh = |ty: &str, blob: u8| KnownHostInput {
+        host_pattern: "h.x".into(),
+        key_type: ty.into(),
+        key_blob: vec![blob; 8],
+        fingerprint: format!("SHA256:{blob}"),
+    };
+    s.known_host_add_new(kh("ssh-ed25519", 1)).unwrap();
+    // Same key again: idempotent.
+    s.known_host_add_new(kh("ssh-ed25519", 1)).unwrap();
+    // Different key, same or other type: refused, stored key untouched.
+    for k in [kh("ssh-ed25519", 2), kh("ecdsa-sha2-nistp256", 3)] {
+        assert!(matches!(s.known_host_add_new(k), Err(StoreError::Conflict(_))));
+    }
+    let found = s.known_host_lookup("h.x").unwrap();
+    assert_eq!(found.len(), 1);
+    assert_eq!(found[0].key_blob, vec![1; 8]);
+}
+
+#[test]
 fn snapshot_roundtrip_and_merge() {
     let a = Store::open_in_memory().unwrap();
     let f = a

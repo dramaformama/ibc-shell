@@ -50,6 +50,30 @@ impl Store {
         })
     }
 
+    /// TOFU insert used by the connect path: stores `kh` only while the host has no other key.
+    /// Identical key already stored → `Ok`. Any different key stored for the pattern (e.g. a
+    /// concurrent prompt accepted another key first) → `Conflict`; never replaces a key.
+    pub fn known_host_add_new(&self, kh: KnownHostInput) -> Result<()> {
+        if kh.host_pattern.is_empty() || kh.key_type.is_empty() || kh.key_blob.is_empty() {
+            return Err(StoreError::Validation("known host: empty field".into()));
+        }
+        self.write(|tx| {
+            let sql = format!("SELECT {KH_COLS} FROM known_host WHERE host_pattern=?1");
+            let stored = query_all(tx, &sql, [&kh.host_pattern], known_host_from_row)?;
+            if stored.iter().any(|k| k.key_blob == kh.key_blob) {
+                return Ok(());
+            }
+            if !stored.is_empty() {
+                return Err(StoreError::Conflict("host key changed".into()));
+            }
+            tx.execute(
+                &format!("INSERT INTO known_host({KH_COLS}) VALUES(?1,?2,?3,?4,?5,?6)"),
+                params![KnownHostId::new_v7(), kh.host_pattern, kh.key_type, kh.key_blob, kh.fingerprint, now_ms()],
+            )?;
+            Ok(())
+        })
+    }
+
     /// Inserts or replaces on (`host_pattern`, `key_type`).
     pub fn known_host_upsert(&self, kh: KnownHostInput) -> Result<()> {
         if kh.host_pattern.is_empty() || kh.key_type.is_empty() || kh.key_blob.is_empty() {

@@ -44,6 +44,18 @@ pub(crate) fn fingerprint(key: &PublicKey) -> String {
     key.fingerprint(HashAlg::Sha256).to_string()
 }
 
+/// Longest server banner kept (chars).
+const MAX_BANNER: usize = 4096;
+
+/// Server banners are plain text: drop control characters (escape injection) except line
+/// breaks / tabs, and cap the length.
+pub(crate) fn clean_banner(raw: &str) -> String {
+    raw.chars()
+        .filter(|c| !c.is_control() || matches!(c, '\n' | '\t'))
+        .take(MAX_BANNER)
+        .collect()
+}
+
 /// Request from the russh handler (running in the session task) to the connect task.
 pub(crate) struct VerifyReq {
     pub key: PublicKeyOrCertificate,
@@ -67,7 +79,7 @@ impl Handler for ClientHandler {
         _session: &mut russh::client::Session,
     ) -> Result<(), Self::Error> {
         if let Ok(mut b) = self.banner.lock() {
-            *b = Some(banner.to_owned());
+            *b = Some(clean_banner(banner));
         }
         Ok(())
     }
@@ -115,6 +127,28 @@ impl<K: KnownHosts, P: Prompter> VerifyCtx<'_, K, P> {
         let _ = req.reply.send(ok);
     }
 
+    fn changed(&self, key_type: String, old: KnownKey, actual: String) -> SshError {
+        SshError::HostKeyChanged(Box::new(HostKeyMismatch {
+            host: self.host.to_owned(),
+            port: self.port,
+            key_type,
+            expected_fingerprint: old.fingerprint,
+            actual_fingerprint: actual,
+            known_host_id: old.id,
+        }))
+    }
+
+    /// Looks the host up and compares; sets `self.error` on a backend failure.
+    fn verdict(&mut self, pattern: &str, key_type: &str, blob: &[u8]) -> Option<Verdict> {
+        match self.known.lookup(pattern) {
+            Ok(stored) => Some(evaluate(&stored, key_type, blob)),
+            Err(e) => {
+                self.error = Some(SshError::KnownHosts(e));
+                None
+            }
+        }
+    }
+
     async fn decide(&mut self, key: &PublicKey) -> bool {
         let pattern = host_pattern(self.host, self.port);
         let key_type = key.algorithm().as_str().to_owned();
@@ -122,28 +156,15 @@ impl<K: KnownHosts, P: Prompter> VerifyCtx<'_, K, P> {
             self.error = Some(SshError::Protocol("unencodable host key".into()));
             return false;
         };
-        let stored = match self.known.lookup(&pattern) {
-            Ok(s) => s,
-            Err(e) => {
-                self.error = Some(SshError::KnownHosts(e));
-                return false;
-            }
-        };
         let fp = fingerprint(key);
-        match evaluate(&stored, &key_type, &blob) {
-            Verdict::Known => true,
-            Verdict::Changed(old) => {
-                self.error = Some(SshError::HostKeyChanged(Box::new(HostKeyMismatch {
-                    host: self.host.to_owned(),
-                    port: self.port,
-                    key_type,
-                    expected_fingerprint: old.fingerprint,
-                    actual_fingerprint: fp,
-                    known_host_id: old.id,
-                })));
+        match self.verdict(&pattern, &key_type, &blob) {
+            None => false,
+            Some(Verdict::Known) => true,
+            Some(Verdict::Changed(old)) => {
+                self.error = Some(self.changed(key_type, old, fp));
                 false
             }
-            Verdict::Unknown => {
+            Some(Verdict::Unknown) => {
                 let info = HostKeyInfo {
                     host: self.host.to_owned(),
                     port: self.port,
@@ -151,26 +172,50 @@ impl<K: KnownHosts, P: Prompter> VerifyCtx<'_, K, P> {
                     randomart: key.fingerprint(HashAlg::Sha256).to_randomart(&key_type),
                     fingerprint: fp.clone(),
                 };
-                match self.prompter.confirm_unknown_host(info).await {
-                    HostKeyDecision::Reject => {
-                        self.error = Some(SshError::Cancelled);
-                        false
-                    }
-                    HostKeyDecision::AcceptOnce => true,
-                    HostKeyDecision::AcceptAndRemember => {
-                        let entry = KnownKey {
-                            id: String::new(),
-                            key_type,
-                            key_blob: blob,
-                            fingerprint: fp,
-                        };
-                        if let Err(e) = self.known.add(&pattern, &entry) {
-                            self.error = Some(SshError::KnownHosts(e));
-                            return false;
-                        }
-                        true
-                    }
+                let decision = self.prompter.confirm_unknown_host(info).await;
+                if decision == HostKeyDecision::Reject {
+                    self.error = Some(SshError::Cancelled);
+                    return false;
                 }
+                self.after_accept(decision, &pattern, key_type, blob, fp)
+            }
+        }
+    }
+
+    /// The prompt may have waited minutes: another connection could have stored a different
+    /// key for this host meanwhile. Re-check, and never let an "unknown" answer override it.
+    fn after_accept(
+        &mut self,
+        decision: HostKeyDecision,
+        pattern: &str,
+        key_type: String,
+        blob: Vec<u8>,
+        fp: String,
+    ) -> bool {
+        match self.verdict(pattern, &key_type, &blob) {
+            None => false,
+            Some(Verdict::Known) => true,
+            Some(Verdict::Changed(old)) => {
+                self.error = Some(self.changed(key_type, old, fp));
+                false
+            }
+            Some(Verdict::Unknown) if decision == HostKeyDecision::AcceptOnce => true,
+            Some(Verdict::Unknown) => {
+                let entry = KnownKey {
+                    id: String::new(),
+                    key_type: key_type.clone(),
+                    key_blob: blob.clone(),
+                    fingerprint: fp.clone(),
+                };
+                let Err(e) = self.known.add(pattern, &entry) else {
+                    return true;
+                };
+                // Lost a race with another writer: report a change if that is what it was.
+                self.error = Some(match self.verdict(pattern, &key_type, &blob) {
+                    Some(Verdict::Changed(old)) => self.changed(key_type, old, fp),
+                    _ => SshError::KnownHosts(e),
+                });
+                false
             }
         }
     }
@@ -216,5 +261,93 @@ mod tests {
             evaluate(&s, "ecdsa-sha2-nistp256", b"x"),
             Verdict::Changed(k("1", "ssh-ed25519", b"e"))
         );
+    }
+
+    #[test]
+    fn banner_is_plain_text_and_capped() {
+        assert_eq!(
+            clean_banner("Hi\x1b]52;c;ZXZpbA==\x07\r\nthere\t!"),
+            "Hi]52;c;ZXZpbA==\nthere\t!"
+        );
+        assert_eq!(clean_banner(&"a".repeat(10_000)).len(), MAX_BANNER);
+    }
+
+    const KEY: &str = "-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+QyNTUxOQAAACAjWF9XMGonNvOZS5jQtwN2+OyShDB1KB0m2qfUAEySdgAAAIhasfTVWrH0
+1QAAAAtzc2gtZWQyNTUxOQAAACAjWF9XMGonNvOZS5jQtwN2+OyShDB1KB0m2qfUAEySdg
+AAAEBpExXls+OkMCOV+0lvM7tv4lCconrTA8VEu/lb4/uEkyNYX1cwaic285lLmNC3A3b4
+7JKEMHUoHSbap9QATJJ2AAAABHRlc3QB
+-----END OPENSSH PRIVATE KEY-----
+";
+
+    /// Store whose content a rival connection changes while the prompt is open.
+    #[derive(Default)]
+    struct Racy(std::sync::Mutex<Vec<KnownKey>>);
+
+    impl KnownHosts for Racy {
+        fn lookup(&self, _: &str) -> Result<Vec<KnownKey>, String> {
+            Ok(self.0.lock().map_err(|_| "poisoned")?.clone())
+        }
+        fn add(&self, _: &str, key: &KnownKey) -> Result<(), String> {
+            let mut rows = self.0.lock().map_err(|_| "poisoned")?;
+            if rows.iter().any(|r| r.key_blob != key.key_blob) {
+                return Err("conflict".into());
+            }
+            rows.push(key.clone());
+            Ok(())
+        }
+    }
+
+    /// Accepts, but first lets a rival store a different key for the same host.
+    struct Sneaky<'a>(&'a Racy, HostKeyDecision);
+
+    #[allow(clippy::unused_async_trait_impl)]
+    impl Prompter for Sneaky<'_> {
+        fn progress(&self, _: &str, _: crate::config::ConnectStep) {}
+        async fn confirm_unknown_host(&self, _: HostKeyInfo) -> HostKeyDecision {
+            if let Ok(mut rows) = self.0 .0.lock() {
+                rows.push(k("rival", "ssh-ed25519", b"rival"));
+            }
+            self.1
+        }
+        async fn keyboard_interactive(
+            &self,
+            _: crate::config::KbdInteractiveRequest,
+        ) -> Option<Vec<secrecy::SecretString>> {
+            None
+        }
+        async fn passphrase(&self, _: &str) -> Option<secrecy::SecretString> {
+            None
+        }
+    }
+
+    #[tokio::test]
+    async fn key_stored_during_prompt_blocks_every_accept() {
+        let key = russh::keys::decode_secret_key(KEY, None)
+            .unwrap()
+            .public_key()
+            .clone();
+        for decision in [
+            HostKeyDecision::AcceptOnce,
+            HostKeyDecision::AcceptAndRemember,
+        ] {
+            let store = Racy::default();
+            let prompter = Sneaky(&store, decision);
+            let mut ctx = VerifyCtx {
+                host: "h",
+                port: 22,
+                known: &store,
+                prompter: &prompter,
+                error: None,
+            };
+            assert!(!ctx.decide(&key).await, "{decision:?}");
+            assert!(
+                matches!(&ctx.error, Some(SshError::HostKeyChanged(m)) if m.known_host_id == "rival"),
+                "{decision:?}: {:?}",
+                ctx.error
+            );
+            assert_eq!(store.0.lock().unwrap().len(), 1, "rival key stays alone");
+        }
     }
 }
