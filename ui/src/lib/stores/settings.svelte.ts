@@ -8,6 +8,31 @@ import { ui } from './ui.svelte';
 export type ThemeChoice = 'light' | 'dark' | 'system';
 
 const LS_THEME = 'ibc.theme';
+const LS_ACCENT = 'ibc.accent';
+
+/** Apple system accent colours offered in Settings (CSS in app.css). */
+export const ACCENTS = [
+  'blue',
+  'purple',
+  'pink',
+  'red',
+  'orange',
+  'green',
+  'teal',
+  'indigo',
+  'graphite'
+] as const;
+export type Accent = (typeof ACCENTS)[number];
+
+function readAccent(): Accent {
+  try {
+    const a = localStorage.getItem(LS_ACCENT);
+    if (a && (ACCENTS as readonly string[]).includes(a)) return a as Accent;
+  } catch {
+    /* storage unavailable */
+  }
+  return 'blue';
+}
 
 function readTheme(): ThemeChoice {
   try {
@@ -28,6 +53,7 @@ export function applyTheme(choice: ThemeChoice): void {
 
 class SettingsStore {
   theme = $state<ThemeChoice>(readTheme());
+  accent = $state<Accent>(readAccent());
   recentFlags = $state.raw<string[]>([]);
   /** Idle minutes before the vault locks (0 = never). */
   autolockMinutes = $state(AUTOLOCK_DEFAULT);
@@ -71,6 +97,17 @@ class SettingsStore {
       /* ignore */
     }
     applyTheme(choice);
+  }
+
+  setAccent(a: Accent): void {
+    this.accent = a;
+    try {
+      localStorage.setItem(LS_ACCENT, a);
+    } catch {
+      /* ignore */
+    }
+    if (a === 'blue') delete document.documentElement.dataset.accent;
+    else document.documentElement.dataset.accent = a;
   }
 
   toggleTheme(): void {

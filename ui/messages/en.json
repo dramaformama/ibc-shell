@@ -282,5 +282,6 @@
   "section_signin": "Sign in",
   "sftp_split": "Resize panes",
   "sftp_resize_col": "Drag to resize · double-click to reset",
-  "settings_highlight": "Highlight terminal output (IPs, links, errors)"
+  "settings_highlight": "Highlight terminal output (IPs, links, errors)",
+  "settings_accent": "Accent colour"
 }

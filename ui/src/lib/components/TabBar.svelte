@@ -106,7 +106,7 @@
     height: 44px;
     padding: 0 8px;
     border-bottom: 1px solid var(--border);
-    background: var(--surface);
+    background: var(--bg);
     flex: none;
   }
   .bar.mac {
@@ -129,7 +129,7 @@
     flex: none;
     max-width: 220px;
     height: 30px;
-    border-radius: var(--r-control);
+    border-radius: 10px;
     color: var(--muted);
     transition:
       background-color 120ms var(--ease),
@@ -140,11 +140,11 @@
     color: var(--text);
   }
   .tab.active {
-    background: var(--bg);
+    background: var(--surface);
     color: var(--text);
     box-shadow:
-      inset 0 0 0 1px var(--border),
-      var(--lift);
+      var(--card-shadow),
+      0 0 0 0.5px var(--border);
   }
   .tab-main {
     display: flex;

@@ -2,7 +2,7 @@
   import { terminalPrefs } from '$lib/terminal/prefs.svelte';
   import { api, type AppInfo } from '$lib/api';
   import * as m from '$lib/paraglide/messages.js';
-  import { settings, type ThemeChoice } from '$lib/stores/settings.svelte';
+  import { ACCENTS, settings, type ThemeChoice } from '$lib/stores/settings.svelte';
   import { ui } from '$lib/stores/ui.svelte';
   import { vault } from '$lib/stores/vault.svelte';
   import { AUTOLOCK_CHOICES } from '$lib/util/autolock';
@@ -56,6 +56,23 @@
                 aria-pressed={settings.theme === t.id}
                 onclick={() => settings.setTheme(t.id)}>{t.label()}</button
               >
+            {/each}
+          </div>
+        </div>
+        <div class="fld">
+          <span class="lbl">{m.settings_accent()}</span>
+          <div class="swatches" role="radiogroup" aria-label={m.settings_accent()}>
+            {#each ACCENTS as a (a)}
+              <button
+                type="button"
+                role="radio"
+                class="sw"
+                data-accent-swatch={a}
+                aria-checked={settings.accent === a}
+                aria-label={a}
+                title={a}
+                onclick={() => settings.setAccent(a)}
+              ></button>
             {/each}
           </div>
         </div>
@@ -174,6 +191,57 @@
 {/if}
 
 <style>
+  .swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .sw {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--sw);
+    cursor: pointer;
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.1);
+    transition: transform 120ms var(--ease);
+  }
+  .sw:hover {
+    transform: scale(1.1);
+  }
+  .sw[aria-checked='true'] {
+    box-shadow:
+      0 0 0 2px var(--surface),
+      0 0 0 4px var(--sw);
+  }
+  .sw[data-accent-swatch='blue'] {
+    --sw: #007aff;
+  }
+  .sw[data-accent-swatch='purple'] {
+    --sw: #af52de;
+  }
+  .sw[data-accent-swatch='pink'] {
+    --sw: #ff2d55;
+  }
+  .sw[data-accent-swatch='red'] {
+    --sw: #ff3b30;
+  }
+  .sw[data-accent-swatch='orange'] {
+    --sw: #ff9500;
+  }
+  .sw[data-accent-swatch='green'] {
+    --sw: #34c759;
+  }
+  .sw[data-accent-swatch='teal'] {
+    --sw: #30b0c7;
+  }
+  .sw[data-accent-swatch='indigo'] {
+    --sw: #5856d6;
+  }
+  .sw[data-accent-swatch='graphite'] {
+    --sw: #8e8e93;
+  }
   .pwform {
     display: grid;
     gap: 8px;

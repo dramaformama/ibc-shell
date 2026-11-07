@@ -55,8 +55,10 @@
     display: flex;
   }
   .mark {
-    margin-bottom: 10px;
-    border-radius: 14px;
+    width: 72px;
+    height: 72px;
+    margin-bottom: 14px;
+    border-radius: 18px;
     box-shadow: var(--shadow);
   }
   .welcome {
@@ -68,9 +70,9 @@
   }
   h1 {
     margin: 0;
-    font-size: 22px;
-    font-weight: 600;
-    letter-spacing: -0.02em;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
     text-wrap: balance;
   }
   p {

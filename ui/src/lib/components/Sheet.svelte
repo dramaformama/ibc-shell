@@ -40,13 +40,15 @@
   :global(.sheet) {
     position: fixed;
     z-index: 51;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: min(420px, 100vw);
+    top: 10px;
+    right: 10px;
+    bottom: 10px;
+    width: min(440px, calc(100vw - 20px));
     display: flex;
     flex-direction: column;
-    border-left: 1px solid var(--border);
+    overflow: hidden;
+    border: 0.5px solid var(--border);
+    border-radius: 20px;
     background: var(--surface);
     box-shadow: var(--shadow);
     animation: slide 150ms var(--ease);
@@ -61,12 +63,13 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 14px 16px 10px 20px;
+    padding: 16px 14px 10px 22px;
   }
   header :global([data-dialog-title]) {
     margin: 0;
-    font-size: 15px;
-    font-weight: 600;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
   }
   .body {
     flex: 1;
@@ -85,8 +88,10 @@
   }
   @media (max-width: 640px) {
     :global(.sheet) {
+      inset: auto 0 0 0;
       width: 100vw;
-      border-left: 0;
+      max-height: 92vh;
+      border-radius: 20px 20px 0 0;
     }
   }
 </style>
