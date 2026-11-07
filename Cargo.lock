@@ -5262,6 +5262,8 @@ dependencies = [
 name = "termlite-ssh"
 version = "0.1.0"
 dependencies = [
+ "bytes",
+ "russh",
  "secrecy",
  "serde",
  "specta",

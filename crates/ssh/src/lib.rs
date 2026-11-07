@@ -2,19 +2,17 @@
 //!
 //! Contract: `docs/contracts/ipc.md` §crates/ssh public API + `security.md` §SSH policy
 //! (FROZEN v1). Must not depend on `store`/`vault`: credentials and known hosts come in via
-//! [`Hop`] / [`KnownHosts`]. Phase 0 skeleton — fallible fns return [`SshError::Unimplemented`].
-// Skeleton-only allowances; the ssh-core agent removes this line when implementing.
-#![allow(
-    unused_variables,
-    clippy::unused_async,
-    clippy::unused_async_trait_impl,
-    clippy::unused_self,
-    clippy::needless_pass_by_value
-)]
-
+//! [`Hop`] / [`KnownHosts`]. Forwards are Phase 3 (`SshError::Unimplemented`).
+mod auth;
+mod connect;
 mod config;
+mod error;
+mod forward;
 mod hostkey;
 mod session;
+mod shell;
+pub mod policy;
+mod verify;
 
 pub use config::{
     AuthMethod, ConnectStep, Hop, KbdInteractiveRequest, KbdPrompt, Prompter, PtyRequest,
@@ -22,10 +20,9 @@ pub use config::{
 pub use hostkey::{
     host_pattern, HostKeyDecision, HostKeyInfo, HostKeyMismatch, KnownHosts, KnownKey,
 };
-pub use session::{
-    Connection, ExecOutput, ForwardHandle, ForwardSpec, ForwardState, Shell, ShellOutput,
-    SubsystemStream, CREDIT_WINDOW,
-};
+pub use forward::{ForwardHandle, ForwardSpec, ForwardState};
+pub use session::{Connection, ExecOutput, SubsystemStream, CREDIT_WINDOW};
+pub use shell::{Shell, ShellOutput};
 
 /// SSH errors. Messages never contain credentials.
 #[derive(Debug, thiserror::Error)]
@@ -61,7 +58,7 @@ pub enum SshError {
     /// Protocol / channel error.
     #[error("ssh protocol error: {0}")]
     Protocol(String),
-    /// Phase 0 skeleton placeholder.
+    /// Not implemented yet (Phase 3 forwards).
     #[error("not implemented")]
     Unimplemented,
 }
@@ -77,5 +74,5 @@ where
     K: KnownHosts,
     P: Prompter,
 {
-    Err(SshError::Unimplemented)
+    connect::connect_chain(chain, known_hosts, prompter).await
 }

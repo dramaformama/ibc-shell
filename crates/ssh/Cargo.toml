@@ -10,8 +10,16 @@ serde.workspace = true
 thiserror.workspace = true
 secrecy.workspace = true
 zeroize.workspace = true
-tokio.workspace = true
 specta.workspace = true
+# SSH protocol implementation (client, keys, agent). aws-lc-rs backend = russh default.
+russh = "0.65"
+# Byte buffers for the shell stream (already in russh's tree).
+bytes = "1"
+# Domain-name resolution + timeouts + spawn for the shell pump.
+tokio = { workspace = true, features = ["net", "time", "rt", "sync", "io-util", "macros"] }
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "net", "time"] }
