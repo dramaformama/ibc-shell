@@ -28,7 +28,7 @@ bindings:
 e2e:
     tests/docker/gen-fixtures.sh
     docker compose -f tests/docker/compose.yml up -d --build --wait
-    trap 'docker compose -f tests/docker/compose.yml down -v' EXIT; TL_E2E=1 cargo test -p ssh -p sftp --test '*'
+    trap 'docker compose -f tests/docker/compose.yml down -v' EXIT; TL_E2E=1 cargo test -p termlite-ssh -p termlite-sftp --test '*'
 
 # Rename the project (placeholder)
 rename name:

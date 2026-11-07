@@ -12,12 +12,12 @@ chown tester:tester /home/tester/.ssh/authorized_keys; chmod 600 /home/tester/.s
 {
   echo "LogLevel VERBOSE"
   echo "PermitRootLogin no"
-  echo "AllowTcpForwarding no"
+  [ "$MODE" = bastion ] && echo "AllowTcpForwarding yes" || echo "AllowTcpForwarding no"
   case "$MODE" in
     pass|evil) echo "PasswordAuthentication yes"; echo "PubkeyAuthentication no"; echo "KbdInteractiveAuthentication no"; echo "UsePAM no" ;;
     key|internal) echo "PasswordAuthentication no"; echo "PubkeyAuthentication yes"; echo "KbdInteractiveAuthentication no"; echo "UsePAM no" ;;
     kbd) echo "PasswordAuthentication no"; echo "PubkeyAuthentication no"; echo "KbdInteractiveAuthentication yes"; echo "UsePAM yes"; echo "AuthenticationMethods keyboard-interactive" ;;
-    bastion) echo "PasswordAuthentication no"; echo "PubkeyAuthentication yes"; echo "KbdInteractiveAuthentication no"; echo "UsePAM no"; echo "AllowTcpForwarding yes" ;;
+    bastion) echo "PasswordAuthentication no"; echo "PubkeyAuthentication yes"; echo "KbdInteractiveAuthentication no"; echo "UsePAM no" ;;
   esac
 } > "$CFG"
 passwd -u tester >/dev/null 2>&1 || true
@@ -36,4 +36,5 @@ if [ "$MODE" = evil ]; then
   mkdir -p big && ( cd big && seq 1 10000 | sed 's/^/f/' | xargs touch )
   chown -R -h tester:tester "$D"
 fi
-exec /usr/sbin/sshd -D -e
+SSHD=/usr/sbin/sshd; [ "$MODE" = kbd ] && SSHD=/usr/sbin/sshd.pam
+exec "$SSHD" -D -e

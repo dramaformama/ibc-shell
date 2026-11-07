@@ -214,10 +214,14 @@ async fn jump_through_bastion() {
     if !enabled() {
         return;
     }
-    let pass = need("TL_SSH_PASSWORD");
+    let key = |label: &str| AuthMethod::Key {
+        pem: zeroize::Zeroizing::new(std::fs::read_to_string(need("TL_SSH_KEY_FILE")).expect("key file")),
+        passphrase: None,
+        identity_label: label.into(),
+    };
     let chain = vec![
-        hop(&need("TL_SSH_BASTION_PORT"), &host(), vec![pw(&pass)]),
-        hop("22", &need("TL_SSH_INTERNAL_HOST"), vec![pw(&pass)]),
+        hop(&need("TL_SSH_BASTION_PORT"), &host(), vec![key("bastion")]),
+        hop("22", &need("TL_SSH_INTERNAL_HOST"), vec![key("internal")]),
     ];
     let c = connect(chain, &Hosts::default(), &accept()).await.expect("connect");
     assert_eq!(c.exec("echo inner", 64).await.expect("exec").stdout, b"inner\n");
