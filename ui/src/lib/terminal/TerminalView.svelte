@@ -197,6 +197,7 @@
   });
 
   $effect(() => sessions.setPhase(tab.id, conn.phase));
+  $effect(() => sessions.setSessionId(tab.id, conn.phase === 'connected' ? conn.id : null));
 
   $effect(() => {
     const size = terminalPrefs.fontSize;
