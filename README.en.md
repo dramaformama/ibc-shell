@@ -13,7 +13,7 @@ A light SSH and SFTP client for people who run many servers.
 Nested folders, country flags, a terminal that stays out of your way, and secrets that never leave your machine.
 
 > **Status: early development.** The core (SSH, SFTP engine, encrypted vault, terminal and file UI) is built and tested.
-> The pieces are not yet wired into a runnable release, so there are no installers yet. See [Download](#download).
+> Installers are built automatically from a tag, see [Download](#download).
 
 ## Why
 
@@ -36,17 +36,23 @@ Demo mode: sample servers and metrics.
 
 ## Download
 
-All builds will be published on the [Releases page](https://github.com/dramaformama/ibc-shell/releases/latest).
+Installers are on the [Releases page](https://github.com/dramaformama/ibc-shell/releases/latest), with a `SHA256SUMS.txt` next to them to verify the download.
 
-| Platform                     | Download                                                               | Status            |
-| ---------------------------- | ---------------------------------------------------------------------- | ----------------- |
-| macOS (Apple Silicon, Intel) | [Releases](https://github.com/dramaformama/ibc-shell/releases/latest) | not built yet     |
-| Windows 10/11                | [Releases](https://github.com/dramaformama/ibc-shell/releases/latest) | not built yet     |
-| Linux (AppImage, deb)        | [Releases](https://github.com/dramaformama/ibc-shell/releases/latest) | not built yet     |
-| iOS                          | —                                                                      | planned (Phase 4) |
-| Android                      | —                                                                      | planned (Phase 4) |
+| Platform             | File                         | State             |
+| -------------------- | ---------------------------- | ----------------- |
+| macOS, Apple Silicon | `iBC Shell_…_aarch64.dmg`    | built in CI       |
+| macOS, Intel         | `iBC Shell_…_x64.dmg`        | built in CI       |
+| Windows 10/11        | `iBC Shell_…_x64-setup.exe`  | built in CI       |
+| Linux                | `.AppImage` and `.deb`       | built in CI       |
+| iOS, Android         | —                            | planned (Phase 4) |
 
-Until installers exist you can [build from source](#build-from-source).
+The builds are not signed with a paid certificate, so the system warns on first launch. That is expected; check the sum from `SHA256SUMS.txt`.
+
+- **macOS.** Drag the app to Applications. On first launch right-click it, choose Open, then Open in the dialog. If macOS says the app is damaged, run `xattr -dr com.apple.quarantine "/Applications/iBC Shell.app"`.
+- **Windows.** In the SmartScreen window click More info, then Run anyway.
+- **Linux.** `chmod +x` the AppImage and run it, or `sudo apt install ./file.deb`.
+
+A release is made by a tag: `git tag v0.1.0 && git push origin v0.1.0`. The [workflow](.github/workflows/release.yml) builds all four installers and puts them in a draft release that you publish by hand.
 
 ## What works today
 
