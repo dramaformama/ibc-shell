@@ -40,8 +40,11 @@ export const commands = {
 	identityUpdate: (id: IdentityId, patch: IdentityPatchInput) => typedError<IdentityDto, ApiError>(__TAURI_INVOKE("identity_update", { id, patch })),
 	/**  Deletes an identity and its secrets. */
 	identityDelete: (id: IdentityId) => typedError<null, ApiError>(__TAURI_INVOKE("identity_delete", { id })),
-	/**  Imports a private key file chosen via the dialog plugin. */
-	identityImportFile: (path: string, passphrase: string | null) => typedError<IdentityDto, ApiError>(__TAURI_INVOKE("identity_import_file", { path, passphrase })),
+	/**
+	 *  Shows the native "open file" dialog (backend side) and imports the chosen private key.
+	 *  The webview cannot name a path: it can only trigger the picker. `null` = user cancelled.
+	 */
+	identityImportFile: (passphrase: string | null) => typedError<IdentityDto | null, ApiError>(__TAURI_INVOKE("identity_import_file", { passphrase })),
 	/**  All tags. */
 	tagList: () => typedError<Tag[], ApiError>(__TAURI_INVOKE("tag_list")),
 	/**  Creates a tag. */

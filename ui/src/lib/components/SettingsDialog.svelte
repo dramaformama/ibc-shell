@@ -4,6 +4,7 @@
   import { settings, type ThemeChoice } from '$lib/stores/settings.svelte';
   import { ui } from '$lib/stores/ui.svelte';
   import { vault } from '$lib/stores/vault.svelte';
+  import { AUTOLOCK_CHOICES } from '$lib/util/autolock';
   import { errorText } from '$lib/util/errors';
   import { MIN_PASSWORD, passwordStrength } from '$lib/util/strength';
   import Sheet from './Sheet.svelte';
@@ -114,6 +115,22 @@
             {#if msg}<p class={msg.ok ? 'note' : 'error'} role="status">{msg.text}</p>{/if}
           </form>
         {/if}
+        <label class="row">
+          <span class="lbl">{m.settings_autolock()}</span>
+          <select
+            class="input"
+            value={settings.autolockMinutes}
+            onchange={(e) => settings.setAutolock(Number(e.currentTarget.value))}
+          >
+            {#each AUTOLOCK_CHOICES as n (n)}
+              <option value={n}
+                >{n === 0
+                  ? m.settings_autolock_never()
+                  : m.settings_autolock_minutes({ n })}</option
+              >
+            {/each}
+          </select>
+        </label>
         <button
           type="button"
           class="btn"

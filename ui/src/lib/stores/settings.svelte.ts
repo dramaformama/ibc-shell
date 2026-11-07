@@ -1,6 +1,7 @@
 /** User settings: theme, language, remembered layout, recent flags. */
 import { api } from '$lib/api';
 import { getLocale, setLocale } from '$lib/paraglide/runtime.js';
+import { AUTOLOCK_DEFAULT, AUTOLOCK_KEY, parseAutolock } from '$lib/util/autolock';
 import { ui } from './ui.svelte';
 
 export type ThemeChoice = 'light' | 'dark' | 'system';
@@ -27,6 +28,8 @@ export function applyTheme(choice: ThemeChoice): void {
 class SettingsStore {
   theme = $state<ThemeChoice>(readTheme());
   recentFlags = $state.raw<string[]>([]);
+  /** Idle minutes before the vault locks (0 = never). */
+  autolockMinutes = $state(AUTOLOCK_DEFAULT);
 
   constructor() {
     if (typeof matchMedia !== 'undefined')
@@ -40,10 +43,13 @@ class SettingsStore {
   }
 
   async load(): Promise<void> {
-    const [width, recent] = await Promise.all([
+    const [width, recent, autolock] = await Promise.all([
       api.settingsGet('ui.sidebar_width'),
-      api.settingsGet('ui.flag_recent')
+      api.settingsGet('ui.flag_recent'),
+      api.settingsGet(AUTOLOCK_KEY)
     ]);
+    if (autolock.status === 'ok')
+      this.autolockMinutes = parseAutolock(autolock.data ?? AUTOLOCK_DEFAULT);
     if (width.status === 'ok' && typeof width.data === 'number')
       ui.sidebarWidth = Math.min(420, Math.max(200, width.data));
     if (recent.status === 'ok' && Array.isArray(recent.data))
@@ -68,6 +74,11 @@ class SettingsStore {
   /** Changes the language; paraglide reloads the document. */
   setLanguage(locale: 'en' | 'ru'): void {
     void setLocale(locale);
+  }
+
+  setAutolock(minutes: number): void {
+    this.autolockMinutes = parseAutolock(minutes);
+    void api.settingsSet(AUTOLOCK_KEY, this.autolockMinutes);
   }
 
   saveSidebarWidth(): void {

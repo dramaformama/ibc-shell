@@ -60,7 +60,7 @@ pub enum ApiError {
 | `identity_create` | `input: IdentityInput` (secrets accepted ONCE → vault) | `IdentityDto` |
 | `identity_update` | `id: IdentityId, patch: IdentityPatchInput` | `IdentityDto` |
 | `identity_delete` | `id: IdentityId` | `null` |
-| `identity_import_file` | `path: string` (dialog plugin), `passphrase: string \| null` | `IdentityDto` |
+| `identity_import_file` | `passphrase: string \| null` (backend opens the file dialog, ADR-006) | `IdentityDto \| null` (null = cancelled) |
 | `tag_list` | — | `Tag[]` |
 | `tag_create` | `input: TagInput` | `Tag` |
 | `tag_update` | `id: TagId, patch: TagPatch` | `Tag` |

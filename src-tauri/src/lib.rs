@@ -33,6 +33,7 @@ pub fn run() {
     let raw: Box<dyn Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync> =
         Box::new(tauri::generate_handler![commands::session::shell_write]);
     let result = tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(move |invoke| {
             if api::RAW_COMMANDS.contains(&invoke.message.command()) {
                 raw(invoke)

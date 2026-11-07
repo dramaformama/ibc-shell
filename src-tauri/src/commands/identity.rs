@@ -4,11 +4,17 @@ use ibc_store::{Identity, IdentityId, IdentityKind, IdentityMetaInput, IdentityM
 use ibc_vault::keys::{import_private_key, KeyError, KeyInfo};
 use ibc_vault::Vault;
 use secrecy::{ExposeSecret, SecretString};
-use tauri::State;
+use std::path::Path;
+
+use tauri::{AppHandle, State};
+use tauri_plugin_dialog::DialogExt;
 
 use crate::api::dto::{IdentityDto, IdentityInput, IdentityPatchInput, SecretInput};
 use crate::api::{ApiError, ApiResult};
 use crate::state::AppState;
+
+/// Largest private key file we accept.
+const MAX_KEY_FILE: usize = 64 * 1024;
 
 fn dto(i: Identity) -> IdentityDto {
     IdentityDto {
@@ -144,27 +150,23 @@ pub async fn identity_delete(state: State<'_, AppState>, id: IdentityId) -> ApiR
     Ok(state.store.identity_delete(id)?)
 }
 
-/// Imports a private key file chosen via the dialog plugin.
-#[tauri::command]
-#[specta::specta]
-pub async fn identity_import_file(
-    state: State<'_, AppState>,
-    path: String,
-    passphrase: Option<SecretInput>,
+/// Reads a key file the user picked and stores it as an identity (path never comes from the UI).
+fn import_from_path(
+    state: &AppState,
+    path: &Path,
+    passphrase: Option<SecretString>,
 ) -> ApiResult<IdentityDto> {
-    let p = std::path::PathBuf::from(&path);
     let bytes = zeroize::Zeroizing::new(
-        std::fs::read(&p).map_err(|_| ApiError::Validation("cannot read key file".into()))?,
+        std::fs::read(path).map_err(|_| ApiError::Validation("cannot read key file".into()))?,
     );
-    if bytes.len() > 64 * 1024 {
+    if bytes.len() > MAX_KEY_FILE {
         return Err(ApiError::Validation("key file too large".into()));
     }
     let pem = String::from_utf8(bytes.to_vec())
         .map_err(|_| ApiError::Validation("invalid key".into()))?;
-    let label = p
+    let label = path
         .file_name()
         .map_or_else(|| "key".to_owned(), |n| n.to_string_lossy().into_owned());
-    let passphrase = passphrase.map(|s| s.0);
     let input = IdentityInput {
         label,
         username: None,
@@ -173,8 +175,83 @@ pub async fn identity_import_file(
         private_key_pem: Some(SecretString::from(pem)),
         passphrase,
     };
+    create(state, input)
+}
+
+/// Shows the native "open file" dialog (backend side) and imports the chosen private key.
+/// The webview cannot name a path: it can only trigger the picker. `null` = user cancelled.
+#[tauri::command]
+#[specta::specta]
+pub async fn identity_import_file(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    passphrase: Option<SecretInput>,
+) -> ApiResult<Option<IdentityDto>> {
+    let passphrase = passphrase.map(|s| s.0);
     let state = (*state).clone();
-    tauri::async_runtime::spawn_blocking(move || create(&state, input))
-        .await
-        .map_err(|e| ApiError::Internal(e.to_string()))?
+    tauri::async_runtime::spawn_blocking(move || {
+        let Some(picked) = app.dialog().file().blocking_pick_file() else {
+            return Ok(None);
+        };
+        let path = picked
+            .into_path()
+            .map_err(|_| ApiError::Validation("unsupported file location".into()))?;
+        import_from_path(&state, &path, passphrase).map(Some)
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))?
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use ibc_store::Store;
+    use ibc_vault::{MemoryKeyStore, VaultMode};
+
+    use super::*;
+
+    const KEY: &str = "-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+QyNTUxOQAAACAjWF9XMGonNvOZS5jQtwN2+OyShDB1KB0m2qfUAEySdgAAAIhasfTVWrH0
+1QAAAAtzc2gtZWQyNTUxOQAAACAjWF9XMGonNvOZS5jQtwN2+OyShDB1KB0m2qfUAEySdg
+AAAEBpExXls+OkMCOV+0lvM7tv4lCconrTA8VEu/lb4/uEkyNYX1cwaic285lLmNC3A3b4
+7JKEMHUoHSbap9QATJJ2AAAABHRlc3QB
+-----END OPENSSH PRIVATE KEY-----
+";
+
+    fn state() -> AppState {
+        let store = Arc::new(Store::open_in_memory().unwrap());
+        let vault = Arc::new(Vault::new(store.clone(), Arc::new(MemoryKeyStore::default())));
+        vault.init(VaultMode::OsKeychain, None).unwrap();
+        AppState::new(store, vault)
+    }
+
+    fn tmp(name: &str) -> std::path::PathBuf {
+        std::env::temp_dir().join(format!("ibc-test-{}-{name}", std::process::id()))
+    }
+
+    #[test]
+    fn imports_a_valid_key_file() {
+        let (st, path) = (state(), tmp("ok"));
+        std::fs::write(&path, KEY).unwrap();
+        let r = import_from_path(&st, &path, None);
+        let _ = std::fs::remove_file(&path);
+        let dto = r.unwrap();
+        assert_eq!(dto.key_algo.as_deref().map(str::is_empty), Some(false));
+        assert!(dto.label.starts_with("ibc-test-"));
+    }
+
+    #[test]
+    fn rejects_missing_oversized_and_garbage_files() {
+        let st = state();
+        assert!(import_from_path(&st, &tmp("missing"), None).is_err());
+        let (big, junk) = (tmp("big"), tmp("junk"));
+        std::fs::write(&big, vec![b'a'; MAX_KEY_FILE + 1]).unwrap();
+        std::fs::write(&junk, "not a key").unwrap();
+        let (a, b) = (import_from_path(&st, &big, None), import_from_path(&st, &junk, None));
+        let _ = std::fs::remove_file(&big);
+        let _ = std::fs::remove_file(&junk);
+        assert!(a.is_err() && b.is_err());
+    }
 }
