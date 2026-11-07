@@ -12,6 +12,30 @@ secrecy.workspace = true
 zeroize.workspace = true
 serde.workspace = true
 specta.workspace = true
+# XChaCha20-Poly1305 AEAD (mandated by ADR-003); OsRng is re-exported through `aead`.
+chacha20poly1305 = "0.10"
+# Argon2id master-password KDF (ADR-003).
+argon2 = "0.5"
+# Constant-time compare of the unlock check value.
+subtle = "2"
+# CBOR for vault_meta kdf params and the .tlvault payload.
+ciborium = "0.2"
+# zstd compression of the .tlvault payload.
+zstd = "0.13"
+# Key import (PEM PKCS#1/#8, OpenSSH, encrypted) and generation via the SSH stack's own parser.
+russh = "0.65"
+# Same ssh-key version russh uses; enables key generation (OS RNG) + RSA.
+ssh-key = { version = "=0.7.0-rc.11", features = ["rand_core", "getrandom", "rsa", "ed25519"] }
+
+# OS keychain access for OsKeyring (Android uses its own plugin instead).
+[target.'cfg(target_os = "macos")'.dependencies]
+keyring = { version = "3", features = ["apple-native"] }
+[target.'cfg(target_os = "ios")'.dependencies]
+keyring = { version = "3", features = ["apple-native"] }
+[target.'cfg(target_os = "windows")'.dependencies]
+keyring = { version = "3", features = ["windows-native"] }
+[target.'cfg(target_os = "linux")'.dependencies]
+keyring = { version = "3", features = ["sync-secret-service", "crypto-rust"] }
 
 [lints]
 workspace = true
