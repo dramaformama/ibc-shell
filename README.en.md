@@ -26,13 +26,13 @@ Nested folders, country flags, a terminal that stays out of your way, and secret
 
 ## Download
 
-All builds will be published on the [Releases page](https://github.com/dramaformama/ibc-server/releases/latest).
+All builds will be published on the [Releases page](https://github.com/dramaformama/ibc-shell/releases/latest).
 
 | Platform                     | Download                                                               | Status            |
 | ---------------------------- | ---------------------------------------------------------------------- | ----------------- |
-| macOS (Apple Silicon, Intel) | [Releases](https://github.com/dramaformama/ibc-server/releases/latest) | not built yet     |
-| Windows 10/11                | [Releases](https://github.com/dramaformama/ibc-server/releases/latest) | not built yet     |
-| Linux (AppImage, deb)        | [Releases](https://github.com/dramaformama/ibc-server/releases/latest) | not built yet     |
+| macOS (Apple Silicon, Intel) | [Releases](https://github.com/dramaformama/ibc-shell/releases/latest) | not built yet     |
+| Windows 10/11                | [Releases](https://github.com/dramaformama/ibc-shell/releases/latest) | not built yet     |
+| Linux (AppImage, deb)        | [Releases](https://github.com/dramaformama/ibc-shell/releases/latest) | not built yet     |
 | iOS                          | —                                                                      | planned (Phase 4) |
 | Android                      | —                                                                      | planned (Phase 4) |
 

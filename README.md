@@ -26,13 +26,13 @@
 
 ## Скачать
 
-Все сборки будут публиковаться на странице [Releases](https://github.com/dramaformama/ibc-server/releases/latest).
+Все сборки будут публиковаться на странице [Releases](https://github.com/dramaformama/ibc-shell/releases/latest).
 
 | Платформа                    | Загрузка                                                               | Состояние         |
 | ---------------------------- | ---------------------------------------------------------------------- | ----------------- |
-| macOS (Apple Silicon, Intel) | [Releases](https://github.com/dramaformama/ibc-server/releases/latest) | пока не собрано   |
-| Windows 10/11                | [Releases](https://github.com/dramaformama/ibc-server/releases/latest) | пока не собрано   |
-| Linux (AppImage, deb)        | [Releases](https://github.com/dramaformama/ibc-server/releases/latest) | пока не собрано   |
+| macOS (Apple Silicon, Intel) | [Releases](https://github.com/dramaformama/ibc-shell/releases/latest) | пока не собрано   |
+| Windows 10/11                | [Releases](https://github.com/dramaformama/ibc-shell/releases/latest) | пока не собрано   |
+| Linux (AppImage, deb)        | [Releases](https://github.com/dramaformama/ibc-shell/releases/latest) | пока не собрано   |
 | iOS                          | —                                                                      | в планах (Фаза 4) |
 | Android                      | —                                                                      | в планах (Фаза 4) |
 
