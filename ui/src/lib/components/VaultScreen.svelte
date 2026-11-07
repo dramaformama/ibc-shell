@@ -1,45 +1,27 @@
 <script lang="ts">
   import Logo from './Logo.svelte';
-  import { Eye, EyeOff, KeyRound, Lock, ShieldCheck } from '@lucide/svelte';
+  import { Eye, EyeOff, KeyRound, Loader } from '@lucide/svelte';
   import * as m from '$lib/paraglide/messages.js';
   import { vault } from '$lib/stores/vault.svelte';
-  import { MIN_PASSWORD, passwordStrength } from '$lib/util/strength';
-  import type { VaultMode } from '$lib/api';
 
-  let mode = $state<VaultMode>('OsKeychain');
   let password = $state('');
-  let confirm = $state('');
   let reveal = $state(false);
-  let localError = $state<string | null>(null);
 
-  const fresh = $derived(vault.state === 'Uninitialized');
-  const needsPassword = $derived(
-    fresh ? mode === 'MasterPassword' : vault.mode === 'MasterPassword'
-  );
-  const strength = $derived(passwordStrength(password));
-  const strengthLabels = [
-    m.strength_empty,
-    m.strength_weak,
-    m.strength_fair,
-    m.strength_good,
-    m.strength_strong
-  ];
+  /** A vault from before ADR-014: asks for the old password once, then moves it to the keychain. */
+  const legacy = $derived(vault.mode === 'MasterPassword');
 
   async function submit(e: SubmitEvent) {
     e.preventDefault();
-    localError = null;
-    if (fresh) {
-      if (needsPassword) {
-        if (password.length < MIN_PASSWORD)
-          return (localError = m.err_password_short({ min: MIN_PASSWORD }));
-        if (password !== confirm) return (localError = m.err_password_mismatch());
-      }
-      await vault.init(mode, needsPassword ? password : null);
-    } else {
-      await vault.unlock(needsPassword ? password : null);
-    }
+    await vault.removePassword(password);
     password = '';
-    confirm = '';
+  }
+  async function justOpen() {
+    await vault.unlock(password);
+    password = '';
+  }
+  function retry() {
+    vault.error = null;
+    void vault.auto();
   }
   const focus = (n: HTMLElement) => n.focus();
 </script>
@@ -49,45 +31,12 @@
   <form class="panel" onsubmit={submit} aria-labelledby="vault-title">
     <div class="mark" aria-hidden="true">
       <Logo size={56} />
-      <span class="badge"
-        >{#if fresh}<ShieldCheck size={13} />{:else}<Lock size={13} />{/if}</span
-      >
+      <span class="badge"><KeyRound size={13} /></span>
     </div>
-    <h1 id="vault-title">{fresh ? m.vault_welcome() : m.vault_locked_title()}</h1>
-    <p class="lede">{fresh ? m.vault_welcome_hint() : m.vault_locked_hint()}</p>
 
-    {#if fresh}
-      <div class="modes" role="radiogroup" aria-label={m.vault_mode()}>
-        <button
-          type="button"
-          role="radio"
-          aria-checked={mode === 'OsKeychain'}
-          class="mode"
-          onclick={() => (mode = 'OsKeychain')}
-        >
-          <KeyRound size={16} />
-          <span
-            ><strong>{m.vault_mode_keychain()}</strong><small>{m.vault_mode_keychain_hint()}</small
-            ></span
-          >
-        </button>
-        <button
-          type="button"
-          role="radio"
-          aria-checked={mode === 'MasterPassword'}
-          class="mode"
-          onclick={() => (mode = 'MasterPassword')}
-        >
-          <Lock size={16} />
-          <span
-            ><strong>{m.vault_mode_password()}</strong><small>{m.vault_mode_password_hint()}</small
-            ></span
-          >
-        </button>
-      </div>
-    {/if}
-
-    {#if needsPassword}
+    {#if legacy}
+      <h1 id="vault-title">{m.vault_legacy_title()}</h1>
+      <p class="lede">{m.vault_legacy_hint()}</p>
       <div class="pw">
         <input
           class="input"
@@ -95,7 +44,7 @@
           bind:value={password}
           placeholder={m.field_master_password()}
           aria-label={m.field_master_password()}
-          autocomplete={fresh ? 'new-password' : 'current-password'}
+          autocomplete="current-password"
           use:focus
         />
         <button
@@ -107,37 +56,21 @@
           {#if reveal}<EyeOff size={16} />{:else}<Eye size={16} />{/if}
         </button>
       </div>
-      {#if fresh}
-        <input
-          class="input"
-          type={reveal ? 'text' : 'password'}
-          bind:value={confirm}
-          placeholder={m.field_confirm_password()}
-          aria-label={m.field_confirm_password()}
-          autocomplete="new-password"
-        />
-        <div class="meter" aria-live="polite">
-          <div class="bars" data-level={strength}>
-            {#each [1, 2, 3, 4] as n (n)}<i class:on={strength >= n}></i>{/each}
-          </div>
-          <span>{strengthLabels[strength]?.()}</span>
-        </div>
-      {/if}
+      {#if vault.error}<p class="error" role="alert">{vault.error}</p>{/if}
+      <button type="submit" class="btn btn-primary go" disabled={vault.busy || !password}>
+        {m.vault_legacy_go()}
+      </button>
+      <button type="button" class="btn go" disabled={vault.busy || !password} onclick={justOpen}>
+        {m.vault_legacy_only_unlock()}
+      </button>
+    {:else if vault.error}
+      <h1 id="vault-title">{m.vault_open_failed()}</h1>
+      <p class="error" role="alert">{vault.error}</p>
+      <p class="quiet">{m.vault_open_failed_hint()}</p>
+      <button type="button" class="btn btn-primary go" onclick={retry}>{m.vault_retry()}</button>
+    {:else}
+      <h1 id="vault-title" class="wait"><Loader size={16} />{m.vault_opening()}</h1>
     {/if}
-
-    {#if localError || vault.error}<p class="error" role="alert">
-        {localError ?? vault.error}
-      </p>{/if}
-
-    <!-- svelte-ignore a11y_autofocus -->
-    <button
-      type="submit"
-      class="btn btn-primary go"
-      disabled={vault.busy || (needsPassword && !password)}
-      autofocus={!needsPassword}
-    >
-      {fresh ? m.vault_create() : m.vault_unlock()}
-    </button>
   </form>
 </main>
 
@@ -190,82 +123,38 @@
     color: var(--muted);
     text-wrap: pretty;
   }
-  .modes {
-    display: grid;
-    gap: 8px;
-    margin-bottom: 4px;
-  }
-  .mode {
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
-    padding: 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--r-card);
-    background: var(--surface);
-    color: var(--text);
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-    transition:
-      border-color 120ms var(--ease),
-      background-color 120ms var(--ease);
-  }
-  .mode :global(svg) {
-    margin-top: 2px;
-    color: var(--muted);
-  }
-  .mode span {
-    display: grid;
-    gap: 2px;
-  }
-  .mode small {
-    color: var(--muted);
-    font-size: 12px;
-  }
-  .mode[aria-checked='true'] {
-    border-color: var(--accent);
-    background: var(--accent-soft);
-  }
-  .mode[aria-checked='true'] :global(svg) {
-    color: var(--accent);
-  }
   .pw {
     display: flex;
     gap: 4px;
     align-items: center;
   }
-  .meter {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: var(--muted);
-    font-size: 12px;
-  }
-  .bars {
-    display: flex;
-    gap: 4px;
-    flex: 1;
-  }
-  .bars i {
-    flex: 1;
-    height: 3px;
-    border-radius: 2px;
-    background: var(--border);
-    transition: background-color 150ms var(--ease);
-  }
-  .bars[data-level='1'] i.on {
-    background: var(--danger);
-  }
-  .bars[data-level='2'] i.on {
-    background: var(--warn);
-  }
-  .bars[data-level='3'] i.on,
-  .bars[data-level='4'] i.on {
-    background: var(--ok);
-  }
   .go {
     height: 34px;
     margin-top: 4px;
+  }
+  .quiet {
+    margin: 0;
+    color: var(--muted);
+    font-size: 12px;
+    text-wrap: pretty;
+  }
+  .wait {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+  }
+  .wait :global(svg) {
+    animation: turn 1s linear infinite;
+  }
+  @keyframes turn {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .wait :global(svg) {
+      animation: none;
+    }
   }
 </style>

@@ -8,7 +8,7 @@ Status: `FROZEN v1` (2026-11-07). Changes only via ADR, bump to `v1.x`. Crypto p
   - `MasterPassword`: `Argon2id(password, salt=16B, m=65536 KiB, t=3, p=1, out=32)`. Params stored in `vault_meta` so they can be raised later. Mobile may use m=32768 if device RAM < 3 GB (record in meta).
 - `vault_meta` keys: `version`=1, `mode`, `kdf` (params+salt, CBOR), `dek_wrap_pw` (nonce||ct), `dek_wrap_os` (nonce||ct), `check` (encrypt constant "tl-ok" with DEK, to verify unlock).
 - Password change = rewrap DEK only. Secrets untouched.
-- Unlocked DEK held in `secrecy::SecretBox<[u8;32]>`, zeroized on lock/drop. Auto-lock: idle 15 min (setting `security.autolock_minutes`, 0 = never; ADR-006), OS sleep/screen lock (desktop events where available), app backgrounded > 60 s on mobile.
+- Unlocked DEK held in `secrecy::SecretBox<[u8;32]>`, zeroized on lock/drop. Auto-lock (password vaults only; a keychain vault never idles out, ADR-014): idle 15 min (setting `security.autolock_minutes`, 0 = never; ADR-006), OS sleep/screen lock (desktop events where available), app backgrounded > 60 s on mobile.
 - Biometric: mobile — keychain/keystore item with user-presence requirement holds KEK; desktop (Phase 3) — Touch ID via LocalAuthentication gating keychain read; Windows Hello via `UserConsentVerifier`.
 
 ## Vault public API (crates/vault/src/lib.rs, keystore.rs)

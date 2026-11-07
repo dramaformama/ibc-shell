@@ -285,6 +285,30 @@ impl Vault {
         Ok(())
     }
 
+    /// Moves a password vault to `OsKeychain` mode: checks the password, wraps the same DEK
+    /// with the OS keychain and drops the password wrap. Secrets stay as they are. Leaves the
+    /// vault unlocked. The DEK is wrapped by the keychain *before* the mode switches, so a
+    /// failure (keychain denied) leaves the password vault untouched.
+    pub fn remove_password(&self, password: &SecretString) -> Result<()> {
+        self.check_version()?;
+        if self.mode()? != Some(VaultMode::MasterPassword) {
+            return Err(VaultError::WrongPassword);
+        }
+        let dek = self.unwrap_with_password(password)?;
+        self.verify_check(dek.expose_secret())?;
+        let wrapped = self.keystore.wrap_dek(&dek)?;
+        // Prove the keychain round-trips before the password wrap goes away.
+        let back = self.keystore.unwrap_dek(&wrapped)?;
+        self.verify_check(back.expose_secret())?;
+        self.storage.meta_set(META_WRAP_OS, &wrapped)?;
+        self.storage.meta_set(META_MODE, b"os")?;
+        // Obsolete password material is overwritten (rows cannot be deleted through the seam).
+        self.storage.meta_set(META_WRAP_PW, &[])?;
+        self.storage.meta_set(META_KDF, &[])?;
+        self.install(dek);
+        Ok(())
+    }
+
     /// Zeroizes the DEK. Idempotent.
     pub fn lock(&self) {
         // SecretBox zeroizes its contents on drop.

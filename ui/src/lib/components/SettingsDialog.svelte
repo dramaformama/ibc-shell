@@ -96,7 +96,7 @@
       <section>
         <h3>{m.settings_security()}</h3>
         <p class="note">
-          {vault.mode === 'MasterPassword' ? m.vault_mode_password() : m.vault_mode_keychain()}
+          {vault.mode === 'MasterPassword' ? m.vault_mode_password() : m.settings_keychain_note()}
         </p>
         {#if vault.mode === 'MasterPassword'}
           <form class="pwform" onsubmit={changePassword}>
@@ -133,27 +133,29 @@
             {#if msg}<p class={msg.ok ? 'note' : 'error'} role="status">{msg.text}</p>{/if}
           </form>
         {/if}
-        <label class="row">
-          <span class="lbl">{m.settings_autolock()}</span>
-          <select
-            class="input"
-            value={settings.autolockMinutes}
-            onchange={(e) => settings.setAutolock(Number(e.currentTarget.value))}
+        {#if vault.canLock}
+          <label class="row">
+            <span class="lbl">{m.settings_autolock()}</span>
+            <select
+              class="input"
+              value={settings.autolockMinutes}
+              onchange={(e) => settings.setAutolock(Number(e.currentTarget.value))}
+            >
+              {#each AUTOLOCK_CHOICES as n (n)}
+                <option value={n}
+                  >{n === 0
+                    ? m.settings_autolock_never()
+                    : m.settings_autolock_minutes({ n })}</option
+                >
+              {/each}
+            </select>
+          </label>
+          <button
+            type="button"
+            class="btn"
+            onclick={() => ((ui.settingsOpen = false), void vault.lock())}>{m.action_lock()}</button
           >
-            {#each AUTOLOCK_CHOICES as n (n)}
-              <option value={n}
-                >{n === 0
-                  ? m.settings_autolock_never()
-                  : m.settings_autolock_minutes({ n })}</option
-              >
-            {/each}
-          </select>
-        </label>
-        <button
-          type="button"
-          class="btn"
-          onclick={() => ((ui.settingsOpen = false), void vault.lock())}>{m.action_lock()}</button
-        >
+        {/if}
       </section>
 
       <section>

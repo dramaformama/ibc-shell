@@ -88,6 +88,11 @@ export const commands = {
 	/**  Rewraps the DEK. */
 	vaultChangePassword: (oldPassword: string, newPassword: string) => typedError<null, ApiError>(__TAURI_INVOKE("vault_change_password", { oldPassword, newPassword })),
 	/**
+	 *  Moves a password vault to the OS keychain (no master password any more); leaves it
+	 *  unlocked. See ADR-014.
+	 */
+	vaultRemovePassword: (password: string) => typedError<null, ApiError>(__TAURI_INVOKE("vault_remove_password", { password })),
+	/**
 	 *  Shows the native "save" dialog (backend side, ADR-007) and writes a `.tlvault` backup
 	 *  there (password ≥ 10 chars). The webview never names the path. `false` = cancelled.
 	 */

@@ -62,6 +62,21 @@ pub async fn vault_unlock(
     .await
 }
 
+/// Moves a password vault to the OS keychain (no master password any more); leaves it
+/// unlocked. See ADR-014.
+#[tauri::command]
+#[specta::specta]
+pub async fn vault_remove_password(
+    state: State<'_, AppState>,
+    password: SecretInput,
+) -> ApiResult<()> {
+    let pw = password.0;
+    blocking(&state, move |v| v.remove_password(&pw)).await?;
+    // The idle timer belongs to password vaults only.
+    crate::autolock::apply_from_store(&state.store, &state.vault);
+    Ok(())
+}
+
 /// Locks (zeroizes DEK) and emits `vault://locked`. Open sessions keep running.
 #[tauri::command]
 #[specta::specta]

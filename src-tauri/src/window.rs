@@ -31,8 +31,7 @@ pub fn create_main(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     else {
         return Err("main window is not configured".into());
     };
-    let builder = WebviewWindowBuilder::from_config(app.handle(), &cfg)?
-        .on_navigation(is_app_page);
+    let builder = WebviewWindowBuilder::from_config(app.handle(), &cfg)?.on_navigation(is_app_page);
     #[cfg(desktop)]
     let builder = builder.on_new_window(|_, _| tauri::webview::NewWindowResponse::Deny);
     builder.build()?;

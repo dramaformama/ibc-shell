@@ -75,6 +75,7 @@ export const mockApi: Api = {
   vaultUnlock: vault.vaultUnlock,
   vaultLock: vault.vaultLock,
   vaultChangePassword: vault.vaultChangePassword,
+  vaultRemovePassword: vault.vaultRemovePassword,
   vaultExport: vault.vaultExport,
   vaultImport: vault.vaultImport,
   // sessions

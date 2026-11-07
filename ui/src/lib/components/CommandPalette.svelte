@@ -57,7 +57,16 @@
       label: m.action_new_folder(),
       run: () => ui.openFolderEditor(null)
     },
-    { id: 'a:lock', group: 'action', label: m.action_lock(), run: () => void vault.lock() },
+    ...(vault.canLock
+      ? [
+          {
+            id: 'a:lock',
+            group: 'action' as const,
+            label: m.action_lock(),
+            run: () => void vault.lock()
+          }
+        ]
+      : []),
     {
       id: 'a:settings',
       group: 'action',

@@ -80,9 +80,19 @@
     }
   });
 
-  // Idle auto-lock while unlocked.
+  // No master password (ADR-014): create / open the keychain vault by itself.
   $effect(() => {
-    if (vault.state !== 'Unlocked') return;
+    if (
+      vault.state === 'Uninitialized' ||
+      (vault.state === 'Locked' && vault.mode === 'OsKeychain')
+    ) {
+      if (!vault.error) void vault.auto();
+    }
+  });
+
+  // Idle auto-lock of a not-yet-migrated password vault.
+  $effect(() => {
+    if (vault.state !== 'Unlocked' || !vault.canLock) return;
     return watchIdle(settings.autolockMinutes, () => void vault.lock());
   });
 </script>

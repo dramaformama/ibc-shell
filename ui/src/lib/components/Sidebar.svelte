@@ -108,12 +108,14 @@
       aria-label={m.settings_title()}
       title="{m.settings_title()} ({mod(',')})"><Settings size={16} /></button
     >
-    <button
-      class="icon-btn"
-      onclick={() => void vault.lock()}
-      aria-label={m.action_lock()}
-      title="{m.action_lock()} ({mod('L')})"><Lock size={16} /></button
-    >
+    {#if vault.canLock}
+      <button
+        class="icon-btn"
+        onclick={() => void vault.lock()}
+        aria-label={m.action_lock()}
+        title="{m.action_lock()} ({mod('L')})"><Lock size={16} /></button
+      >
+    {/if}
   </footer>
 </aside>
 

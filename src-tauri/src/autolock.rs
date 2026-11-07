@@ -36,8 +36,18 @@ pub fn timeout_from_setting(v: Option<&serde_json::Value>) -> Option<Duration> {
 
 /// Reads the setting from the store and applies it (default on a read error). Returns it.
 pub fn apply_from_store(store: &Store, vault: &Vault) -> Option<Duration> {
+    // A keychain vault has no password to come back with, so locking on idle would only be a
+    // dead end (ADR-014). Only a not-yet-migrated password vault keeps the idle timer.
+    let password_vault = matches!(
+        vault.mode(),
+        Ok(Some(ibc_shell_vault::VaultMode::MasterPassword))
+    );
     let v = store.setting_get(AUTOLOCK_KEY).ok().flatten();
-    let t = timeout_from_setting(v.as_ref());
+    let t = if password_vault {
+        timeout_from_setting(v.as_ref())
+    } else {
+        None
+    };
     vault.set_idle_timeout(t);
     t
 }
@@ -80,7 +90,10 @@ mod tests {
             Arc::new(ibc_shell_vault::MemoryKeyStore::default()),
         );
         vault
-            .init(ibc_shell_vault::VaultMode::OsKeychain, None)
+            .init(
+                ibc_shell_vault::VaultMode::MasterPassword,
+                Some(&secrecy::SecretString::from("long enough password")),
+            )
             .unwrap();
         assert_eq!(
             apply_from_store(&store, &vault),
@@ -92,6 +105,21 @@ mod tests {
             Some(Duration::from_mins(5))
         );
         store.setting_set(AUTOLOCK_KEY, &json!(0)).unwrap();
+        assert_eq!(apply_from_store(&store, &vault), None);
+        assert!(!vault.lock_if_idle());
+    }
+
+    #[test]
+    fn keychain_vault_never_idles_out() {
+        let store = Arc::new(Store::open_in_memory().unwrap());
+        let vault = Vault::new(
+            store.clone(),
+            Arc::new(ibc_shell_vault::MemoryKeyStore::default()),
+        );
+        vault
+            .init(ibc_shell_vault::VaultMode::OsKeychain, None)
+            .unwrap();
+        store.setting_set(AUTOLOCK_KEY, &json!(5)).unwrap();
         assert_eq!(apply_from_store(&store, &vault), None);
         assert!(!vault.lock_if_idle());
     }

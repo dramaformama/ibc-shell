@@ -77,6 +77,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             vault::vault_unlock,
             vault::vault_lock,
             vault::vault_change_password,
+            vault::vault_remove_password,
             vault::vault_export,
             vault::vault_import,
             session::session_open,

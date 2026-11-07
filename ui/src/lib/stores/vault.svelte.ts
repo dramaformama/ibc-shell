@@ -29,6 +29,26 @@ class VaultStore {
     return this.#run(() => api.vaultUnlock(password));
   }
 
+  /** Only a password vault can be locked; a keychain vault just reopens itself (ADR-014). */
+  get canLock(): boolean {
+    return this.mode === 'MasterPassword';
+  }
+
+  /** Keychain flow without a prompt: creates the vault on first start, opens it afterwards. */
+  async auto(): Promise<boolean> {
+    if (this.busy) return false;
+    if (this.state === 'Uninitialized') return this.init('OsKeychain', null);
+    if (this.state === 'Locked' && this.mode === 'OsKeychain') return this.unlock(null);
+    return false;
+  }
+
+  /** Last password entry of a legacy vault: moves it to the keychain and opens it. */
+  async removePassword(password: string): Promise<boolean> {
+    const ok = await this.#run(() => api.vaultRemovePassword(password));
+    if (ok) this.mode = 'OsKeychain';
+    return ok;
+  }
+
   async lock(): Promise<void> {
     await api.vaultLock();
     this.state = 'Locked';

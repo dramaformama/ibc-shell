@@ -89,6 +89,7 @@ pub enum ApiError {
 | `vault_unlock` | `password: string \| null` (null = keychain / biometric) | `null` |
 | `vault_lock` | — | `null` (+ event `vault://locked`) |
 | `vault_change_password` | `old_password: string, new_password: string` | `null` |
+| `vault_remove_password` | `password: string` (current master password; ADR-014) | `null` (vault moved to `OsKeychain` mode and left unlocked) |
 | `vault_export` | `password: string` (≥ 10 chars; backend opens the save dialog, ADR-007) | `boolean` (false = cancelled) |
 | `vault_import` | `password: string` (backend opens the file dialog, ADR-007) | `ImportSummary \| null` (null = cancelled; + event `tree://changed`) |
 

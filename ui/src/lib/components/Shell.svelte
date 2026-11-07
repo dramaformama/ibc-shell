@@ -47,8 +47,9 @@
     if (e.shiftKey && k !== 'tab') return;
     if (k === 'k') ui.paletteOpen = !ui.paletteOpen;
     else if (k === 'b') ui.sidebarOpen = !ui.sidebarOpen;
-    else if (k === 'l') void vault.lock();
-    else if (k === ',') ui.settingsOpen = true;
+    else if (k === 'l') {
+      if (vault.canLock) void vault.lock();
+    } else if (k === ',') ui.settingsOpen = true;
     else if (k === 't') ui.paletteOpen = true;
     else if (k === 'w' && sessions.activeGroup) sessions.closeGroup(sessions.activeGroup);
     else if (/^[1-9]$/.test(k)) {

@@ -172,6 +172,36 @@ fn change_password_rewraps_only() {
 }
 
 #[test]
+fn remove_password_moves_to_keychain_and_keeps_secrets() {
+    let (st, _ks, v) = setup();
+    v.init(VaultMode::MasterPassword, Some(&pw("old password")))
+        .unwrap();
+    let id = v.put_secret(b"payload").unwrap();
+    let before = st.secret_get(id).unwrap().unwrap();
+    assert!(matches!(
+        v.remove_password(&pw("nope nope nope")),
+        Err(VaultError::WrongPassword)
+    ));
+    assert_eq!(v.mode().unwrap(), Some(VaultMode::MasterPassword));
+    v.lock();
+    v.remove_password(&pw("old password")).unwrap();
+    assert_eq!(v.mode().unwrap(), Some(VaultMode::OsKeychain));
+    assert_eq!(v.state().unwrap(), VaultState::Unlocked);
+    assert_eq!(
+        st.secret_get(id).unwrap().unwrap(),
+        before,
+        "rows untouched"
+    );
+    v.lock();
+    // The password no longer opens anything; the keychain does.
+    assert!(v.unlock_with_password(&pw("old password")).is_err());
+    v.unlock_with_keystore().unwrap();
+    assert_eq!(v.get_secret(id).unwrap().as_slice(), b"payload");
+    // Only a password vault can be converted.
+    assert!(v.remove_password(&pw("old password")).is_err());
+}
+
+#[test]
 fn aad_binds_ciphertext_to_secret_id() {
     let (st, _ks, v) = setup();
     v.init(VaultMode::OsKeychain, None).unwrap();

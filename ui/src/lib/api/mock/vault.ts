@@ -1,17 +1,24 @@
 /**
  * Mock: vault, app commands and the global event bus.
- * Vault starts `Locked` (MasterPassword). Password `ibc-shell` unlocks; anything else →
- * `WrongPassword`. `?vault=new` in the URL starts `Uninitialized` (onboarding).
+ * Vault starts `Locked` (legacy MasterPassword). Password `ibc-shell` unlocks / migrates; anything
+ * else → `WrongPassword`. `?vault=new` starts `Uninitialized` (auto-creates a keychain vault),
+ * `?vault=os` starts as a keychain vault (opens by itself).
  */
 import type { ApiEvents, Commands, EventPayloads, VaultMode, VaultState } from '../types';
 import { delay, err, ok } from './state';
 
 const MOCK_PASSWORD = 'ibc-shell';
 
-const initialUninit =
-  typeof location !== 'undefined' && new URLSearchParams(location.search).get('vault') === 'new';
+const query =
+  typeof location !== 'undefined' ? new URLSearchParams(location.search).get('vault') : null;
+const initialUninit = query === 'new';
 let state: VaultState = initialUninit ? 'Uninitialized' : 'Locked';
-let mode: VaultMode | null = initialUninit ? null : 'MasterPassword';
+// Default: a legacy password vault (shows the one-time migration); `?vault=os`: keychain vault.
+let mode: VaultMode | null = initialUninit
+  ? null
+  : query === 'os'
+    ? 'OsKeychain'
+    : 'MasterPassword';
 let password = MOCK_PASSWORD;
 
 export const vaultIsUnlocked = (): boolean => state === 'Unlocked';
@@ -62,6 +69,14 @@ export const vaultLock: Commands['vaultLock'] = async () => {
     state = 'Locked';
     emit('vaultLocked', null);
   }
+  return ok(null);
+};
+
+export const vaultRemovePassword: Commands['vaultRemovePassword'] = async (pw) => {
+  await delay(300);
+  if (mode !== 'MasterPassword' || pw !== password) return err({ code: 'WrongPassword' });
+  mode = 'OsKeychain';
+  state = 'Unlocked';
   return ok(null);
 };
 

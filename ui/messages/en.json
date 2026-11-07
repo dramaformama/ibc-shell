@@ -486,5 +486,14 @@
   "fleet_ssl_denied": "Root is needed to see every certificate: {names}",
   "fleet_snip_hint": "Commands for any server. Running asks where to send them.",
   "nav_fleet": "Sections",
-  "stat_nice": "Nice"
+  "stat_nice": "Nice",
+  "vault_opening": "Opening the vault…",
+  "vault_open_failed": "Could not open the vault",
+  "vault_open_failed_hint": "The key is kept in the system keychain. If the system asks for permission, choose Always Allow and try again.",
+  "vault_retry": "Try again",
+  "vault_legacy_title": "No password needed any more",
+  "vault_legacy_hint": "Enter your old master password one last time. After that the app opens by itself and the encryption key stays in this computer's keychain.",
+  "vault_legacy_go": "Remove password and open",
+  "vault_legacy_only_unlock": "Just open, keep the password",
+  "settings_keychain_note": "Your data is encrypted; the key is kept in this computer's keychain. The app opens without a password."
 }
