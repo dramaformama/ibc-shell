@@ -5,7 +5,7 @@ use std::sync::{Arc, PoisonError};
 use std::time::Duration;
 
 use ibc_ssh::{ConnectStep, PtyRequest, Shell, ShellOutput};
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, Notify};
 use tokio::time::Instant;
 
 use crate::api::dto::SessionEvent;
@@ -13,7 +13,7 @@ use crate::api::stream::RawBytes;
 use crate::api::ApiError;
 use crate::connect::{build_chain, StoreKnownHosts};
 use crate::prompts::EventPrompter;
-use crate::state::{AppState, SessionHandle, SessionTarget, ShellCmd};
+use crate::state::{AppState, SessionHandle, SessionTarget, ShellCmd, ShellTx};
 
 /// Flush when this many bytes are buffered.
 pub const FLUSH_BYTES: usize = 64 * 1024;
@@ -22,7 +22,7 @@ pub const FLUSH_AFTER: Duration = Duration::from_millis(8);
 
 /// Installs a fresh command channel into `handle` and spawns the session task.
 pub fn spawn_session(state: &AppState, handle: &Arc<SessionHandle>, cols: u16, rows: u16) {
-    let (tx, rx) = mpsc::unbounded_channel();
+    let (tx, rx, closed) = ShellTx::channel();
     {
         let mut live = handle.live.lock().unwrap_or_else(PoisonError::into_inner);
         live.cmd = Some(tx);
@@ -30,7 +30,7 @@ pub fn spawn_session(state: &AppState, handle: &Arc<SessionHandle>, cols: u16, r
         live.size = (cols, rows);
     }
     let (state, handle) = (state.clone(), handle.clone());
-    tauri::async_runtime::spawn(run_session(state, handle, rx));
+    tauri::async_runtime::spawn(run_session(state, handle, rx, closed));
 }
 
 async fn wait_close(rx: &mut mpsc::UnboundedReceiver<ShellCmd>) {
@@ -46,6 +46,7 @@ async fn run_session(
     state: AppState,
     handle: Arc<SessionHandle>,
     mut rx: mpsc::UnboundedReceiver<ShellCmd>,
+    closed: Arc<Notify>,
 ) {
     let events = handle.spec.on_event.clone();
     let fail = |error: ApiError| {
@@ -107,7 +108,7 @@ async fn run_session(
         server_banner: label,
     });
 
-    let user_closed = pump(shell, &mut rx, &handle).await;
+    let user_closed = pump(shell, &mut rx, &closed, &handle).await;
     handle
         .live
         .lock()
@@ -128,6 +129,7 @@ async fn run_session(
 async fn pump(
     mut shell: Shell,
     rx: &mut mpsc::UnboundedReceiver<ShellCmd>,
+    closed: &Notify,
     handle: &SessionHandle,
 ) -> bool {
     let mut buf: Vec<u8> = Vec::new();
@@ -164,8 +166,15 @@ async fn pump(
             },
             cmd = rx.recv() => match cmd {
                 Some(ShellCmd::Write(b)) => {
-                    if shell.write(&b).await.is_err() {
-                        break false;
+                    // Raced against the close signal: a server that never opens its
+                    // window must not make `session_close` wait behind this write.
+                    tokio::select! {
+                        r = shell.write(b.as_slice()) => {
+                            if r.is_err() {
+                                break false;
+                            }
+                        }
+                        () = closed.notified() => break true,
                     }
                 }
                 Some(ShellCmd::Resize(c, r)) => {

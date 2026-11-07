@@ -98,7 +98,7 @@ pub async fn shell_write(state: State<'_, AppState>, request: Request<'_>) -> Ap
     let InvokeBody::Raw(bytes) = request.body() else {
         return Err(ApiError::Validation("expected raw body".into()));
     };
-    if session_of(&state, id)?.send(ShellCmd::Write(bytes.clone())) {
+    if session_of(&state, id)?.write(bytes) {
         Ok(())
     } else {
         Err(ApiError::Cancelled)

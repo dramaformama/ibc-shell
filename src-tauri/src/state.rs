@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use ibc_sftp::Sftp;
@@ -10,7 +11,7 @@ use ibc_ssh::Connection;
 use ibc_store::{HostId, Store};
 use ibc_vault::Vault;
 use tauri::ipc::Channel;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, Notify};
 
 use crate::api::dto::{QuickConnect, SessionEvent, SessionId, SftpId};
 use crate::api::stream::RawBytes;
@@ -63,14 +64,97 @@ impl<K: Eq + Hash + Copy, V: Clone> Registry<K, V> {
 /// Input to the session pump task.
 #[derive(Debug)]
 pub enum ShellCmd {
-    /// Keystrokes.
-    Write(Vec<u8>),
+    /// Keystrokes (counted against the input queue budget while queued).
+    Write(WriteBytes),
     /// PTY resize.
     Resize(u16, u16),
     /// Credit return.
     Ack(u32),
     /// Close the shell and disconnect.
     Close,
+}
+
+/// Max keystroke bytes waiting in a session's input queue (a stalled server must not make
+/// the queue grow without bound).
+pub const MAX_QUEUED_INPUT: usize = 1024 * 1024;
+
+/// Queued keystrokes; releases its share of the queue budget when dropped.
+pub struct WriteBytes {
+    data: Vec<u8>,
+    queued: Arc<AtomicUsize>,
+}
+
+impl WriteBytes {
+    /// The bytes to send.
+    #[must_use]
+    pub fn as_slice(&self) -> &[u8] {
+        &self.data
+    }
+}
+
+impl std::fmt::Debug for WriteBytes {
+    /// Never prints the keystrokes (they may be a password).
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "WriteBytes(<{} bytes>)", self.data.len())
+    }
+}
+
+impl Drop for WriteBytes {
+    fn drop(&mut self) {
+        self.queued.fetch_sub(self.data.len(), Ordering::AcqRel);
+    }
+}
+
+/// Sender side of a session's command queue: unbounded for small control commands, byte-bounded
+/// for keystrokes, plus an out-of-band close signal that works even while a write is stalled.
+#[derive(Clone)]
+pub struct ShellTx {
+    tx: mpsc::UnboundedSender<ShellCmd>,
+    queued: Arc<AtomicUsize>,
+    closed: Arc<Notify>,
+}
+
+impl ShellTx {
+    /// New queue: sender plus receiver and the close signal for the pump.
+    #[must_use]
+    pub fn channel() -> (Self, mpsc::UnboundedReceiver<ShellCmd>, Arc<Notify>) {
+        let (tx, rx) = mpsc::unbounded_channel();
+        let closed = Arc::new(Notify::new());
+        let me = Self {
+            tx,
+            queued: Arc::new(AtomicUsize::new(0)),
+            closed: closed.clone(),
+        };
+        (me, rx, closed)
+    }
+    /// Queues keystrokes; `false` when the pump ended or the queue budget is exhausted.
+    #[must_use]
+    pub fn write(&self, data: &[u8]) -> bool {
+        let prev = self.queued.fetch_add(data.len(), Ordering::AcqRel);
+        let msg = WriteBytes {
+            data: data.to_vec(),
+            queued: self.queued.clone(),
+        };
+        if prev.saturating_add(data.len()) > MAX_QUEUED_INPUT {
+            return false; // `msg` drop returns the budget
+        }
+        self.tx.send(ShellCmd::Write(msg)).is_ok()
+    }
+    /// Queues a control command; `Close` additionally raises the out-of-band signal.
+    #[must_use]
+    pub fn send(&self, cmd: ShellCmd) -> bool {
+        let close = matches!(cmd, ShellCmd::Close);
+        let ok = self.tx.send(cmd).is_ok();
+        if close {
+            self.closed.notify_one();
+        }
+        ok
+    }
+    /// True when the pump has dropped its receiver.
+    #[must_use]
+    pub fn is_closed(&self) -> bool {
+        self.tx.is_closed()
+    }
 }
 
 /// What a session connects to (kept for `session_reconnect`).
@@ -96,7 +180,7 @@ pub struct SessionSpec {
 #[derive(Default)]
 pub struct Live {
     /// Command channel into the pump (closed when the pump ended).
-    pub cmd: Option<mpsc::UnboundedSender<ShellCmd>>,
+    pub cmd: Option<ShellTx>,
     /// Authenticated connection (shared with SFTP).
     pub conn: Option<Arc<Connection>>,
     /// Last known PTY size.
@@ -117,7 +201,13 @@ impl SessionHandle {
     /// Sends a command to the pump; `false` when the session is not running.
     pub fn send(&self, cmd: ShellCmd) -> bool {
         let live = self.live.lock().unwrap_or_else(PoisonError::into_inner);
-        live.cmd.as_ref().is_some_and(|tx| tx.send(cmd).is_ok())
+        live.cmd.as_ref().is_some_and(|tx| tx.send(cmd))
+    }
+    /// Queues keystrokes; `false` when not running or the input queue is full.
+    #[must_use]
+    pub fn write(&self, data: &[u8]) -> bool {
+        let live = self.live.lock().unwrap_or_else(PoisonError::into_inner);
+        live.cmd.as_ref().is_some_and(|tx| tx.write(data))
     }
     /// True while the pump is alive.
     pub fn is_running(&self) -> bool {
@@ -225,6 +315,26 @@ mod tests {
         assert!(!r.allows(&tmp.join("a/../../nonexistent"), true));
         let _ = std::fs::remove_dir_all(&tmp);
         let _ = std::fs::remove_dir_all(&other);
+    }
+
+    #[test]
+    fn input_queue_is_byte_bounded_and_refills() {
+        let (tx, mut rx, _closed) = ShellTx::channel();
+        let chunk = vec![0u8; MAX_QUEUED_INPUT / 2];
+        assert!(tx.write(&chunk));
+        assert!(tx.write(&chunk));
+        assert!(!tx.write(b"x"), "over budget must be rejected");
+        drop(rx.try_recv().unwrap());
+        assert!(tx.write(b"x"), "budget returns once the pump consumed a chunk");
+    }
+
+    #[tokio::test]
+    async fn close_signal_survives_a_full_queue() {
+        let (tx, _rx, closed) = ShellTx::channel();
+        assert!(tx.send(ShellCmd::Close));
+        tokio::time::timeout(std::time::Duration::from_secs(1), closed.notified())
+            .await
+            .unwrap();
     }
 
     #[test]
