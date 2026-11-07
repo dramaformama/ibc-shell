@@ -1,0 +1,27 @@
+[workspace]
+resolver = "2"
+members = ["crates/store", "crates/vault", "crates/ssh", "crates/sftp", "crates/geo", "src-tauri"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+module_name_repetitions = "allow"
+missing_errors_doc = "allow"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+opt-level = "s"

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Termlite",
+  "version": "0.1.0",
+  "identifier": "app.termlite.desktop",
+  "build": {
+    "beforeDevCommand": "pnpm -C ui dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "pnpm -C ui build",
+    "frontendDist": "../ui/build"
+  },
+  "app": {
+    "windows": [
+      { "title": "Termlite", "width": 1100, "height": 720, "minWidth": 480, "minHeight": 360 }
+    ],
+    "security": { "csp": null }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": ["icons/icon.png"]
+  }
+}
