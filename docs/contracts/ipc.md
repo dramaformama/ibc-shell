@@ -161,6 +161,14 @@ pub enum ApiError {
 `TransferEngine::new(TransferConfig{parallel_files: 3, pipeline_depth: 64, chunk_size: 32 KiB})` with `subscribe() -> mpsc::UnboundedReceiver<TransferEvent>`, `enqueue(TransferJob) -> Vec<TransferId>`, `pause/resume/cancel/retry(id)`, `conflict_reply(ConflictId, ConflictChoice, apply_to_all)`.
 `TransferJob { src: Endpoint::{Local, Remote(Arc<Sftp>)}, dst, items, dst_dir, conflict }` (engine-side Endpoint, mapped by the bridge).
 
+## Commands — stats (ADR-009)
+| command | args | returns |
+|---|---|---|
+| `stats_sample` | `session_id` | `HostStats` (~1 s: samples `/proc` twice, 1 s apart, over an exec channel of the session's connection). Errors: `NotFound`, `Network` (not connected), `Timeout` (8 s), `Unsupported` (non-Linux). Passive: does not reset auto-lock. |
+
+`HostStats` (percent 0–100, bytes, bytes/s; u64 → TS `number`): `cpu_pct, cores, cpu_cores: number[], cpu_user, cpu_system, cpu_nice, cpu_iowait, cpu_steal, load1, load5, load15, mem_total, mem_used (total − available), mem_cached, swap_total, swap_used, disk_total, disk_used (root fs), net_rx_bps, net_tx_bps (non-lo), disk_read_bps, disk_write_bps (whole disks), uptime_s, os_name: string|null, temp_c: number|null, procs: ProcRow[]` (top 8 by CPU).
+`ProcRow { pid, user, cpu, mem_bytes, command }`. Server strings are stripped of control chars, ≤ 128 chars.
+
 ## Commands — app
 | command | args | returns |
 |---|---|---|

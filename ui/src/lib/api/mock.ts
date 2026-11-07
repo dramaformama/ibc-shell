@@ -8,6 +8,7 @@
  */
 import * as catalog from './mock/catalog';
 import * as sftp from './mock/sftp';
+import * as stats from './mock/stats';
 import * as term from './mock/terminal';
 import * as tree from './mock/tree';
 import * as vault from './mock/vault';
@@ -107,6 +108,8 @@ export const mockApi: Api = {
   transferRetry: sftp.transferRetry,
   transferConflictReply: sftp.transferConflictReply,
   transfersSubscribe: sftp.transfersSubscribe,
+  // stats
+  statsSample: stats.statsSample,
   // app
   appInfo: vault.appInfo,
   openExternal: vault.openExternal
