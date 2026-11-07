@@ -37,6 +37,8 @@ class SessionsStore {
   activeId = $state<string | null>(null);
   /** Per-tab connection state, reported by the terminal / SFTP views. */
   phases = $state<Record<string, TabPhase>>({});
+  /** Backend session id per terminal tab, once connected (stats use it). */
+  sessionIds = $state<Record<string, string>>({});
   /** Last active tab per group, so switching servers returns to the same view. */
   #last = new Map<string, string>();
   #seq = 0;
@@ -91,6 +93,17 @@ class SessionsStore {
     return this.phases[id] ?? 'connecting';
   }
 
+  setSessionId(tabId: string, sid: string | null): void {
+    if (sid) this.sessionIds[tabId] = sid;
+    else delete this.sessionIds[tabId];
+  }
+
+  /** Session id of a server group's terminal (metrics run over it). */
+  groupSession(g: TabGroup): string | null {
+    const t = g.tabs.find((x) => x.kind === 'terminal' && this.sessionIds[x.id]);
+    return t ? (this.sessionIds[t.id] ?? null) : null;
+  }
+
   setPhase(id: string, phase: TabPhase): void {
     if (this.phases[id] !== phase) this.phases[id] = phase;
   }
@@ -117,6 +130,7 @@ class SessionsStore {
     const closing = this.tabs[i]!;
     this.tabs = this.tabs.filter((t) => t.id !== id);
     delete this.phases[id];
+    delete this.sessionIds[id];
     if (this.activeId === id) {
       // Prefer the other view of the same server, then the neighbour.
       const sibling = this.tabs.find((t) => groupKey(t) === groupKey(closing));
@@ -140,6 +154,7 @@ class SessionsStore {
   clear(): void {
     this.tabs = [];
     this.phases = {};
+    this.sessionIds = {};
     this.#last.clear();
     this.activeId = null;
   }
