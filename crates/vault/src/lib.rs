@@ -4,107 +4,28 @@
 
 mod backup;
 mod crypto;
+mod idle;
 pub mod keys;
 pub mod keystore;
 mod storage;
 #[cfg(test)]
 mod tests;
+mod types;
 
 use std::path::Path;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::time::{Duration, Instant};
 
 use ibc_store::{SecretId, SecretRow, Store, StoreError};
 use secrecy::{ExposeSecret, SecretBox, SecretString};
-use serde::{Deserialize, Serialize};
 use subtle::ConstantTimeEq;
 use zeroize::Zeroizing;
 
 use crypto::{open_blob, seal_blob, KdfParams};
+pub use idle::DEFAULT_TIMEOUT as DEFAULT_IDLE_TIMEOUT;
 pub use keystore::{KeyStore, KeyStoreError, MemoryKeyStore, OsKeyring};
 pub use storage::VaultStorage;
-
-/// Lock state. IPC: `VaultStatus.state`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
-pub enum VaultState {
-    /// No `vault_meta.version` yet.
-    Uninitialized,
-    /// Initialized, DEK not in memory.
-    Locked,
-    /// DEK in memory.
-    Unlocked,
-}
-
-/// How the DEK is wrapped. IPC: `VaultStatus.mode`, `vault_init(mode)`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
-pub enum VaultMode {
-    /// KEK in OS keychain / Android Keystore (`dek_wrap_os`).
-    OsKeychain,
-    /// Argon2id(master password) (`dek_wrap_pw`), optional OS cache for biometrics.
-    MasterPassword,
-}
-
-/// Counts returned by `vault_import`. IPC: `ImportSummary`.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
-pub struct ImportSummary {
-    /// Folders added.
-    pub folders: u32,
-    /// Hosts added.
-    pub hosts: u32,
-    /// Identities added (with secrets).
-    pub identities: u32,
-    /// Tags added.
-    pub tags: u32,
-    /// Snippets added.
-    pub snippets: u32,
-    /// Forwards added.
-    pub forwards: u32,
-    /// Known hosts added.
-    pub known_hosts: u32,
-    /// Rows skipped because the id already existed.
-    pub skipped: u32,
-}
-
-/// Vault errors. Never contain secret material; `Debug` is derived only because no variant
-/// carries secrets.
-#[derive(Debug, thiserror::Error)]
-pub enum VaultError {
-    /// Operation needs an unlocked vault.
-    #[error("vault locked")]
-    Locked,
-    /// `init` on an initialized vault.
-    #[error("vault already initialized")]
-    AlreadyInitialized,
-    /// Operation on an uninitialized vault.
-    #[error("vault not initialized")]
-    Uninitialized,
-    /// Wrong master / backup password (constant-time compare after Argon2).
-    #[error("wrong password")]
-    WrongPassword,
-    /// Password policy (backup: ≥ 10 chars).
-    #[error("weak password")]
-    WeakPassword,
-    /// AEAD failure / tampered data / bad backup header.
-    #[error("decryption failed")]
-    Corrupt,
-    /// Unsupported backup / meta version.
-    #[error("unsupported version {0}")]
-    UnsupportedVersion(u16),
-    /// Store failure.
-    #[error(transparent)]
-    Store(#[from] StoreError),
-    /// Keystore failure.
-    #[error(transparent)]
-    KeyStore(#[from] KeyStoreError),
-    /// File IO (sanitized message).
-    #[error("io error: {0}")]
-    Io(String),
-    /// Reserved; never returned by this implementation.
-    #[error("not implemented")]
-    Unimplemented,
-}
-
-/// Result alias.
-pub type Result<T, E = VaultError> = std::result::Result<T, E>;
+pub use types::{ImportSummary, Result, VaultError, VaultMode, VaultState};
 
 const META_VERSION: &str = "version";
 const META_MODE: &str = "mode";
@@ -124,6 +45,8 @@ pub struct Vault {
     storage: Arc<dyn VaultStorage>,
     keystore: Arc<dyn KeyStore>,
     dek: Mutex<Option<SecretBox<[u8; 32]>>>,
+    /// Backend idle auto-lock deadline (ADR-007).
+    idle: idle::Idle,
     /// (m KiB, t, p) used for new wraps; tests lower it.
     cost: (u32, u32, u32),
 }
@@ -163,8 +86,29 @@ impl Vault {
             storage,
             keystore,
             dek: Mutex::new(None),
+            idle: idle::Idle::default(),
             cost: (65_536, 3, 1),
         }
+    }
+
+    /// Sets the backend idle auto-lock (`None` = never; ADR-007) and restarts its clock.
+    pub fn set_idle_timeout(&self, timeout: Option<Duration>) {
+        self.idle.set_timeout(timeout);
+    }
+
+    /// Records user activity (extends the idle deadline). No effect on a locked vault.
+    pub fn touch(&self) {
+        self.idle.touch_at(Instant::now());
+    }
+
+    /// Locks (zeroizes the DEK) if the idle deadline passed. `true` = it locked just now.
+    pub fn lock_if_idle(&self) -> bool {
+        let mut g = self.dek_guard();
+        if g.is_some() && self.idle.expired_at(Instant::now()) {
+            *g = None;
+            return true;
+        }
+        false
     }
 
     /// Lowers the Argon2 cost for new wraps (low-RAM mobile, tests). Recorded in meta.
@@ -178,9 +122,18 @@ impl Vault {
         self.dek.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
-    /// Runs `f` with the DEK; `Locked` when no DEK is loaded.
+    /// DEK guard after enforcing the idle deadline (an expired DEK is zeroized here).
+    fn live_guard(&self) -> MutexGuard<'_, Option<SecretBox<[u8; 32]>>> {
+        let mut g = self.dek_guard();
+        if g.is_some() && self.idle.expired_at(Instant::now()) {
+            *g = None;
+        }
+        g
+    }
+
+    /// Runs `f` with the DEK; `Locked` when no DEK is loaded or the idle deadline passed.
     pub(crate) fn with_dek<R>(&self, f: impl FnOnce(&[u8; 32]) -> Result<R>) -> Result<R> {
-        let g = self.dek_guard();
+        let g = self.live_guard();
         let dek = g.as_ref().ok_or(VaultError::Locked)?;
         f(dek.expose_secret())
     }
@@ -216,7 +169,7 @@ impl Vault {
 
     /// Current lock state.
     pub fn state(&self) -> Result<VaultState> {
-        if self.dek_guard().is_some() {
+        if self.live_guard().is_some() {
             return Ok(VaultState::Unlocked);
         }
         Ok(if self.initialized()? {
@@ -274,7 +227,9 @@ impl Vault {
     }
 
     fn install(&self, dek: SecretBox<[u8; 32]>) {
-        *self.dek_guard() = Some(dek);
+        let mut g = self.dek_guard();
+        self.idle.touch_at(Instant::now()); // a fresh unlock starts a fresh idle period
+        *g = Some(dek);
     }
 
     /// Creates DEK + wraps it. `MasterPassword` requires `password`. Leaves the vault unlocked.

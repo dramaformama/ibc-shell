@@ -18,6 +18,11 @@ const MIN_BACKUP_PASSWORD_CHARS: usize = 10;
 const MAX_KDF_LEN: usize = 1024;
 /// Decompression bomb guard.
 const MAX_PLAIN: u64 = 512 * 1024 * 1024;
+/// Largest backup file read (the picked file may be anything). Small in tests.
+#[cfg(not(test))]
+const MAX_FILE: u64 = 256 * 1024 * 1024;
+#[cfg(test)]
+const MAX_FILE: u64 = 1024 * 1024;
 
 /// One decrypted secret inside the payload; zeroized on drop.
 #[derive(Serialize, Deserialize)]
@@ -102,9 +107,22 @@ pub(crate) fn export(vault: &Vault, path: &Path, password: &SecretString) -> Res
     })
 }
 
+/// Reads the backup file, refusing anything larger than [`MAX_FILE`] (never buffers more).
+fn read_capped(path: &Path) -> Result<Vec<u8>> {
+    let f = std::fs::File::open(path).map_err(io_err)?;
+    let mut bytes = Vec::new();
+    f.take(MAX_FILE + 1)
+        .read_to_end(&mut bytes)
+        .map_err(io_err)?;
+    if bytes.len() as u64 > MAX_FILE {
+        return Err(VaultError::Corrupt);
+    }
+    Ok(bytes)
+}
+
 /// Parses + decrypts a backup file into its payload.
 fn decrypt(path: &Path, password: &SecretString) -> Result<Payload> {
-    let bytes = std::fs::read(path).map_err(io_err)?;
+    let bytes = read_capped(path)?;
     if bytes.len() < 14 || &bytes[..8] != MAGIC {
         return Err(VaultError::Corrupt);
     }
@@ -193,4 +211,22 @@ pub(crate) fn import(vault: &Vault, path: &Path, password: &SecretString) -> Res
         known_hosts: counts.known_hosts,
         skipped: u32::try_from(total.saturating_sub(written)).unwrap_or(u32::MAX),
     })
+}
+
+#[cfg(test)]
+mod size_tests {
+    use super::*;
+
+    #[test]
+    fn oversized_backup_file_is_refused_without_reading_it_all() {
+        let p = std::env::temp_dir().join(format!("ibc-big-{}.tlvault", std::process::id()));
+        let f = std::fs::File::create(&p).unwrap();
+        f.set_len(MAX_FILE + 1).unwrap();
+        let big = read_capped(&p);
+        f.set_len(MAX_FILE).unwrap();
+        let ok = read_capped(&p).map(|b| b.len() as u64);
+        let _ = std::fs::remove_file(&p);
+        assert!(matches!(big, Err(VaultError::Corrupt)));
+        assert_eq!(ok.ok(), Some(MAX_FILE));
+    }
 }
