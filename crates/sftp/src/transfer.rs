@@ -3,10 +3,9 @@
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc;
 use uuid::Uuid;
 
-use crate::{Sftp, SftpError};
+use crate::Sftp;
 
 /// Transfer id (one per top-level item of a request).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, specta::Type)]
@@ -176,54 +175,5 @@ impl Default for TransferConfig {
             pipeline_depth: 64,
             chunk_size: 32 * 1024,
         }
-    }
-}
-
-/// The queue. `Send + Sync`; spawn on the tokio runtime.
-#[derive(Debug)]
-pub struct TransferEngine {
-    config: TransferConfig,
-}
-
-impl TransferEngine {
-    /// Creates an idle engine.
-    #[must_use]
-    pub fn new(config: TransferConfig) -> Self {
-        Self { config }
-    }
-    /// Event stream; one subscriber (the bridge), a new call replaces the previous one.
-    #[must_use]
-    pub fn subscribe(&self) -> mpsc::UnboundedReceiver<TransferEvent> {
-        let _ = self.config;
-        mpsc::unbounded_channel().1
-    }
-    /// Queues a job; one [`TransferId`] per item.
-    pub fn enqueue(&self, job: TransferJob) -> Result<Vec<TransferId>, SftpError> {
-        Err(SftpError::Unimplemented)
-    }
-    /// Pauses.
-    pub fn pause(&self, id: TransferId) -> Result<(), SftpError> {
-        Err(SftpError::Unimplemented)
-    }
-    /// Resumes (byte-offset resume).
-    pub fn resume(&self, id: TransferId) -> Result<(), SftpError> {
-        Err(SftpError::Unimplemented)
-    }
-    /// Cancels.
-    pub fn cancel(&self, id: TransferId) -> Result<(), SftpError> {
-        Err(SftpError::Unimplemented)
-    }
-    /// Retries a failed/cancelled transfer.
-    pub fn retry(&self, id: TransferId) -> Result<(), SftpError> {
-        Err(SftpError::Unimplemented)
-    }
-    /// Answers a conflict; `apply_to_all` covers later conflicts of the same transfer.
-    pub fn conflict_reply(
-        &self,
-        pending_id: ConflictId,
-        choice: ConflictChoice,
-        apply_to_all: bool,
-    ) -> Result<(), SftpError> {
-        Err(SftpError::Unimplemented)
     }
 }

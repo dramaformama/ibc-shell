@@ -10,8 +10,23 @@ ibc-ssh.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 uuid.workspace = true
-tokio.workspace = true
+tokio = { workspace = true, features = ["fs", "time", "rt-multi-thread"] }
 specta.workspace = true
+# SFTP v3 client over the SSH subsystem stream (stack-mandated).
+russh-sftp = "3"
+# NFC normalization of remote file names (security.md).
+unicode-normalization = "0.1"
+# CancellationToken for transfers.
+tokio-util = { version = "0.7", default-features = false }
+# FuturesOrdered/Unordered for request pipelining.
+futures-util = { version = "0.3", default-features = false, features = ["alloc"] }
+
+[dev-dependencies]
+# sha256 verification in e2e tests.
+sha2 = "0.10"
+tempfile = "3"
+secrecy = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread", "time", "fs", "process", "io-util", "macros"] }
 
 [lints]
 workspace = true
