@@ -113,8 +113,20 @@
     gap: 8px;
     margin-top: 4px;
   }
+  /* Two long choices never fit side by side in a 400px dialog: stack them, full width. */
   .seg {
-    justify-self: start;
-    display: inline-flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    gap: 2px;
+  }
+  .seg button {
+    height: auto;
+    min-height: 32px;
+    padding: 6px 12px;
+    justify-content: flex-start;
+    text-align: start;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 </style>

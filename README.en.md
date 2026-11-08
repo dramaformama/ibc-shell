@@ -35,7 +35,7 @@ The builds are not signed with a paid certificate, so the system warns on first 
 - **Windows.** In the SmartScreen window click More info, then Run anyway.
 - **Linux.** `chmod +x` the AppImage and run it, or `sudo apt install ./file.deb`.
 
-A release is made by a tag: `git tag v0.1.3 && git push origin v0.1.3`. The [workflow](.github/workflows/release.yml) builds the installers for every system and publishes the release at once, so the links above start working.
+A release is made by a tag: `git tag v0.1.4 && git push origin v0.1.4`. The [workflow](.github/workflows/release.yml) builds the installers for every system and publishes the release at once, so the links above start working.
 
 ## Why
 
