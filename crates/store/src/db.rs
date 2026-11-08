@@ -6,7 +6,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use rusqlite::{Connection, OpenFlags, Transaction, TransactionBehavior};
 
-use crate::{schema, Result, StoreError};
+use crate::{schema, Result};
 
 const READERS: usize = 2;
 
@@ -100,6 +100,7 @@ impl Store {
 
 #[cfg(unix)]
 fn restrict_permissions(path: &Path) -> Result<()> {
+    use crate::StoreError;
     use std::os::unix::fs::PermissionsExt;
     for suffix in ["", "-wal", "-shm"] {
         let mut p = path.as_os_str().to_owned();
