@@ -46,6 +46,24 @@ function readTheme(): ThemeChoice {
   return 'light';
 }
 
+export type Density = 'roomy' | 'compact';
+
+function readDensity(): Density {
+  try {
+    if (localStorage.getItem('ibc.density') === 'compact') return 'compact';
+  } catch {
+    /* storage unavailable */
+  }
+  return 'roomy';
+}
+
+export function applyDensity(d: Density): void {
+  if (d === 'compact') document.documentElement.dataset.density = 'compact';
+  else delete document.documentElement.dataset.density;
+}
+
+if (typeof document !== 'undefined') applyDensity(readDensity());
+
 export function applyTheme(choice: ThemeChoice): void {
   const dark =
     choice === 'dark' ||
@@ -65,6 +83,8 @@ function readFlag(key: string): boolean {
 class SettingsStore {
   theme = $state<ThemeChoice>(readTheme());
   accent = $state<Accent>(readAccent());
+  /** Row height of long lists (servers, folders, processes). */
+  density = $state<Density>(readDensity());
   recentFlags = $state.raw<string[]>([]);
   /** Idle minutes before the vault locks (0 = never). */
   autolockMinutes = $state(AUTOLOCK_DEFAULT);
@@ -116,6 +136,16 @@ class SettingsStore {
       /* ignore */
     }
     applyTheme(choice);
+  }
+
+  setDensity(d: Density): void {
+    this.density = d;
+    try {
+      localStorage.setItem('ibc.density', d);
+    } catch {
+      /* ignore */
+    }
+    applyDensity(d);
   }
 
   setAccent(a: Accent): void {

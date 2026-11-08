@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Server } from '@lucide/svelte';
+  import EmptyState from './EmptyState.svelte';
   import { ContextMenu } from 'bits-ui';
   import * as m from '$lib/paraglide/messages.js';
   import { connectHost } from '$lib/stores/actions';
@@ -341,12 +343,11 @@
         {/if}
       </div>
       {#if tree.loaded && rows.length === 0}
-        <div class="empty">
-          <p>{m.tree_empty()}</p>
-          <button class="btn btn-primary" onclick={() => ui.openHostEditor(null)}
+        <EmptyState icon={Server} title={m.tree_empty()}>
+          <button class="btn btn-primary btn-sm" onclick={() => ui.openHostEditor(null)}
             >{m.action_new_host()}</button
           >
-        </div>
+        </EmptyState>
       {/if}
     </div>
   </ContextMenu.Trigger>

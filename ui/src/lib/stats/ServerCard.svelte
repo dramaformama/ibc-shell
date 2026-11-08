@@ -84,7 +84,7 @@
     {#if d}<SpecLine {d} model />{/if}
     <div class="rings">
       <div class="gauge">
-        <Ring value={d?.cpu_pct ?? null} size={66} label={m.stat_cpu()} tone="var(--c-cyan)" />
+        <Ring value={d?.cpu_pct ?? null} size={66} label={m.stat_cpu()} />
         <span>{m.stat_cpu()}</span>
       </div>
       <div class="gauge">
@@ -92,7 +92,6 @@
           value={d && d.mem_total ? (d.mem_used / d.mem_total) * 100 : null}
           size={66}
           label={m.stat_ram()}
-          tone="var(--c-green)"
         />
         <span>{m.stat_ram()}</span>
       </div>
@@ -101,7 +100,6 @@
           value={d && d.disk_total ? (d.disk_used / d.disk_total) * 100 : null}
           size={66}
           label={m.stat_disk()}
-          tone="var(--c-orange)"
         />
         <span>{m.stat_disk()}</span>
       </div>

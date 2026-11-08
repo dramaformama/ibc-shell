@@ -20,7 +20,7 @@
   position: absolute;
   left: 0;
   right: 0;
-  height: 30px;
+  height: var(--row-tree);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -166,15 +166,4 @@
   box-shadow: var(--shadow);
   pointer-events: none;
   font-size: 12px;
-}
-.tree .empty {
-  display: grid;
-  gap: 12px;
-  justify-items: center;
-  padding: 40px 16px;
-  color: var(--muted);
-  text-align: center;
-}
-.tree .empty p {
-  margin: 0;
 }

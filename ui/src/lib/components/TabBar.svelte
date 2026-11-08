@@ -20,9 +20,11 @@
   let { mac = false }: { mac?: boolean } = $props();
 
   const active = $derived(sessions.active);
+  /** Servers connected for monitoring that have no tab. */
+  const hidden = $derived(sessions.groups.length - sessions.visibleGroups.length);
 
   function onKey(e: KeyboardEvent, i: number) {
-    const gs = sessions.groups;
+    const gs = sessions.visibleGroups;
     const n = gs.length;
     const to = e.key === 'ArrowRight' ? (i + 1) % n : e.key === 'ArrowLeft' ? (i - 1 + n) % n : -1;
     if (to < 0) return;
@@ -55,7 +57,7 @@
   {/if}
   <span class="sep" aria-hidden="true"></span>
   <div class="tabs" role="tablist" aria-label={m.tabs_label()} data-tauri-drag-region>
-    {#each sessions.groups as g, i (g.key)}
+    {#each sessions.visibleGroups as g, i (g.key)}
       {@const on = g.key === sessions.activeGroup}
       <div class="tab" class:active={on} role="presentation">
         <button
@@ -79,6 +81,16 @@
         >
       </div>
     {/each}
+    {#if hidden > 0}
+      <button
+        class="bg-pill tnum"
+        onclick={() => {
+          ui.page = 'overview';
+          sessions.activeId = null;
+        }}
+        title={m.tabs_background_hint()}>{m.tabs_background({ count: hidden })}</button
+      >
+    {/if}
     <button
       class="icon-btn new"
       onclick={() => (ui.paletteOpen = true)}
@@ -125,6 +137,24 @@
 </div>
 
 <style>
+  .bg-pill {
+    flex: none;
+    height: 24px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--text) 8%, transparent);
+    color: var(--muted);
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 120ms var(--ease);
+  }
+  .bg-pill:hover {
+    background: color-mix(in oklab, var(--text) 14%, transparent);
+    color: var(--text);
+  }
   .bar {
     container-type: inline-size;
     display: flex;

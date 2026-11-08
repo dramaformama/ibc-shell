@@ -580,5 +580,19 @@
   "backup_restore_pw": "Пароль файла",
   "backup_restore": "Выбрать файл…",
   "backup_restored": "Восстановлено: серверов {hosts}, папок {folders}, ключей и паролей {identities}, сниппетов {snippets}, настроек {settings}.",
-  "backup_skipped": "Уже было: {skipped}."
+  "backup_skipped": "Уже было: {skipped}.",
+  "unit_b": "Б",
+  "unit_kb": "КБ",
+  "unit_mb": "МБ",
+  "unit_gb": "ГБ",
+  "unit_tb": "ТБ",
+  "unit_per_s": "/с",
+  "settings_density": "Плотность списков",
+  "density_roomy": "Просторно",
+  "density_compact": "Компактно",
+  "fleet_need_connect_title": "Нет подключённых серверов",
+  "fleet_need_connect_hint": "Подключитесь к серверам, и здесь появятся данные со всех открытых сразу.",
+  "fleet_open_overview": "Открыть «Сводку»",
+  "tabs_background": "В фоне: {count}",
+  "tabs_background_hint": "Подключены для мониторинга и не занимают вкладки. Они на «Сводке»; откройте сервер, и он появится среди вкладок."
 }

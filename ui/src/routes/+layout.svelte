@@ -17,8 +17,11 @@
   import { services } from '$lib/services/services.svelte';
   import { vault } from '$lib/stores/vault.svelte';
   import { watchIdle } from '$lib/util/autolock';
+  import * as m from '$lib/paraglide/messages.js';
+  import { setUnitLabels } from '$lib/stats/format';
 
   let { children } = $props();
+  setUnitLabels([m.unit_b(), m.unit_kb(), m.unit_mb(), m.unit_gb(), m.unit_tb()], m.unit_per_s());
 
   onMount(() => {
     void vault.refresh();

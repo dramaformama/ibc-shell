@@ -1,8 +1,16 @@
 /** Number formatting for the status cards (compact, Apple-style units). */
 
-const UNITS = ['B', 'K', 'M', 'G', 'T'];
+/** Unit labels; the app sets the localized ones at start (`setUnitLabels`). */
+let UNITS = ['B', 'KB', 'MB', 'GB', 'TB'];
+let PER_SECOND = '/s';
 
-/** 16.0 G, 452 M, 812 K. */
+/** Localized byte units (B, KB, MB, GB, TB) and the per-second suffix. */
+export function setUnitLabels(units: string[], perSecond: string): void {
+  if (units.length === 5) UNITS = units;
+  PER_SECOND = perSecond;
+}
+
+/** 16.0 GB, 452 MB, 812 KB. */
 export function bytes(n: number): string {
   let v = Math.max(0, n);
   let i = 0;
@@ -13,10 +21,10 @@ export function bytes(n: number): string {
   return `${v >= 100 || i === 0 ? Math.round(v) : v.toFixed(1)} ${UNITS[i]}`;
 }
 
-/** Bytes per second → [value, unit] with a /s unit, e.g. ['4.01', 'M/s']. */
+/** Bytes per second → [value, unit] with a per-second unit, e.g. ['4.0', 'MB/s']. */
 export function rate(bps: number): [string, string] {
   const [v, u] = bytes(bps).split(' ');
-  return [v ?? '0', `${u ?? 'B'}/s`];
+  return [v ?? '0', `${u ?? UNITS[0]}${PER_SECOND}`];
 }
 
 /** 6 d 2 h · 3 h 12 m · 45 m. */
@@ -40,12 +48,16 @@ export const percent = (v: number | null): string => (v == null ? '—' : `${pct
 export const decimal = (v: number | null, digits = 2): string =>
   v == null ? '—' : v.toFixed(digits);
 
-/** Ring / bar colour by load: calm → busy → hot. */
+/** How busy: below 60 % calm, from 60 % busy, from 85 % hot; `null` when unknown. */
+export function loadTone(p: number | null): 'calm' | 'warm' | 'hot' | null {
+  if (p == null) return null;
+  return p >= 85 ? 'hot' : p >= 60 ? 'warm' : 'calm';
+}
+
+/** Ring / bar colour by load, the same scale on every screen. */
 export function loadColor(p: number | null): string {
-  if (p == null) return 'var(--muted)';
-  if (p >= 85) return 'var(--danger)';
-  if (p >= 60) return 'var(--c-yellow)';
-  return 'var(--c-cyan)';
+  const t = loadTone(p);
+  return t ? `var(--load-${t})` : 'var(--muted)';
 }
 
 /** "5 min ago" in the given locale, rounded to the largest whole unit. */

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import EmptyState from '$lib/components/EmptyState.svelte';
   import Logo from '$lib/components/Logo.svelte';
   import { onMount } from 'svelte';
   import {
@@ -214,11 +215,7 @@
       {#if rest.length && scroller}
         <ServerGrid servers={rest} {scroller} />
       {:else if !shown.length}
-        <div class="empty small">
-          <Search size={24} />
-          <h2>{m.dash_no_results()}</h2>
-          <p>{m.dash_no_results_hint()}</p>
-        </div>
+        <EmptyState icon={Search} title={m.dash_no_results()} hint={m.dash_no_results_hint()} />
       {/if}
     {/if}
     <footer>{m.dash_checked_note()}</footer>

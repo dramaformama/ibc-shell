@@ -8,6 +8,8 @@
   let { series, height = 64, max }: { series: Series[]; height?: number; max?: number } = $props();
 
   const W = 300;
+  /** A line needs two points; before that the chart is a quiet baseline, not an empty grid. */
+  const hasData = $derived(series.some((s) => s.values.filter((v) => v !== null).length >= 2));
   const top = $derived(
     Math.max(
       max ?? 0,
@@ -56,13 +58,17 @@
   style:height="{height}px"
   aria-hidden="true"
 >
-  {#each [0.25, 0.5, 0.75] as g (g)}
-    <line x1="0" x2={W} y1={height * g} y2={height * g} class="grid" />
-  {/each}
-  {#each series as s, i (i)}
-    {#if s.fill}<path d={path(s.values, true)} style:fill={s.color} class="area" />{/if}
-    <path d={path(s.values, false)} style:stroke={s.color} class="line" />
-  {/each}
+  {#if hasData}
+    {#each [0.25, 0.5, 0.75] as g (g)}
+      <line x1="0" x2={W} y1={height * g} y2={height * g} class="grid" />
+    {/each}
+    {#each series as s, i (i)}
+      {#if s.fill}<path d={path(s.values, true)} style:fill={s.color} class="area" />{/if}
+      <path d={path(s.values, false)} style:stroke={s.color} class="line" />
+    {/each}
+  {:else}
+    <line x1="0" x2={W} y1={height - 1} y2={height - 1} class="base" />
+  {/if}
 </svg>
 
 <style>
@@ -76,6 +82,11 @@
     stroke-width: 1;
     vector-effect: non-scaling-stroke;
     stroke-dasharray: 2 3;
+  }
+  .base {
+    stroke: var(--border);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
   }
   .line {
     fill: none;

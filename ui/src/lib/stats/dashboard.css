@@ -208,10 +208,6 @@
   text-align: center;
   color: var(--muted);
 }
-.dashboard .empty.small {
-  flex: none;
-  padding: 40px 16px;
-}
 .dashboard .empty h2 {
   font-size: 20px;
   color: var(--text);

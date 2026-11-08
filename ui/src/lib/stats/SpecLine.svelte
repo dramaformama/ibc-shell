@@ -5,13 +5,17 @@
   import { coresText, diskText, sizeText } from './spec-text';
 
   /** What the server is: cores, memory, disk (and the processor name when `model`). */
-  let { d, model = false }: { d: SpecInput; model?: boolean } = $props();
+  let {
+    d,
+    model = false,
+    inline = false
+  }: { d: SpecInput; model?: boolean; inline?: boolean } = $props();
 
   const disk = $derived(diskText(d));
   const cpu = $derived(d.cpu_model || null);
 </script>
 
-<div class="spec tnum">
+<div class="spec tnum" class:inline>
   <span class="chips">
     {#if d.cores}<span title={cpu ?? m.spec_cpu()}><Cpu size={13} />{coresText(d.cores)}</span>{/if}
     {#if d.mem_total}<span title={m.stat_ram()}
@@ -29,6 +33,11 @@
     min-width: 0;
     color: var(--muted);
     font-size: 12px;
+  }
+  /* `inline`: the chips join the parent's flex row instead of forming their own. */
+  .spec.inline,
+  .spec.inline .chips {
+    display: contents;
   }
   .chips {
     display: flex;

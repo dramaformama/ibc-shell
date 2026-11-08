@@ -61,6 +61,21 @@
           </div>
         </div>
         <div class="fld">
+          <span class="lbl">{m.settings_density()}</span>
+          <div class="seg" role="group" aria-label={m.settings_density()}>
+            <button
+              type="button"
+              aria-pressed={settings.density === 'roomy'}
+              onclick={() => settings.setDensity('roomy')}>{m.density_roomy()}</button
+            >
+            <button
+              type="button"
+              aria-pressed={settings.density === 'compact'}
+              onclick={() => settings.setDensity('compact')}>{m.density_compact()}</button
+            >
+          </div>
+        </div>
+        <div class="fld">
           <span class="lbl">{m.settings_accent()}</span>
           <div class="swatches" role="radiogroup" aria-label={m.settings_accent()}>
             {#each ACCENTS as a (a)}

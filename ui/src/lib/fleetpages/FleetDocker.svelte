@@ -1,4 +1,7 @@
 <script lang="ts">
+  import EmptyState from '$lib/components/EmptyState.svelte';
+  import { ui } from '$lib/stores/ui.svelte';
+  import { sessions } from '$lib/stores/sessions.svelte';
   import { Box } from '@lucide/svelte';
   import Flag from '$lib/flags/Flag.svelte';
   import * as m from '$lib/paraglide/messages.js';
@@ -28,10 +31,15 @@
     </p>
   </header>
   {#if !live.length}
-    <div class="blank">
-      <Box size={28} />
-      <p>{m.fleet_need_connect()}</p>
-    </div>
+    <EmptyState icon={Box} title={m.fleet_need_connect_title()} hint={m.fleet_need_connect_hint()}>
+      <button
+        class="btn btn-primary btn-sm"
+        onclick={() => {
+          ui.page = 'overview';
+          sessions.activeId = null;
+        }}>{m.fleet_open_overview()}</button
+      >
+    </EmptyState>
   {:else}
     {#each withDocker as s (s.key)}
       <section class="card server" style:--tone="var(--c-cyan)">

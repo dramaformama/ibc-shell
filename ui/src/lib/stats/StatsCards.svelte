@@ -13,7 +13,7 @@
   import * as m from '$lib/paraglide/messages.js';
   import type { Series } from '$lib/stores/stats.svelte';
   import CoreBars from './CoreBars.svelte';
-  import { bytes, decimal, pct, rate } from './format';
+  import { bytes, decimal, loadColor, pct, rate } from './format';
   import NetFlows from './NetFlows.svelte';
   import Spark from './Spark.svelte';
   import './stats-cards.css';
@@ -156,7 +156,7 @@
         {pct(d.disk_total ? diskPct : null)}<small>%</small>
         <span class="of">{bytes(d.disk_used)} / {bytes(d.disk_total)}</span>
       </p>
-      <div class="meter" aria-hidden="true" data-hot={diskPct >= 90}>
+      <div class="meter" aria-hidden="true" style:--fill={loadColor(diskPct)}>
         <span style:width="{diskPct}%"></span>
       </div>
       <div class="foot">
@@ -201,7 +201,10 @@
               <td class="num cpu">
                 <div>
                   <span class="pbar" aria-hidden="true"
-                    ><i style:width="{Math.max(2, ((p.cpu ?? 0) / topCpu) * 100)}%"></i></span
+                    ><i
+                      style:width="{Math.max(2, ((p.cpu ?? 0) / topCpu) * 100)}%"
+                      style:background={loadColor(p.cpu ?? 0)}
+                    ></i></span
                   >
                   <span class="pv">{decimal(p.cpu, 1)}</span>
                 </div>

@@ -12,6 +12,8 @@
         document.documentElement.dataset.theme = t;
         var a = localStorage.getItem('ibc.accent');
         if (a && a !== 'blue') document.documentElement.dataset.accent = a;
+        if (localStorage.getItem('ibc.density') === 'compact')
+          document.documentElement.dataset.density = 'compact';
       } catch (e) {}
     </script>
     <link rel="icon" href="%sveltekit.assets%/favicon.svg" type="image/svg+xml" />

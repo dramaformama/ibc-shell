@@ -1,4 +1,7 @@
 <script lang="ts">
+  import EmptyState from '$lib/components/EmptyState.svelte';
+  import { ui } from '$lib/stores/ui.svelte';
+  import { sessions } from '$lib/stores/sessions.svelte';
   import { ShieldCheck } from '@lucide/svelte';
   import Flag from '$lib/flags/Flag.svelte';
   import { getLocale } from '$lib/paraglide/runtime.js';
@@ -36,15 +39,25 @@
     <p class="subtitle tnum">{m.fleet_ssl_counts({ total: rows.length, soon })}</p>
   </header>
   {#if !live.length}
-    <div class="blank">
-      <ShieldCheck size={28} />
-      <p>{m.fleet_need_connect()}</p>
-    </div>
+    <EmptyState
+      icon={ShieldCheck}
+      title={m.fleet_need_connect_title()}
+      hint={m.fleet_need_connect_hint()}
+    >
+      <button
+        class="btn btn-primary btn-sm"
+        onclick={() => {
+          ui.page = 'overview';
+          sessions.activeId = null;
+        }}>{m.fleet_open_overview()}</button
+      >
+    </EmptyState>
   {:else if !rows.length}
-    <div class="blank">
-      <ShieldCheck size={28} />
-      <p>{loading ? m.ssl_loading() : m.ssl_none()}</p>
-    </div>
+    <EmptyState
+      icon={ShieldCheck}
+      busy={loading}
+      title={loading ? m.ssl_loading() : m.ssl_none()}
+    />
   {:else}
     <section class="card list">
       {#each rows as r (r.s.key + r.path)}

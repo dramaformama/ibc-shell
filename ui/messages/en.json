@@ -580,5 +580,19 @@
   "backup_restore_pw": "File password",
   "backup_restore": "Choose file…",
   "backup_restored": "Restored: {hosts} servers, {folders} folders, {identities} keys and passwords, {snippets} snippets, {settings} settings.",
-  "backup_skipped": "Already there: {skipped}."
+  "backup_skipped": "Already there: {skipped}.",
+  "unit_b": "B",
+  "unit_kb": "KB",
+  "unit_mb": "MB",
+  "unit_gb": "GB",
+  "unit_tb": "TB",
+  "unit_per_s": "/s",
+  "settings_density": "List density",
+  "density_roomy": "Roomy",
+  "density_compact": "Compact",
+  "fleet_need_connect_title": "No connected servers",
+  "fleet_need_connect_hint": "Connect to servers and data from all open ones shows up here.",
+  "fleet_open_overview": "Open Overview",
+  "tabs_background": "{count} in background",
+  "tabs_background_hint": "Connected for monitoring without taking tabs. They are on Overview; open a server and it joins the tabs."
 }

@@ -5,15 +5,12 @@
   let {
     value,
     size = 64,
-    label,
-    tone
-  }: { value: number | null; size?: number; label: string; tone?: string } = $props();
+    label
+  }: { value: number | null; size?: number; label: string } = $props();
 
   const r = $derived(size / 2 - 5);
   const c = $derived(2 * Math.PI * r);
-  const color = $derived(
-    value == null || value >= 85 ? loadColor(value) : (tone ?? loadColor(value))
-  );
+  const color = $derived(loadColor(value));
 </script>
 
 <div

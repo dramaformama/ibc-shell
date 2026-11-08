@@ -18,6 +18,8 @@ export interface Tab {
   /** Flag code already resolved for display, or null. */
   flag: string | null;
   adhoc: QuickConnect | null;
+  /** Opened for monitoring (startup, group connect): live, but not shown in the tab bar until the user opens it. */
+  background?: boolean;
 }
 
 /** One server in the tab bar / sidebar: its terminal and files views share a group. */
@@ -60,6 +62,11 @@ class SessionsStore {
     });
   }
 
+  /** Servers with at least one tab the user has opened; the rest only feed the overview. */
+  get visibleGroups(): TabGroup[] {
+    return this.groups.filter((g) => g.tabs.some((t) => !t.background));
+  }
+
   get activeGroup(): string | null {
     return this.active ? groupKey(this.active) : null;
   }
@@ -83,6 +90,9 @@ class SessionsStore {
   select(id: string): void {
     const t = this.tabs.find((x) => x.id === id);
     if (!t) return;
+    // Opening a background server is what makes it a tab.
+    if (t.background)
+      this.tabs = this.tabs.map((x) => (x.id === id ? { ...x, background: false } : x));
     this.#last.set(groupKey(t), id);
     this.activeId = id;
   }
@@ -128,7 +138,7 @@ class SessionsStore {
 
   /** Adds a tab; `focus = false` opens it in the background (e.g. a terminal behind Status). */
   open(tab: Omit<Tab, 'id'>, focus = true): Tab {
-    const t: Tab = { ...tab, id: `tab-${++this.#seq}` };
+    const t: Tab = { ...tab, id: `tab-${++this.#seq}`, background: !focus };
     this.tabs = [...this.tabs, t];
     if (focus) this.select(t.id);
     return t;
@@ -143,14 +153,16 @@ class SessionsStore {
     delete this.sessionIds[id];
     if (this.activeId === id) {
       // Prefer the other view of the same server, then the neighbour.
-      const sibling = this.tabs.find((t) => groupKey(t) === groupKey(closing));
-      this.activeId = sibling?.id ?? this.tabs[Math.min(i, this.tabs.length - 1)]?.id ?? null;
+      const shown = this.tabs.filter((t) => !t.background);
+      const sibling = shown.find((t) => groupKey(t) === groupKey(closing));
+      const near = shown.length ? shown[Math.min(i, shown.length - 1)] : undefined;
+      this.activeId = sibling?.id ?? near?.id ?? null;
     }
   }
 
   /** ⌘1…9 / ⌃Tab navigation over servers. */
   step(delta: 1 | -1): void {
-    const gs = this.groups;
+    const gs = this.visibleGroups;
     if (gs.length < 2) return;
     const i = gs.findIndex((g) => g.key === this.activeGroup);
     const g = gs[(i + delta + gs.length) % gs.length];

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import EmptyState from '$lib/components/EmptyState.svelte';
   import {
     ChevronRight,
     CornerDownLeft,
@@ -101,16 +102,13 @@
   </div>
 
   {#if !snippets.items.length && snippets.loaded}
-    <div class="empty">
-      <span class="empty-icon"><Zap size={22} /></span>
-      <h3>{m.snip_empty_title()}</h3>
-      <p>{m.snip_empty_hint()}</p>
+    <EmptyState icon={Zap} title={m.snip_empty_title()} hint={m.snip_empty_hint()}>
       <button
         class="btn btn-primary btn-sm"
         onclick={() => (snippets.editing = { snippet: null, group: null })}
         ><Plus size={14} />{m.snip_new()}</button
       >
-    </div>
+    </EmptyState>
   {:else}
     {#if top.length}
       <div class="frequent" aria-label={m.snip_frequent()}>

@@ -281,11 +281,10 @@
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: var(--tone);
-  transition: width 600ms var(--ease);
-}
-.cards .meter[data-hot='true'] span {
-  background: var(--danger);
+  background: var(--fill, var(--load-calm));
+  transition:
+    width 600ms var(--ease),
+    background-color 400ms var(--ease);
 }
 .cards .procs {
   width: 100%;
@@ -312,7 +311,7 @@
   width: 72px;
 }
 .cards .procs td {
-  padding: 5px 0;
+  padding: var(--row-pad) 0;
   border-top: 1px solid var(--border);
   vertical-align: middle;
 }
@@ -357,8 +356,9 @@
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: var(--tone);
-  transition: width 600ms var(--ease);
+  transition:
+    width 600ms var(--ease),
+    background-color 400ms var(--ease);
 }
 .cards .procs .pv {
   flex: none;

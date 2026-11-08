@@ -3,10 +3,10 @@ import { bytes, decimal, loadColor, pct, percent, rate, uptime } from './format'
 
 describe('stats format', () => {
   it('formats sizes and rates', () => {
-    expect(bytes(16 * 1024 ** 3)).toBe('16.0 G');
-    expect(bytes(452 * 1024 ** 2)).toBe('452 M');
+    expect(bytes(16 * 1024 ** 3)).toBe('16.0 GB');
+    expect(bytes(452 * 1024 ** 2)).toBe('452 MB');
     expect(bytes(512)).toBe('512 B');
-    expect(rate(4.01 * 1024 ** 2)).toEqual(['4.0', 'M/s']);
+    expect(rate(4.01 * 1024 ** 2)).toEqual(['4.0', 'MB/s']);
   });
   it('distinguishes missing metrics from idle values', () => {
     expect(pct(null)).toBe('—');

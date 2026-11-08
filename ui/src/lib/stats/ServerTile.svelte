@@ -101,7 +101,7 @@
   .tile {
     container-type: inline-size;
     position: relative;
-    height: 68px;
+    height: var(--row-tile);
     border-radius: var(--r-field);
     background: var(--surface);
     box-shadow: var(--card-shadow);
@@ -205,6 +205,9 @@
   .meta small {
     color: var(--muted);
     font-size: 11px;
+  }
+  :global([data-density='compact']) .id .spec {
+    display: none;
   }
   .id .spec {
     font-size: 10.5px;

@@ -20,6 +20,13 @@
   /* Chart / section colours (SwiftServer-style cards). */
   --c-cyan: #12a5c7;
   --c-yellow: #e0a100;
+  /* Load (CPU, rows, disks, processes) reads the same everywhere: calm → busy → hot. */
+  --row-tile: 68px;
+  --row-tree: 30px;
+  --row-pad: 5px;
+  --load-calm: var(--c-cyan);
+  --load-warm: var(--c-yellow);
+  --load-hot: var(--danger);
   --c-pink: #e8336d;
   --c-purple: #8e5bd8;
   --c-green: #2fb350;
@@ -250,6 +257,13 @@ textarea {
     opacity: 0;
   }
 }
+/* List density (Settings → Appearance): server rows, folder tree, process rows. */
+:root[data-density='compact'] {
+  --row-tile: 50px;
+  --row-tree: 26px;
+  --row-pad: 2px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
