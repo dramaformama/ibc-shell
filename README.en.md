@@ -151,7 +151,7 @@ The plan lives in [docs/PLAN.md](docs/PLAN.md) (Russian), current progress in [d
 Passwords, private keys and passphrases never reach the UI layer except for the one thing you type.
 There is no master password: your data is encrypted and the key sits in your computer's keychain, so the app opens at once. The protection is your Mac login and FileVault. If the keychain is lost (a new Mac, a reset) the vault cannot be opened, so keep a backup (it has its own password).
 A changed host key blocks the connection. Remote strings are never rendered as HTML, and remote file names are sanitized before touching your disk.
-The update check reads the public GitHub releases page, sends nothing about you, and can be turned off in Settings.
+When a new version is out, a "Version … is available" notice appears at the bottom of the sidebar and links to the release page (you install it by hand). The check reads the public GitHub releases page, sends nothing about you, and can be turned off in Settings.
 Details: [docs/contracts/security.md](docs/contracts/security.md).
 
 ## License

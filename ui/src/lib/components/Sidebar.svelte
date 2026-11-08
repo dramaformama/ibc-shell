@@ -7,6 +7,7 @@
     Lock,
     Plus,
     Search,
+    CircleArrowUp,
     Settings,
     ShieldCheck,
     Zap
@@ -15,6 +16,8 @@
   import { services } from '$lib/services/services.svelte';
   import { certTone, daysLeft } from '$lib/services/ports';
   import { snippets } from '$lib/snippets/snippets.svelte';
+  import { api } from '$lib/api';
+  import { settings } from '$lib/stores/settings.svelte';
   import * as m from '$lib/paraglide/messages.js';
   import { sessions } from '$lib/stores/sessions.svelte';
   import { tree } from '$lib/stores/tree.svelte';
@@ -111,6 +114,20 @@
     >
   </div>
   <Tree />
+  {#if settings.update}
+    {@const u = settings.update}
+    <button
+      type="button"
+      class="update"
+      title={m.update_open()}
+      onclick={() => void api.openExternal(u.url)}
+    >
+      <CircleArrowUp size={16} />
+      <span
+        ><b>{m.update_available({ version: u.version })}</b><small>{m.update_open()}</small></span
+      >
+    </button>
+  {/if}
   <footer>
     <span class="brand"><Logo size={18} />iBC Shell</span>
     <span class="sp"></span>
@@ -247,6 +264,37 @@
     font-size: 11px;
     font-weight: 600;
     color: var(--muted);
+  }
+  .update {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 8px 8px;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: var(--r-field);
+    background: color-mix(in oklab, var(--accent) 12%, transparent);
+    color: var(--accent);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background 140ms var(--ease);
+  }
+  .update:hover {
+    background: color-mix(in oklab, var(--accent) 20%, transparent);
+  }
+  .update span {
+    display: grid;
+    min-width: 0;
+    line-height: 1.3;
+  }
+  .update b {
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+  .update small {
+    color: color-mix(in oklab, var(--accent) 70%, var(--muted));
+    font-size: 11px;
   }
   footer {
     display: flex;
