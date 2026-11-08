@@ -73,6 +73,11 @@ class UiState {
   closeEditor(): void {
     this.editor = null;
   }
+  /** Closes the editor, then asks to delete (the sheet's focus trap must release first). */
+  deleteFromEditor(key: string): void {
+    this.editor = null;
+    setTimeout(() => (this.deleteKeys = [key]), 60);
+  }
 
   toast(text: string, tone: Toast['tone'] = 'info'): void {
     const id = ++this.#seq;

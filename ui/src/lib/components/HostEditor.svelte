@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { Eye, EyeOff, FileKey, KeyRound, LockKeyhole } from '@lucide/svelte';
+  import { Eye, EyeOff, FileKey, KeyRound, LockKeyhole, Trash2 } from '@lucide/svelte';
   import { api, type IdentityDto } from '$lib/api';
   import * as m from '$lib/paraglide/messages.js';
   import { tree } from '$lib/stores/tree.svelte';
   import { ui } from '$lib/stores/ui.svelte';
   import { emptyDefaults, formFrom, toPatch, toValues } from '$lib/util/defaults-form';
   import { errorText } from '$lib/util/errors';
-  import { inheritedFlag } from '$lib/util/tree-model';
+  import { hkey, inheritedFlag } from '$lib/util/tree-model';
   import DefaultsFields from './DefaultsFields.svelte';
   import FlagPicker from './FlagPicker.svelte';
   import Sheet from './Sheet.svelte';
@@ -269,6 +269,15 @@
     {#if error}<p class="error" role="alert">{error}</p>{/if}
   </form>
   {#snippet footer()}
+    {#if host}
+      <button
+        type="button"
+        class="btn btn-danger btn-delete"
+        disabled={busy}
+        onclick={() => ui.deleteFromEditor(hkey(host.id))}
+        ><Trash2 size={14} />{m.action_delete()}</button
+      >
+    {/if}
     <button type="button" class="btn btn-ghost" onclick={() => ui.closeEditor()}
       >{m.action_cancel()}</button
     >

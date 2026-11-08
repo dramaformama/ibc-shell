@@ -17,6 +17,10 @@
     return tree.data.hosts.filter((h) => h.folder_id && ids.has(h.folder_id)).length;
   });
   let mode = $state<FolderDeleteMode>('MoveToParent');
+  // Every new confirmation starts on the safe choice, never on the last one used.
+  $effect(() => {
+    if (ui.deleteKeys) mode = 'MoveToParent';
+  });
 
   const title = $derived(
     keys.length === 1
@@ -29,12 +33,16 @@
   );
 
   async function run() {
-    const ids = hostIds;
+    // Snapshot first: clearing `ui.deleteKeys` empties every $derived above.
+    const hosts = [...hostIds];
+    const folders = [...folderIds];
+    const how = mode;
     ui.deleteKeys = null;
-    if (ids.length) await tree.deleteHosts(ids);
-    for (const f of folderIds) await tree.deleteFolder(f, mode);
+    let ok = true;
+    if (hosts.length) ok = (await tree.deleteHosts(hosts)) && ok;
+    for (const f of folders) ok = (await tree.deleteFolder(f, how)) && ok;
     tree.select([]);
-    ui.toast(m.toast_deleted());
+    if (ok) ui.toast(m.toast_deleted());
   }
 </script>
 

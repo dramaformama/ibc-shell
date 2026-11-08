@@ -88,6 +88,11 @@
     padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
     border-top: 1px solid var(--border);
   }
+  /* Destructive action sits alone at the start; Cancel / Save stay at the end. */
+  footer :global(.btn-delete) {
+    margin-inline-end: auto;
+    gap: 6px;
+  }
   @media (max-width: 640px) {
     :global(.sheet) {
       inset: auto 0 0 0;

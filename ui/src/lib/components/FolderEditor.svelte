@@ -1,8 +1,9 @@
 <script lang="ts">
+  import { Trash2 } from '@lucide/svelte';
   import * as m from '$lib/paraglide/messages.js';
   import { tree } from '$lib/stores/tree.svelte';
   import { ui } from '$lib/stores/ui.svelte';
-  import { inheritedFlag } from '$lib/util/tree-model';
+  import { fkey, inheritedFlag } from '$lib/util/tree-model';
   import FlagPicker from './FlagPicker.svelte';
   import Sheet from './Sheet.svelte';
 
@@ -71,6 +72,15 @@
     {#if error}<p class="error" role="alert">{error}</p>{/if}
   </form>
   {#snippet footer()}
+    {#if folder}
+      <button
+        type="button"
+        class="btn btn-danger btn-delete"
+        disabled={busy}
+        onclick={() => ui.deleteFromEditor(fkey(folder.id))}
+        ><Trash2 size={14} />{m.action_delete()}</button
+      >
+    {/if}
     <button type="button" class="btn btn-ghost" onclick={() => ui.closeEditor()}
       >{m.action_cancel()}</button
     >
