@@ -328,3 +328,11 @@
 :root[data-density='compact'] .dashboard .live-grid {
   margin-bottom: 16px;
 }
+
+/* "Getting started" card above the server list. */
+.dashboard .start-slot {
+  margin-bottom: var(--grid-gap);
+}
+.dashboard .empty .start.roomy {
+  margin: 14px 0 6px;
+}

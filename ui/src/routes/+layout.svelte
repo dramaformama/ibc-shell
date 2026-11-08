@@ -5,6 +5,7 @@
   import Shell from '$lib/components/Shell.svelte';
   import VaultScreen from '$lib/components/VaultScreen.svelte';
   import { tree } from '$lib/stores/tree.svelte';
+  import { start } from '$lib/start/start.svelte';
   import { settings } from '$lib/stores/settings.svelte';
   import { sessions } from '$lib/stores/sessions.svelte';
   import { recent } from '$lib/stores/recent.svelte';
@@ -15,6 +16,7 @@
   import { snippets } from '$lib/snippets/snippets.svelte';
   import { stats } from '$lib/stores/stats.svelte';
   import { services } from '$lib/services/services.svelte';
+  import { dockerRes } from '$lib/services/dockerres.svelte';
   import { vault } from '$lib/stores/vault.svelte';
   import { watchIdle } from '$lib/util/autolock';
   import * as m from '$lib/paraglide/messages.js';
@@ -69,14 +71,17 @@
         for (const id of lastSeen.watched) if (tree.host(id)) connectInBackground(id);
       });
       void recent.load();
+      void start.load();
       void geo.load();
       void snippets.load();
     } else if (vault.state === 'Locked') {
       tree.data = { folders: [], hosts: [] };
       tree.loaded = false;
       sessions.clear();
+      start.clear();
       stats.clear();
       services.clear();
+      dockerRes.clear();
       lastSeen.clear();
       geo.clear();
       snippets.clear();

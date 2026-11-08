@@ -4,8 +4,9 @@
 pub use crate::tray::{TrayItem, TrayMenu};
 use ibc_shell_sftp::{ConflictPolicy, TransferId};
 pub use ibc_shell_ssh::{
-    CertInfo, CertReport, Container, CoreSplit, DockerAccess, DockerAction, DockerReport,
-    HostStats, Listener, NetIface, PeerFlow, ProcRow,
+    CertInfo, CertReport, ComposeProject, ComposeService, Container, CoreSplit, DockerAccess,
+    DockerAction, DockerCompose, DockerEvent, DockerEvents, DockerImage, DockerImages,
+    DockerNetwork, DockerNetworks, DockerReport, DockerVolume, DockerVolumes, HostStats, Listener, NetIface, PeerFlow, ProcRow,
 };
 use ibc_shell_ssh::{ConnectStep, ForwardState, HostKeyInfo, KbdPrompt};
 use ibc_shell_store::{ForwardId, HostId, IdentityId, IdentityKind};

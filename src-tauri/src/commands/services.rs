@@ -3,7 +3,10 @@
 
 use tauri::State;
 
-use crate::api::dto::{CertReport, DockerAction, DockerReport, SessionId};
+use crate::api::dto::{
+    CertReport, DockerAction, DockerCompose, DockerEvents, DockerImages, DockerNetworks,
+    DockerReport, DockerVolumes, SessionId,
+};
 use crate::api::{ApiError, ApiResult};
 use crate::commands::session::session_of;
 use crate::commands::vault::require_unlocked;
@@ -65,6 +68,62 @@ pub async fn docker_action(
     ibc_shell_ssh::docker_act(&conn, &container_id, action)
         .await
         .map_err(docker_err)
+}
+
+/// Compose projects (by container labels). Read-only; passive for auto-lock.
+#[tauri::command]
+#[specta::specta]
+pub async fn docker_compose(
+    state: State<'_, AppState>,
+    session_id: SessionId,
+) -> ApiResult<DockerCompose> {
+    let conn = conn_of(&state, session_id)?;
+    Ok(ibc_shell_ssh::docker_compose(&conn).await?)
+}
+
+/// Images with size and use. Read-only; passive for auto-lock.
+#[tauri::command]
+#[specta::specta]
+pub async fn docker_images(
+    state: State<'_, AppState>,
+    session_id: SessionId,
+) -> ApiResult<DockerImages> {
+    let conn = conn_of(&state, session_id)?;
+    Ok(ibc_shell_ssh::docker_images(&conn).await?)
+}
+
+/// Volumes with size and use. Read-only; passive for auto-lock.
+#[tauri::command]
+#[specta::specta]
+pub async fn docker_volumes(
+    state: State<'_, AppState>,
+    session_id: SessionId,
+) -> ApiResult<DockerVolumes> {
+    let conn = conn_of(&state, session_id)?;
+    Ok(ibc_shell_ssh::docker_volumes(&conn).await?)
+}
+
+/// Networks with subnets and attached containers. Read-only; passive for auto-lock.
+#[tauri::command]
+#[specta::specta]
+pub async fn docker_networks(
+    state: State<'_, AppState>,
+    session_id: SessionId,
+) -> ApiResult<DockerNetworks> {
+    let conn = conn_of(&state, session_id)?;
+    Ok(ibc_shell_ssh::docker_networks(&conn).await?)
+}
+
+/// Daemon events of the last `window_s` seconds. Read-only; passive for auto-lock.
+#[tauri::command]
+#[specta::specta]
+pub async fn docker_events(
+    state: State<'_, AppState>,
+    session_id: SessionId,
+    window_s: u32,
+) -> ApiResult<DockerEvents> {
+    let conn = conn_of(&state, session_id)?;
+    Ok(ibc_shell_ssh::docker_events(&conn, window_s).await?)
 }
 
 /// TLS certificates found on the server with their expiry. Read-only; passive for auto-lock.

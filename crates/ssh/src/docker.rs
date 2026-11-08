@@ -97,7 +97,12 @@ fn valid_id(id: &str) -> bool {
     (12..=64).contains(&id.len()) && id.bytes().all(|b| b.is_ascii_hexdigit())
 }
 
-async fn run(conn: &Connection, cmd: &str, max: usize, t: Duration) -> Result<String, SshError> {
+pub(crate) async fn run(
+    conn: &Connection,
+    cmd: &str,
+    max: usize,
+    t: Duration,
+) -> Result<String, SshError> {
     let out = tokio::time::timeout(t, conn.exec(cmd, max))
         .await
         .map_err(|_| SshError::Timeout)??;
@@ -194,7 +199,7 @@ fn clean_log(s: &str) -> String {
 }
 
 /// Parses a size such as `12.5MiB`, `1.944GiB`, `512kB`, `0B` into bytes.
-fn size(s: &str) -> Option<u64> {
+pub(crate) fn size(s: &str) -> Option<u64> {
     let s = s.trim();
     let split = s.find(|c: char| c.is_ascii_alphabetic())?;
     let (num, unit) = s.split_at(split);

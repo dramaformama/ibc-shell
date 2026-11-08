@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { start } from '$lib/start/start.svelte';
   import { api } from '$lib/api';
   import * as m from '$lib/paraglide/messages.js';
   import { errorText } from '$lib/util/errors';
@@ -25,6 +26,7 @@
     if (r.data) {
       savePw = savePw2 = '';
       msg = { text: m.backup_saved(), ok: true };
+      start.markBackup();
     }
   }
 

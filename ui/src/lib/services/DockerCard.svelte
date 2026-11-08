@@ -1,11 +1,15 @@
 <script lang="ts">
+  import './docker-res.css';
   import { Box } from '@lucide/svelte';
   import * as m from '$lib/paraglide/messages.js';
-  import DockerRows from './DockerRows.svelte';
+  import DockerTabs from './DockerTabs.svelte';
+  import { DOCKER_TABS as tabs, type DockerTab } from './docker-tabs';
   import { services } from './services.svelte';
 
-  /** Containers of the server (ADR-012): state, ports, load; logs and start / stop / restart. */
+  /** Docker of the server (ADR-012, ADR-016): containers, compose, images, volumes, networks, events. */
   let { sid }: { sid: string } = $props();
+
+  let tab = $state<DockerTab>('containers');
 
   $effect(() => services.watch('docker', sid));
   const report = $derived(services.docker[sid] ?? null);
@@ -25,7 +29,16 @@
         >
       {/if}
     </h3>
-    <DockerRows {sid} {report} />
+    {#if report?.access === 'Ok'}
+      <div class="seg tabs" role="tablist" aria-label={m.dk_title()}>
+        {#each tabs as [id, label] (id)}
+          <button type="button" role="tab" aria-selected={tab === id} onclick={() => (tab = id)}
+            >{label()}</button
+          >
+        {/each}
+      </div>
+    {/if}
+    <DockerTabs {sid} {report} {tab} />
   </section>
 {/if}
 

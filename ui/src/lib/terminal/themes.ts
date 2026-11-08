@@ -1,53 +1,10 @@
 /** Terminal themes (docs/contracts/ui.md): 16 ANSI + foreground / background / cursor / selection. */
 import type { ITheme } from '@xterm/xterm';
-
-type Ansi = [
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-  string
-];
-
-function theme(bg: string, fg: string, cursor: string, selection: string, ansi: Ansi): ITheme {
-  const [black, red, green, yellow, blue, magenta, cyan, white] = ansi;
-  return {
-    background: bg,
-    foreground: fg,
-    cursor,
-    cursorAccent: bg,
-    selectionBackground: selection,
-    black,
-    red,
-    green,
-    yellow,
-    blue,
-    magenta,
-    cyan,
-    white,
-    brightBlack: ansi[8],
-    brightRed: ansi[9],
-    brightGreen: ansi[10],
-    brightYellow: ansi[11],
-    brightBlue: ansi[12],
-    brightMagenta: ansi[13],
-    brightCyan: ansi[14],
-    brightWhite: ansi[15]
-  };
-}
+import { theme } from './theme-make';
+import { MORE_THEMES } from './themes-more';
 
 export const TERMINAL_THEMES: Record<string, ITheme> = {
+  ...MORE_THEMES,
   'ibc-light': theme('#ffffff', '#16181d', '#3a66d6', 'rgba(58,102,214,0.22)', [
     '#16181d',
     '#c93a3a',

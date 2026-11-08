@@ -184,6 +184,16 @@ export const commands = {
 	dockerLogs: (sessionId: SessionId, containerId: string, lines: number) => typedError<string, ApiError>(__TAURI_INVOKE("docker_logs", { sessionId, containerId, lines })),
 	/**  Starts, stops or restarts one container (the UI asks the user first). */
 	dockerAction: (sessionId: SessionId, containerId: string, action: DockerAction) => typedError<null, ApiError>(__TAURI_INVOKE("docker_action", { sessionId, containerId, action })),
+	/**  Compose projects (by container labels). Read-only; passive for auto-lock. */
+	dockerCompose: (sessionId: SessionId) => typedError<DockerCompose, ApiError>(__TAURI_INVOKE("docker_compose", { sessionId })),
+	/**  Images with size and use. Read-only; passive for auto-lock. */
+	dockerImages: (sessionId: SessionId) => typedError<DockerImages, ApiError>(__TAURI_INVOKE("docker_images", { sessionId })),
+	/**  Volumes with size and use. Read-only; passive for auto-lock. */
+	dockerVolumes: (sessionId: SessionId) => typedError<DockerVolumes, ApiError>(__TAURI_INVOKE("docker_volumes", { sessionId })),
+	/**  Networks with subnets and attached containers. Read-only; passive for auto-lock. */
+	dockerNetworks: (sessionId: SessionId) => typedError<DockerNetworks, ApiError>(__TAURI_INVOKE("docker_networks", { sessionId })),
+	/**  Daemon events of the last `window_s` seconds. Read-only; passive for auto-lock. */
+	dockerEvents: (sessionId: SessionId, windowS: number) => typedError<DockerEvents, ApiError>(__TAURI_INVOKE("docker_events", { sessionId, windowS })),
 	/**  TLS certificates found on the server with their expiry. Read-only; passive for auto-lock. */
 	certList: (sessionId: SessionId) => typedError<CertReport, ApiError>(__TAURI_INVOKE("cert_list", { sessionId })),
 	/**
@@ -279,6 +289,32 @@ export type CertReport = {
 	denied: number,
 	/**  `openssl` is not installed. */
 	no_openssl: boolean,
+};
+
+/**  A compose project, found by the labels compose puts on its containers. */
+export type ComposeProject = {
+	/**  Project name. */
+	name: string,
+	/**  Directory of the compose file on the server, if labelled. */
+	dir: string | null,
+	/**  Running containers. */
+	running: number,
+	/**  All containers. */
+	total: number,
+	/**  Containers by service. */
+	services: ComposeService[],
+};
+
+/**  One container of a compose project. */
+export type ComposeService = {
+	/**  Service name from the compose file. */
+	service: string,
+	/**  Container name. */
+	container: string,
+	/**  `running`, `exited`, … */
+	state: string,
+	/**  Human status. */
+	status: string,
 };
 
 /**  Answer to a conflict. */
@@ -399,12 +435,106 @@ export type DockerAction =
 /**  `docker restart`. */
 "Restart";
 
+/**  Result of [`docker_compose`]. */
+export type DockerCompose = {
+	/**  Access state; the list is empty unless `Ok`. */
+	access: DockerAccess,
+	/**  Projects, busiest first. */
+	projects: ComposeProject[],
+};
+
+/**  One daemon event. */
+export type DockerEvent = {
+	/**  Unix millis (server clock). */
+	time: number,
+	/**  `container`, `image`, `volume` or `network`. */
+	kind: string,
+	/**  `start`, `die`, `oom`, `pull`, … (no arguments). */
+	action: string,
+	/**  Name of the thing, if the event carries one. */
+	name: string,
+};
+
+/**  Result of [`docker_events`]. */
+export type DockerEvents = {
+	/**  Access state; the list is empty unless `Ok`. */
+	access: DockerAccess,
+	/**  Newest first, ≤ 200. */
+	events: DockerEvent[],
+};
+
+/**  One image. */
+export type DockerImage = {
+	/**  Short id (12 hex chars). */
+	id: string,
+	/**  `repository:tag` (`<none>` for untagged). */
+	name: string,
+	/**  Size in bytes, if the CLI's figure could be read. */
+	size_bytes: number | null,
+	/**  Human age, e.g. `3 weeks ago`. */
+	created: string,
+	/**  Containers (running or not) created from it; 0 = unused. */
+	containers: number,
+};
+
+/**  Result of [`docker_images`]. */
+export type DockerImages = {
+	/**  Access state; the list is empty unless `Ok`. */
+	access: DockerAccess,
+	/**  Images, used first, then biggest first. */
+	images: DockerImage[],
+};
+
+/**  One network. */
+export type DockerNetwork = {
+	/**  Short id (12 hex chars). */
+	id: string,
+	/**  Name. */
+	name: string,
+	/**  Driver (`bridge`, `host`, `overlay`, …). */
+	driver: string,
+	/**  `local` or `swarm`. */
+	scope: string,
+	/**  Subnets, space separated; empty when none. */
+	subnet: string,
+	/**  Attached containers. */
+	containers: number,
+};
+
+/**  Result of [`docker_networks`]. */
+export type DockerNetworks = {
+	/**  Access state; the list is empty unless `Ok`. */
+	access: DockerAccess,
+	/**  Networks, with containers first, then by name. */
+	networks: DockerNetwork[],
+};
+
 /**  Result of [`docker_list`]. */
 export type DockerReport = {
 	/**  Access state; `containers` is empty unless `Ok`. */
 	access: DockerAccess,
 	/**  Containers, running first. */
 	containers: Container[],
+};
+
+/**  One volume. */
+export type DockerVolume = {
+	/**  Name. */
+	name: string,
+	/**  Driver (`local`). */
+	driver: string,
+	/**  Disk use in bytes when the daemon reports it. */
+	size_bytes: number | null,
+	/**  Containers that mount it. */
+	containers: number,
+};
+
+/**  Result of [`docker_volumes`]. */
+export type DockerVolumes = {
+	/**  Access state; the list is empty unless `Ok`. */
+	access: DockerAccess,
+	/**  Volumes, used first, then by name. */
+	volumes: DockerVolume[],
 };
 
 /**  Transfer endpoint. TS: `{kind:"local"} | {kind:"remote", sftp_id}`. */

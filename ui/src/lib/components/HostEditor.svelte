@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Eye, EyeOff, FileKey, KeyRound, LockKeyhole } from '@lucide/svelte';
-  import { api, type IdentityDto, type Tag } from '$lib/api';
+  import { api, type IdentityDto } from '$lib/api';
   import * as m from '$lib/paraglide/messages.js';
   import { tree } from '$lib/stores/tree.svelte';
   import { ui } from '$lib/stores/ui.svelte';
@@ -23,9 +23,7 @@
   let hostname = $state(host?.hostname ?? '');
   let flag = $state<string | null>(host?.country_code ?? null);
   let notes = $state(host?.notes ?? '');
-  let tagIds = $state.raw<string[]>(host?.tag_ids ?? []);
   let defaults = $state(host ? formFrom(host) : emptyDefaults());
-  let tags = $state.raw<Tag[]>([]);
   let error = $state<string | null>(null);
   let busy = $state(false);
 
@@ -37,7 +35,6 @@
   let identity = $state.raw<IdentityDto | null>(null);
   let keyIdentity = $state.raw<IdentityDto | null>(null);
 
-  void api.tagList().then((r) => r.status === 'ok' && (tags = r.data));
   void api.identityList().then((r) => {
     if (r.status !== 'ok' || !host?.identity_id) return;
     identity = r.data.find((i) => i.id === host.identity_id) ?? null;
@@ -99,7 +96,6 @@
         ...(hostname.trim() !== host.hostname ? { hostname: hostname.trim() } : {}),
         ...(flag !== host.country_code ? { country_code: flag } : {}),
         ...(notes !== (host.notes ?? '') ? { notes: notes || null } : {}),
-        ...(tagIds.join() !== host.tag_ids.join() ? { tag_ids: tagIds } : {}),
         ...toPatch(formFrom(host), defaults)
       });
     } else {
@@ -110,7 +106,7 @@
           hostname: hostname.trim(),
           country_code: flag,
           notes: notes || null,
-          tag_ids: tagIds,
+          tag_ids: [],
           ...toValues(defaults)
         })) !== null;
     }
@@ -120,8 +116,6 @@
       ui.toast(m.toast_saved());
     }
   }
-  const toggleTag = (t: string) =>
-    (tagIds = tagIds.includes(t) ? tagIds.filter((x) => x !== t) : [...tagIds, t]);
 </script>
 
 <Sheet title={host ? m.editor_host_edit() : m.editor_host_new()} onclose={() => ui.closeEditor()}>
@@ -249,34 +243,27 @@
       {/if}
     </section>
 
+    <section>
+      <div class="fld">
+        <label for="h-notes">{m.section_notes()}</label>
+        <textarea
+          id="h-notes"
+          class="input"
+          rows="3"
+          placeholder={m.notes_placeholder()}
+          bind:value={notes}></textarea>
+      </div>
+    </section>
+
     <details>
       <summary>{m.section_advanced()}</summary>
       <div class="adv">
-        {#if tags.length}
-          <div class="fld">
-            <span class="lbl">{m.field_tags()}</span>
-            <div class="chips">
-              {#each tags as t (t.id)}
-                <button
-                  type="button"
-                  class="chip"
-                  aria-pressed={tagIds.includes(t.id)}
-                  onclick={() => toggleTag(t.id)}>{t.name}</button
-                >
-              {/each}
-            </div>
-          </div>
-        {/if}
         <DefaultsFields
           bind:form={defaults}
           inheritFrom={folder}
           selfHostId={host?.id ?? null}
           advancedOnly
         />
-        <div class="fld">
-          <label for="h-notes">{m.section_notes()}</label>
-          <textarea id="h-notes" class="input" rows="3" bind:value={notes}></textarea>
-        </div>
       </div>
     </details>
     {#if error}<p class="error" role="alert">{error}</p>{/if}

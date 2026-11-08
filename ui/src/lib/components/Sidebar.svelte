@@ -2,6 +2,7 @@
   import {
     Box,
     FolderPlus,
+    Keyboard,
     LayoutGrid,
     Lock,
     Plus,
@@ -113,6 +114,12 @@
   <footer>
     <span class="brand"><Logo size={18} />iBC Shell</span>
     <span class="sp"></span>
+    <button
+      class="icon-btn"
+      onclick={() => (ui.hotkeysOpen = true)}
+      aria-label={m.keys_title()}
+      title="{m.keys_title()} (?)"><Keyboard size={16} /></button
+    >
     <button
       class="icon-btn"
       onclick={() => (ui.settingsOpen = true)}

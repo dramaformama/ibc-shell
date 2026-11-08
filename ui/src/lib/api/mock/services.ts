@@ -106,6 +106,128 @@ export const dockerAction: Commands['dockerAction'] = async (_sid, id, action) =
   return ok(null);
 };
 
+const GB = 1024 * MIB;
+
+export const dockerCompose: Commands['dockerCompose'] = async () => {
+  await delay(400);
+  const svc = (service: string, container: string, state: string, status: string) => ({
+    service,
+    container,
+    state,
+    status
+  });
+  return ok({
+    access: 'Ok',
+    projects: [
+      {
+        name: 'shop',
+        dir: '/srv/shop',
+        running: 3,
+        total: 4,
+        services: [
+          svc('db', 'shop-db-1', 'running', 'Up 3 days (healthy)'),
+          svc('redis', 'shop-redis-1', 'running', 'Up 3 days'),
+          svc('web', 'shop-web-1', 'running', 'Up 3 days'),
+          svc('worker', 'shop-worker-1', 'exited', 'Exited (1) 2 hours ago')
+        ]
+      },
+      {
+        name: 'monitoring',
+        dir: '/opt/monitoring',
+        running: 2,
+        total: 2,
+        services: [
+          svc('grafana', 'monitoring-grafana-1', 'running', 'Up 3 days'),
+          svc('prometheus', 'monitoring-prometheus-1', 'running', 'Up 3 days')
+        ]
+      }
+    ]
+  });
+};
+
+export const dockerImages: Commands['dockerImages'] = async () => {
+  await delay(400);
+  const img = (id: string, name: string, size: number, created: string, containers: number) => ({
+    id,
+    name,
+    size_bytes: size,
+    created,
+    containers
+  });
+  return ok({
+    access: 'Ok',
+    images: [
+      img('9f8e7d6c5b4a', 'postgres:16', 438 * MIB, '3 weeks ago', 1),
+      img('1a2b3c4d5e6f', 'grafana/grafana:11.2.0', 466 * MIB, '2 months ago', 1),
+      img('2b3c4d5e6f7a', 'teddysun/xray:1.8.24', 59 * MIB, '5 weeks ago', 1),
+      img('3c4d5e6f7a8b', 'nginx:1.27-alpine', 48 * MIB, '6 weeks ago', 1),
+      img('4d5e6f7a8b9c', 'restic/restic:0.17.1', 31 * MIB, '3 months ago', 1),
+      img('5e6f7a8b9c0d', 'nginx:1.25', 187 * MIB, '9 months ago', 0),
+      img('6f7a8b9c0d1e', '<none>', 1.2 * GB, '1 year ago', 0)
+    ]
+  });
+};
+
+export const dockerVolumes: Commands['dockerVolumes'] = async () => {
+  await delay(500);
+  return ok({
+    access: 'Ok',
+    volumes: [
+      { name: 'shop_pgdata', driver: 'local', size_bytes: 412 * MIB, containers: 1 },
+      { name: 'grafana-storage', driver: 'local', size_bytes: 96 * MIB, containers: 1 },
+      { name: 'restic-cache', driver: 'local', size_bytes: 2.4 * GB, containers: 1 },
+      { name: 'old_uploads', driver: 'local', size_bytes: 1.1 * GB, containers: 0 },
+      { name: 'a3f1c9d27b6e', driver: 'local', size_bytes: null, containers: 0 }
+    ]
+  });
+};
+
+export const dockerNetworks: Commands['dockerNetworks'] = async () => {
+  await delay(400);
+  const net = (id: string, name: string, driver: string, subnet: string, containers: number) => ({
+    id,
+    name,
+    driver,
+    scope: 'local',
+    subnet,
+    containers
+  });
+  return ok({
+    access: 'Ok',
+    networks: [
+      net('a1a1a1a1a1a1', 'bridge', 'bridge', '172.17.0.0/16', 3),
+      net('b2b2b2b2b2b2', 'shop_default', 'bridge', '172.20.0.0/16', 4),
+      net('c3c3c3c3c3c3', 'monitoring_default', 'bridge', '172.21.0.0/16', 2),
+      net('d4d4d4d4d4d4', 'host', 'host', '', 0),
+      net('e5e5e5e5e5e5', 'none', 'null', '', 0)
+    ]
+  });
+};
+
+const EVENT_SAMPLE: [string, string, string][] = [
+  ['container', 'start', 'shop-worker-1'],
+  ['container', 'die', 'shop-worker-1'],
+  ['container', 'oom', 'shop-worker-1'],
+  ['container', 'restart', 'nginx'],
+  ['image', 'pull', 'postgres:16'],
+  ['network', 'connect', 'shop_default'],
+  ['volume', 'create', 'old_uploads'],
+  ['container', 'stop', 'backup']
+];
+
+export const dockerEvents: Commands['dockerEvents'] = async (_sid, windowS) => {
+  await delay(250);
+  const now = Date.now();
+  const n = Math.min(EVENT_SAMPLE.length * 2, Math.floor(windowS / 120));
+  return ok({
+    access: 'Ok',
+    events: Array.from({ length: n }, (_, i) => {
+      const [kind, action, name] = EVENT_SAMPLE[i % EVENT_SAMPLE.length]!;
+      return { time: now - (i * 97 + 12) * 1000, kind, action, name };
+    })
+  });
+};
+
 export const certList: Commands['certList'] = async () => {
   await delay(400);
   const now = Date.now();

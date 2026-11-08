@@ -51,6 +51,8 @@ class UiState {
   }
 
   paletteOpen = $state(false);
+  /** The "Keyboard shortcuts" window. */
+  hotkeysOpen = $state(false);
   settingsOpen = $state(false);
   editor = $state.raw<EditorTarget | null>(null);
   toasts = $state.raw<Toast[]>([]);

@@ -5,12 +5,15 @@
   import { Box } from '@lucide/svelte';
   import Flag from '$lib/flags/Flag.svelte';
   import * as m from '$lib/paraglide/messages.js';
-  import DockerRows from '$lib/services/DockerRows.svelte';
+  import '$lib/services/docker-res.css';
+  import DockerTabs from '$lib/services/DockerTabs.svelte';
+  import { DOCKER_TABS, type DockerTab } from '$lib/services/docker-tabs';
   import { services } from '$lib/services/services.svelte';
   import { connectedServers } from './connected.svelte';
   import './page.css';
 
-  /** Containers of every connected server on one page (ADR-012). */
+  /** Everything Docker shows, for every connected server on one page (ADR-012, ADR-016). */
+  let tab = $state<DockerTab>('containers');
   const live = $derived(connectedServers());
   $effect(() => {
     const stops = live.map((s) => services.watch('docker', s.sid));
@@ -41,10 +44,17 @@
       >
     </EmptyState>
   {:else}
+    <div class="seg tabs" role="tablist" aria-label={m.dk_title()}>
+      {#each DOCKER_TABS as [id, label] (id)}
+        <button type="button" role="tab" aria-selected={tab === id} onclick={() => (tab = id)}
+          >{label()}</button
+        >
+      {/each}
+    </div>
     {#each withDocker as s (s.key)}
-      <section class="card server" style:--tone="var(--c-cyan)">
+      <section class="card server dk" style:--tone="var(--c-cyan)">
         <h2><Flag code={s.group.flag} size={18} />{s.group.label}</h2>
-        <DockerRows sid={s.sid} report={services.docker[s.sid] ?? null} />
+        <DockerTabs sid={s.sid} report={services.docker[s.sid] ?? null} {tab} />
       </section>
     {/each}
     {#if without.length}

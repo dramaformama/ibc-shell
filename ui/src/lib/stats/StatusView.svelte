@@ -9,6 +9,7 @@
   import { ui } from '$lib/stores/ui.svelte';
   import ServicesPane from '$lib/services/ServicesPane.svelte';
   import MetricsPane from './MetricsPane.svelte';
+  import NotesCard from './NotesCard.svelte';
 
   /** A server's own page: identity, quick actions and every metric as a card grid. */
   let { tab }: { tab: Tab } = $props();
@@ -59,6 +60,7 @@
     </header>
     <MetricsPane {group} wide />
     {#if sid}<ServicesPane {sid} />{/if}
+    {#if host}<NotesCard hostId={host.id} />{/if}
   </section>
 {/if}
 
@@ -91,6 +93,9 @@
     min-width: 0;
   }
   h1 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     margin: 0 0 3px;
     font-size: 26px;
     font-weight: 700;

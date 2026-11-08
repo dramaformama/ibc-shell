@@ -114,5 +114,17 @@
     </span>
   {:else}
     <span class="count tnum">{row.count}</span>
+    <span class="acts">
+      <button
+        type="button"
+        class="icon-btn act"
+        tabindex="-1"
+        title={m.menu_edit_defaults()}
+        aria-label={m.menu_edit_defaults()}
+        onclick={(e) => (e.stopPropagation(), ui.openFolderEditor(row.id))}
+        onpointerdown={(e) => e.stopPropagation()}
+        ondblclick={(e) => e.stopPropagation()}><Pencil size={12} /></button
+      >
+    </span>
   {/if}
 {/if}

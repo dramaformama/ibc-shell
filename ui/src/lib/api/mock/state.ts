@@ -100,7 +100,9 @@ export const ID = {
   deDb: '01900000-0000-7000-8000-0000000000db',
   idKey: '01900000-0000-7000-8000-00000000ed25',
   idPw: '01900000-0000-7000-8000-00000000aa01',
-  tagProd: '01900000-0000-7000-8000-00000000ba01'
+  tagProd: '01900000-0000-7000-8000-00000000ba01',
+  tagStg: '01900000-0000-7000-8000-00000000ba02',
+  tagTest: '01900000-0000-7000-8000-00000000ba03'
 } as const;
 
 function seed() {
@@ -113,10 +115,15 @@ function seed() {
   folders[0]!.defaults = { ...emptyDefaults(), username: 'root', identity_id: ID.idKey };
   const hosts: Host[] = [
     host('fra-1', '203.0.113.10', ID.de, 'a0', { tag_ids: [ID.tagProd] }),
-    host('fra-2', '203.0.113.11', ID.de, 'a1'),
+    host('fra-2', '203.0.113.11', ID.de, 'a1', { tag_ids: [ID.tagStg] }),
     host('fra-db-1', '10.0.0.5', ID.deDb, 'a0', { notes: 'Primary Postgres' }),
     host('fra-db-2', '10.0.0.6', ID.deDb, 'a1'),
-    host('ams-1', '198.51.100.20', ID.nl, 'a0', { username: 'deploy', identity_id: ID.idPw }),
+    host('ams-1', '198.51.100.20', ID.nl, 'a0', {
+      username: 'deploy',
+      identity_id: ID.idPw,
+      tag_ids: [ID.tagTest],
+      notes: 'Тестовый стенд. Перед выкладкой проверить миграции.'
+    }),
     host('ams-2', '198.51.100.21', ID.nl, 'a1'),
     host('ams-edge', 'edge.example.nl', ID.nl, 'a2', { port: 2222 }),
     host('hel-1 (new key)', '192.0.2.30', ID.fi, 'a0'),
@@ -155,7 +162,11 @@ function seed() {
       updated_at: t
     }
   ];
-  const tags: Tag[] = [{ id: ID.tagProd, name: 'prod', color: 'danger' }];
+  const tags: Tag[] = [
+    { id: ID.tagProd, name: 'prod', color: 'red' },
+    { id: ID.tagStg, name: 'staging', color: 'orange' },
+    { id: ID.tagTest, name: 'test', color: 'yellow' }
+  ];
   const snippets: Snippet[] = [
     {
       id: uuid(),
@@ -192,10 +203,12 @@ function seed() {
       added_at: t
     }
   ];
+  // `?seed=empty` starts with no servers, folders or keys (first-run screens).
+  const empty = typeof location !== 'undefined' && location.search.includes('seed=empty');
   return {
-    folders,
-    hosts,
-    identities,
+    folders: empty ? [] : folders,
+    hosts: empty ? [] : hosts,
+    identities: empty ? [] : identities,
     tags,
     snippets,
     forwards: [] as PortForward[],

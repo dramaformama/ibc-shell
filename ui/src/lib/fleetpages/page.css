@@ -20,6 +20,17 @@
   color: var(--muted);
   font-size: 13px;
 }
+.fpage > .tabs {
+  display: flex;
+  width: max-content;
+  max-width: 100%;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.fpage > .tabs button {
+  flex: none;
+}
 .fpage .server {
   margin-bottom: 16px;
   padding: 16px 18px;

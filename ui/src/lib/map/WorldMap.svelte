@@ -23,7 +23,8 @@
   import { ms } from '$lib/stats/format';
   import { fitView, project, projectLonLat, spread, WORLD } from './geo';
   import { geo } from './geoip.svelte';
-  import { BORDER_SCALE, OUTLINES } from './borders';
+  import { BORDER_SCALE } from './borders';
+  import { SMOOTH_OUTLINES as OUTLINES } from './outlines';
   import { CENTROIDS, GRID, LAND } from './world';
   import './world-map.css';
 

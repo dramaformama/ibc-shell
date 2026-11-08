@@ -119,6 +119,11 @@ export const mockApi: Api = {
   dockerList: services.dockerList,
   dockerLogs: services.dockerLogs,
   dockerAction: services.dockerAction,
+  dockerCompose: services.dockerCompose,
+  dockerImages: services.dockerImages,
+  dockerVolumes: services.dockerVolumes,
+  dockerNetworks: services.dockerNetworks,
+  dockerEvents: services.dockerEvents,
   certList: services.certList,
   traySet: services.traySet,
   // app

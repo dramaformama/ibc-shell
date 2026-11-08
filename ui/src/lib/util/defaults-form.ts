@@ -78,5 +78,14 @@ export const TERM_THEMES = [
   { id: 'solarized-dark', name: 'Solarized Dark' },
   { id: 'solarized-light', name: 'Solarized Light' },
   { id: 'night', name: 'Night' },
-  { id: 'frost', name: 'Frost' }
+  { id: 'frost', name: 'Frost' },
+  { id: 'dracula', name: 'Dracula' },
+  { id: 'one-dark', name: 'One Dark' },
+  { id: 'tokyo-night', name: 'Tokyo Night' },
+  { id: 'catppuccin-mocha', name: 'Catppuccin Mocha' },
+  { id: 'catppuccin-latte', name: 'Catppuccin Latte' },
+  { id: 'gruvbox-dark', name: 'Gruvbox Dark' },
+  { id: 'gruvbox-light', name: 'Gruvbox Light' },
+  { id: 'monokai', name: 'Monokai' },
+  { id: 'github-dark', name: 'GitHub Dark' }
 ] as const;

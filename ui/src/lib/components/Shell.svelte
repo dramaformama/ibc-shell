@@ -10,6 +10,7 @@
   import { vault } from '$lib/stores/vault.svelte';
   import { isApple } from '$lib/util/platform';
   import CloseServerDialog from './CloseServerDialog.svelte';
+  import HotkeysDialog from '$lib/help/HotkeysDialog.svelte';
   import CommandPalette from './CommandPalette.svelte';
   import ConfirmDelete from './ConfirmDelete.svelte';
   import FolderEditor from './FolderEditor.svelte';
@@ -38,7 +39,20 @@
     return () => mq.removeEventListener('change', sync);
   });
 
+  function typing(e: KeyboardEvent): boolean {
+    const t = e.target;
+    return (
+      t instanceof HTMLElement &&
+      (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName))
+    );
+  }
+
   function onKeyDown(e: KeyboardEvent) {
+    if (e.key === '?' && !e.metaKey && !e.ctrlKey && !e.altKey && !typing(e)) {
+      e.preventDefault();
+      ui.hotkeysOpen = !ui.hotkeysOpen;
+      return;
+    }
     if (e.ctrlKey && e.key === 'Tab') {
       e.preventDefault();
       sessions.step(e.shiftKey ? -1 : 1);
@@ -126,6 +140,7 @@
 <SettingsDialog />
 <ConfirmDelete />
 <CloseServerDialog />
+<HotkeysDialog />
 <Toasts />
 
 <style>

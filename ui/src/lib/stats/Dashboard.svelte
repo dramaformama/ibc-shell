@@ -1,6 +1,8 @@
 <script lang="ts">
   import EmptyState from '$lib/components/EmptyState.svelte';
   import Logo from '$lib/components/Logo.svelte';
+  import GettingStarted from '$lib/start/GettingStarted.svelte';
+  import { start } from '$lib/start/start.svelte';
   import { onMount } from 'svelte';
   import {
     CircleHelp,
@@ -138,6 +140,7 @@
   </header>
 
   {#if servers.length}
+    {#if start.visible}<div class="start-slot"><GettingStarted /></div>{/if}
     {#if recents.length}
       <div class="recent" aria-label={m.dash_recent()}>
         <span class="cap"><History size={13} />{m.dash_recent()}</span>
@@ -224,17 +227,21 @@
       <Logo size={64} />
       <h2>{m.dash_empty_title()}</h2>
       <p>{m.dash_empty_hint()}</p>
-      <div class="row">
-        <button class="btn btn-primary btn-prominent" onclick={() => ui.openHostEditor(null)}
-          ><Plus size={16} />{m.action_new_host()}</button
-        >
-        <button class="btn btn-prominent" onclick={() => ui.openFolderEditor(null)}
-          ><FolderPlus size={16} />{m.action_new_folder()}</button
-        >
-        <button class="btn btn-prominent" onclick={() => (ui.paletteOpen = true)}
-          >{m.dash_quick_connect()}</button
-        >
-      </div>
+      {#if start.visible}
+        <GettingStarted roomy />
+      {:else}
+        <div class="row">
+          <button class="btn btn-primary btn-prominent" onclick={() => ui.openHostEditor(null)}
+            ><Plus size={16} />{m.action_new_host()}</button
+          >
+          <button class="btn btn-prominent" onclick={() => ui.openFolderEditor(null)}
+            ><FolderPlus size={16} />{m.action_new_folder()}</button
+          >
+          <button class="btn btn-prominent" onclick={() => (ui.paletteOpen = true)}
+            >{m.dash_quick_connect()}</button
+          >
+        </div>
+      {/if}
     </div>
   {/if}
 </section>

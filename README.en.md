@@ -35,7 +35,7 @@ The builds are not signed with a paid certificate, so the system warns on first 
 - **Windows.** In the SmartScreen window click More info, then Run anyway.
 - **Linux.** `chmod +x` the AppImage and run it, or `sudo apt install ./file.deb`.
 
-A release is made by a tag: `git tag v0.1.0 && git push origin v0.1.0`. The [workflow](.github/workflows/release.yml) builds the installers for every system and publishes the release at once, so the links above start working.
+A release is made by a tag: `git tag v0.1.1 && git push origin v0.1.1`. The [workflow](.github/workflows/release.yml) builds the installers for every system and publishes the release at once, so the links above start working.
 
 ## Why
 
@@ -91,7 +91,11 @@ Demo mode: sample servers and metrics.
 - **A connection you can read.** Every step is shown: address lookup, connecting (to which IP), secure channel, sign-in, terminal, and how long each took. When it fails you see which step stopped and what that usually means (address not found, port closed, server dropped the connection, sign-in refused). There is a Copy report button. A dropped session is explained too.
 - **Server configuration.** Cores, processor, memory and disk (NVMe, SSD or HDD) on the cards and in Status, like a hosting plan.
 - **Backup.** Settings → Backup: one encrypted file with servers, folders, passwords and keys, snippets, trusted keys and settings. Open it on another computer with Restore and everything is back.
-- **Docker.** A server's containers with state, ports and load; start, stop and restart (stop and restart ask first); logs. The Docker tab shows every connected server at once.
+- **Docker.** A server's containers with state, ports and load, start, stop and restart (stop and restart ask first), logs. The Docker tab in the sidebar shows every connected server at once, with the same six tabs as a server's page: **Containers**, **Compose** (projects and their services), **Images** (size, age, in use or not), **Volumes**, **Networks** and **Events** (starts, stops, crashes and out-of-memory kills, refreshed every 5 seconds while the tab is open). Everything is read-only except starting and stopping containers.
+- **Server notes.** What the server is for, who owns it, what to remember. Written right on the server page and saved when you leave the field.
+- **Getting started.** On first launch the overview shows three steps: add a server, add a sign-in key, make a backup. Steps tick themselves off, and the card can be hidden.
+- **Keyboard shortcuts.** Press <kbd>?</kbd> anywhere, or the keyboard button at the bottom left: a window with every shortcut for the app, tabs, terminal and files.
+- **Terminal themes.** 15 themes: iBC Shell (light and dark), Solarized, Night, Frost, Dracula, One Dark, Tokyo Night, Catppuccin, Gruvbox, Monokai, GitHub Dark. Set per server or folder in advanced settings.
 - **SSL certificates.** Finds Let's Encrypt, nginx, Apache and Caddy certificates, shows expiry and warns ahead. The Domains tab gathers them from all servers.
 - **macOS menu-bar icon.** A short summary of your servers, one click to jump to a server. Can be turned off in settings.
 - **Per-core CPU load** split into user, system, nice, iowait and steal.

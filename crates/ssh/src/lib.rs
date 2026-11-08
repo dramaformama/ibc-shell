@@ -8,6 +8,8 @@ mod certs;
 mod config;
 mod connect;
 mod docker;
+mod docker_more;
+mod docker_more_types;
 mod error;
 mod forward;
 mod hostkey;
@@ -25,6 +27,13 @@ pub use config::{
 };
 pub use docker::{
     docker_act, docker_list, docker_logs, Container, DockerAccess, DockerAction, DockerReport,
+};
+pub use docker_more::{
+    docker_compose, docker_events, docker_images, docker_networks, docker_volumes,
+};
+pub use docker_more_types::{
+    ComposeProject, ComposeService, DockerCompose, DockerEvent, DockerEvents, DockerImage,
+    DockerImages, DockerNetwork, DockerNetworks, DockerVolume, DockerVolumes,
 };
 pub use forward::{ForwardHandle, ForwardSpec, ForwardState};
 pub use hostkey::{

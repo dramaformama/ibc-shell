@@ -1,14 +1,14 @@
 <script lang="ts">
   import EmptyState from '$lib/components/EmptyState.svelte';
   import {
-    CornerDownLeft,
     Folder,
     FolderPlus,
     Pencil,
     Play,
     Plus,
     Search,
-    Send,
+    Server,
+    TextCursorInput,
     Trash2,
     Zap
   } from '@lucide/svelte';
@@ -208,13 +208,13 @@
                 class="mini"
                 onclick={() => snippets.run(s, 'here', false)}
                 aria-label={m.snip_insert()}
-                title={m.snip_insert()}><CornerDownLeft size={13} /></button
+                title={m.snip_insert()}><TextCursorInput size={13} /></button
               >
               <button
                 class="mini"
                 onclick={() => snippets.run(s, 'many')}
                 aria-label={m.snip_run_many()}
-                title={m.snip_run_many()}><Send size={13} /></button
+                title={m.snip_run_many()}><Server size={13} /></button
               >
               <button
                 class="mini"

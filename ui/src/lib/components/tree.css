@@ -100,7 +100,8 @@
 .tree .row:hover .acts {
   display: inline-flex;
 }
-.tree .row:hover .sub {
+.tree .row:hover .sub,
+.tree .row:hover .count {
   display: none;
 }
 .tree .act {

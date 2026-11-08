@@ -74,6 +74,12 @@
       run: () => (ui.settingsOpen = true)
     },
     {
+      id: 'a:keys',
+      group: 'action',
+      label: m.keys_title(),
+      run: () => (ui.hotkeysOpen = true)
+    },
+    {
       id: 'a:theme',
       group: 'action',
       label: m.action_toggle_theme(),

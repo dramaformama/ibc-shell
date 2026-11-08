@@ -282,10 +282,11 @@
   .pane.active {
     display: block;
   }
+  /* The gap is the inset, not padding: FitAddon measures the parent's border-box height and
+     would count padding as free room, adding a row that spills past the bottom edge. */
   .xt {
     position: absolute;
-    inset: 0;
-    padding: 8px;
+    inset: 8px;
   }
   .xt.hidden {
     visibility: hidden;

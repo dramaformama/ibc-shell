@@ -14,23 +14,24 @@
   height: 100%;
 }
 .map .canvas > svg .dots {
-  stroke: color-mix(in oklab, var(--muted) 26%, transparent);
+  stroke: color-mix(in oklab, var(--muted) 22%, transparent);
   stroke-width: var(--dot);
   stroke-linecap: round;
 }
-/* Country outlines sit over the dots: hairlines, constant width however far the map zooms. */
+/* Country outlines sit over the dots: soft hairlines, constant width however far the map zooms. */
 .map .canvas > svg .borders,
 .map .canvas > svg .lit {
   fill: none;
-  stroke: color-mix(in oklab, var(--muted) 62%, transparent);
-  stroke-width: 0.8px;
+  stroke: color-mix(in oklab, var(--muted) 42%, transparent);
+  stroke-width: 0.7px;
   stroke-linejoin: round;
+  stroke-linecap: round;
   vector-effect: non-scaling-stroke;
 }
 .map .canvas > svg .lit {
-  fill: color-mix(in oklab, var(--accent) 16%, transparent);
-  stroke: color-mix(in oklab, var(--accent) 80%, transparent);
-  stroke-width: 1.2px;
+  fill: color-mix(in oklab, var(--accent) 13%, transparent);
+  stroke: color-mix(in oklab, var(--accent) 70%, transparent);
+  stroke-width: 1.1px;
   transition: fill 160ms var(--ease);
 }
 .map .canvas > svg .lit.on {
@@ -38,6 +39,24 @@
 }
 .map .canvas > svg {
   transition: none;
+  /* The zoomed view cuts the land at the frame: fade it out instead of a hard edge. */
+  --fade: 28px;
+  mask-image:
+    linear-gradient(
+      to right,
+      transparent,
+      #000 var(--fade),
+      #000 calc(100% - var(--fade)),
+      transparent
+    ),
+    linear-gradient(
+      to bottom,
+      transparent,
+      #000 var(--fade),
+      #000 calc(100% - var(--fade)),
+      transparent
+    );
+  mask-composite: intersect;
 }
 .map .sp {
   flex: 1;
