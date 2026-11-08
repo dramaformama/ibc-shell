@@ -26,7 +26,12 @@ export function buildFleet(
   now: number
 ): Server[] {
   const folders = new Map(catalog.folders.map((f) => [f.id, f.name]));
-  const byHost = new Map(groups.filter((g) => g.current.hostId).map((g) => [g.current.hostId, g]));
+  // A host open in several windows is still one server: the first window represents it.
+  const byHost = new Map<string, TabGroup>();
+  for (const g of groups) {
+    const id = g.current.hostId;
+    if (id && !byHost.has(id)) byHost.set(id, g);
+  }
   const saved = catalog.hosts.map((host): Server => {
     const group = byHost.get(host.id) ?? null;
     const phase = group ? phaseOf(group) : null;

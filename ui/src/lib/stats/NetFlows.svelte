@@ -67,13 +67,13 @@
   {:else}
     <div class="seg" role="tablist" aria-label={m.net_title()}>
       <button role="tab" aria-selected={view === 'in'} onclick={() => (view = 'in')}
-        >{m.net_in()}<span class="tnum">{counts.in}</span></button
+        ><span class="t">{m.net_in()}</span><span class="n tnum">{counts.in}</span></button
       >
       <button role="tab" aria-selected={view === 'out'} onclick={() => (view = 'out')}
-        >{m.net_out()}<span class="tnum">{counts.out}</span></button
+        ><span class="t">{m.net_out()}</span><span class="n tnum">{counts.out}</span></button
       >
       <button role="tab" aria-selected={view === 'ports'} onclick={() => (view = 'ports')}
-        >{m.net_ports()}<span class="tnum">{d.listen.length}</span></button
+        ><span class="t">{m.net_ports()}</span><span class="n tnum">{d.listen.length}</span></button
       >
     </div>
 
@@ -130,23 +130,34 @@
     font-size: 12px;
     font-weight: 500;
   }
-  /* Three tabs with counters must fit a narrow card: they shrink and clip, never overflow. */
+  /* Three tabs with counters share the card by content, so a long label never leaves its pill. */
   .seg {
     width: 100%;
+    container-type: inline-size;
   }
   .seg button {
-    flex: 1 1 0;
+    flex: 1 1 auto;
     min-width: 0;
     gap: 5px;
     padding-inline: 8px;
     justify-content: center;
     white-space: nowrap;
   }
-  .seg span {
+  .t {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .n {
     flex: none;
     color: var(--muted);
     font-size: 11px;
     font-weight: 500;
+  }
+  /* Too narrow for three counters: only the open tab keeps its number. */
+  @container (max-width: 310px) {
+    .seg button[aria-selected='false'] .n {
+      display: none;
+    }
   }
   .list {
     display: grid;

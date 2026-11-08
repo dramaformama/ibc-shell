@@ -3,12 +3,15 @@
   import { api } from '$lib/api';
   import * as m from '$lib/paraglide/messages.js';
   import { sessions, type Tab } from '$lib/stores/sessions.svelte';
-  import { isApple } from '$lib/util/platform';
+  import { connectAnother } from '$lib/stores/actions';
+  import { tree } from '$lib/stores/tree.svelte';
+  import { isApple, shortcutKey } from '$lib/util/platform';
   import { Connection } from './connection.svelte';
   import { createEngine, type Engine } from './engine';
   import { terminalPrefs } from './prefs.svelte';
   import Prompts from './Prompts.svelte';
   import SearchBar from './SearchBar.svelte';
+  import TermMenu from './TermMenu.svelte';
   import StatusLayer from './StatusLayer.svelte';
   import {
     binaryBytes,
@@ -31,6 +34,7 @@
   let appDark = $state(false);
   let title = $state('');
   let searchOpen = $state(false);
+  let hasSelection = $state(false);
   let link = $state<string | null>(null);
   let paste = $state<{ text: string; lines: number } | null>(null);
 
@@ -42,7 +46,7 @@
     if (!terminalPrefs.highlight) return engine.term.write(data, done);
     engine.term.write(hl.feed(decoder.decode(data, { stream: true })), done);
   });
-  const theme = $derived(resolveTheme(themeId, appDark));
+  const theme = $derived(resolveTheme(themeId ?? terminalPrefs.theme, appDark));
   const modalOpen = $derived(!!conn.prompt || !!link || !!paste);
 
   function focusTerm() {
@@ -69,6 +73,11 @@
     }
   }
 
+  function copySelection() {
+    if (engine?.term.hasSelection())
+      void navigator.clipboard.writeText(engine.term.getSelection()).catch(() => {});
+  }
+
   function onPasteEvent(e: ClipboardEvent) {
     e.preventDefault();
     e.stopPropagation();
@@ -80,7 +89,7 @@
     if (e.type !== 'keydown' || !engine) return true;
     const chord = isApple ? e.metaKey && !e.ctrlKey : e.ctrlKey && e.shiftKey;
     if (!chord || e.altKey) return true;
-    const k = e.key.toLowerCase();
+    const k = shortcutKey(e);
     const stop = () => {
       e.preventDefault();
       return false;
@@ -90,7 +99,7 @@
       return stop();
     }
     if (k === 'c' && engine.term.hasSelection()) {
-      void navigator.clipboard.writeText(engine.term.getSelection()).catch(() => {});
+      copySelection();
       return stop();
     }
     if (k === 'v' && !isApple) {
@@ -158,7 +167,7 @@
       if (resolved?.status === 'ok') themeId = resolved.data.term_theme.value;
       if (dead) return;
       const eng = await createEngine(xt, {
-        theme: resolveTheme(themeId, appDark),
+        theme: resolveTheme(themeId ?? terminalPrefs.theme, appDark),
         fontSize: terminalPrefs.fontSize,
         scrollback: terminalPrefs.scrollback,
         onLink: (url) => {
@@ -175,6 +184,7 @@
       eng.term.onData(onInput);
       eng.term.onBinary((s) => conn.write(binaryBytes(s)));
       eng.term.onResize(({ cols, rows }) => conn.resize(cols, rows));
+      eng.term.onSelectionChange(() => (hasSelection = eng.term.hasSelection()));
       eng.term.onTitleChange((t) => (title = sanitizeTitle(t)));
       ro = new ResizeObserver(() => {
         clearTimeout(timer);
@@ -201,6 +211,20 @@
 
   $effect(() => {
     if (engine) engine.term.options.theme = theme;
+  });
+
+  // Editing a host or its folder can change the theme of a tab that is already open.
+  $effect(() => {
+    void tree.data;
+    const id = tab.hostId;
+    if (!id) return;
+    void api.hostResolve(id).then((r) => {
+      if (r.status === 'ok') themeId = r.data.term_theme.value;
+    });
+  });
+
+  $effect(() => {
+    if (engine) engine.term.options.scrollback = terminalPrefs.scrollback;
   });
 
   $effect(() => sessions.setPhase(tab.id, conn.phase));
@@ -257,12 +281,24 @@
   onpastecapture={onPasteEvent}
   onkeydown={keepCtrlForShell}
 >
-  <div
-    bind:this={xt}
-    class="xt"
-    class:hidden={conn.phase === 'connecting' || conn.phase === 'failed'}
-    inert={modalOpen}
-  ></div>
+  <TermMenu
+    hasHost={!!tab.hostId}
+    selected={hasSelection}
+    oncopy={copySelection}
+    onpaste={() => void pasteFromClipboard()}
+    onselectall={() => engine?.term.selectAll()}
+    onfind={() => (searchOpen = true)}
+    onclear={() => engine?.term.clear()}
+    onanother={() => tab.hostId && connectAnother(tab.hostId)}
+    onclosed={() => !searchOpen && focusTerm()}
+  >
+    <div
+      bind:this={xt}
+      class="xt"
+      class:hidden={conn.phase === 'connecting' || conn.phase === 'failed'}
+      inert={modalOpen}
+    ></div>
+  </TermMenu>
   {#if searchOpen && engine}
     <SearchBar search={engine.search} onclose={closeSearch} />
   {/if}
@@ -290,6 +326,10 @@
   }
   .xt.hidden {
     visibility: hidden;
+  }
+  .pane :global(.term-trigger) {
+    position: absolute;
+    inset: 0;
   }
   .xt :global(.xterm) {
     height: 100%;

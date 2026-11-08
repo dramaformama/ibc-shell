@@ -68,6 +68,7 @@
   padding: 2px;
   border-radius: var(--r-control);
   background: var(--hover);
+  gap: 2px;
   width: fit-content;
   max-width: 100%;
 }

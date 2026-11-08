@@ -36,6 +36,7 @@ export function shortcutGroups(): ShortcutGroup[] {
       title: m.keys_group_tabs(),
       items: [
         { label: m.keys_new_tab(), keys: app('T') },
+        { label: m.menu_connect_another(), keys: term('T') },
         { label: m.keys_close_tab(), keys: app('W') },
         { label: m.keys_switch_server(), keys: [...app('1'), '–', '9'] },
         { label: m.keys_next_tab(), keys: ['Ctrl', 'Tab'] }

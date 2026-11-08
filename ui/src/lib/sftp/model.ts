@@ -97,13 +97,8 @@ export function parseOctal(text: string): number | null {
   return /^[0-7]{3,4}$/.test(t) ? parseInt(t, 8) : null;
 }
 
-const dateFmt = new Intl.DateTimeFormat(undefined, {
-  year: 'numeric',
-  month: 'short',
-  day: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit'
-});
+// Numeric on purpose: a spelled-out month does not fit the default column.
+const dateFmt = new Intl.DateTimeFormat(undefined, { dateStyle: 'short', timeStyle: 'short' });
 export const formatDate = (ms: number | null): string => (ms == null ? '' : dateFmt.format(ms));
 
 // ---- selection ----

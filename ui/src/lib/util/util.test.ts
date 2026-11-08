@@ -1,3 +1,4 @@
+import { shortcutKey } from './platform';
 import { describe, expect, it } from 'vitest';
 import type { Folder, Host, Tree } from '$lib/api';
 import { fuzzyScore, rank } from './fuzzy';
@@ -148,5 +149,17 @@ describe('tree model', () => {
     ]);
     expect(t.hosts.find((h) => h.id === 'h3')?.folder_id).toBe('de');
     expect(buildRows(t)[1]?.key).toBe('h:h3');
+  });
+});
+
+describe('shortcutKey', () => {
+  const ev = (key: string, code: string) => ({ key, code }) as KeyboardEvent;
+  it('keeps the typed Latin key', () => {
+    expect(shortcutKey(ev('K', 'KeyK'))).toBe('k');
+    expect(shortcutKey(ev('k', 'KeyL'))).toBe('k');
+  });
+  it('uses the physical key on a Cyrillic layout', () => {
+    expect(shortcutKey(ev('л', 'KeyK'))).toBe('k');
+    expect(shortcutKey(ev('б', 'Comma'))).toBe(',');
   });
 });

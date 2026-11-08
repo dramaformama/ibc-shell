@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { terminalPrefs } from '$lib/terminal/prefs.svelte';
   import { api, type AppInfo } from '$lib/api';
   import * as m from '$lib/paraglide/messages.js';
   import { ACCENTS, settings, type ThemeChoice } from '$lib/stores/settings.svelte';
@@ -9,6 +8,9 @@
   import { errorText } from '$lib/util/errors';
   import { MIN_PASSWORD, passwordStrength } from '$lib/util/strength';
   import BackupSection from './BackupSection.svelte';
+  import KeysSection from './KeysSection.svelte';
+  import KnownHostsSection from './KnownHostsSection.svelte';
+  import TerminalSection from './TerminalSection.svelte';
   import Sheet from './Sheet.svelte';
 
   let info = $state<AppInfo | null>(null);
@@ -109,6 +111,8 @@
         </div>
       </section>
 
+      <TerminalSection />
+
       <section>
         <h3>{m.settings_security()}</h3>
         <p class="note">
@@ -177,15 +181,6 @@
       <section>
         <h3>{m.settings_preferences()}</h3>
         <label class="row">
-          <span class="lbl">{m.settings_highlight()}</span>
-          <input
-            type="checkbox"
-            role="switch"
-            checked={terminalPrefs.highlight}
-            onchange={(e) => terminalPrefs.setHighlight(e.currentTarget.checked)}
-          />
-        </label>
-        <label class="row">
           <span class="lbl">{m.settings_probe()}</span>
           <input
             type="checkbox"
@@ -225,6 +220,8 @@
           </div>
         {/if}
       </section>
+      <KeysSection />
+      <KnownHostsSection />
       <BackupSection />
       {#if info}
         <p class="note tnum">{m.app_name()} {info.version} · {info.platform} {info.arch}</p>

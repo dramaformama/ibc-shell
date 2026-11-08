@@ -15,7 +15,7 @@ Contracts: FROZEN v1.1 (ADR-010)
 ## Known issues / decisions pending
 - paraglide compile fetches plugin from CDN (offline builds fail) — check/pin in Phase 2.
 - UI not verified: real-pointer DnD, context menu, settings, FlagPicker screenshots. FlagPicker ~270 rows unvirtualized.
-- UI missing: Forwards section, Snippets/Keys/Known hosts pages (Phase 3).
+- UI missing: Forwards section (backend `start_forward` is a stub), tags (CRUD only, no UI).
 - russh: no sk-keys, certificates not wired; keyboard-interactive answers can't be zeroized.
 - CI not yet run on GitHub; repo URL unknown (needed for README download links).
 - Project agents not auto-loaded: spawn general-purpose + model + "read .claude/agents/<name>.md".

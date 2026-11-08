@@ -1,5 +1,6 @@
 <script lang="ts">
   import {
+    CopyPlus,
     FolderOpen,
     Gauge,
     LayoutGrid,
@@ -12,10 +13,11 @@
   } from '@lucide/svelte';
   import Flag from '$lib/flags/Flag.svelte';
   import * as m from '$lib/paraglide/messages.js';
-  import { closeServer, switchKind } from '$lib/stores/actions';
+  import { closeServer, connectAnother, switchKind } from '$lib/stores/actions';
   import { sessions } from '$lib/stores/sessions.svelte';
   import { ui } from '$lib/stores/ui.svelte';
   import { mod } from '$lib/util/platform';
+  import TabMenu from './TabMenu.svelte';
 
   let { mac = false }: { mac?: boolean } = $props();
 
@@ -59,27 +61,31 @@
   <div class="tabs" role="tablist" aria-label={m.tabs_label()} data-tauri-drag-region>
     {#each sessions.visibleGroups as g, i (g.key)}
       {@const on = g.key === sessions.activeGroup}
-      <div class="tab" class:active={on} role="presentation">
-        <button
-          id={'tab-' + g.key}
-          class="tab-main"
-          role="tab"
-          aria-selected={on}
-          tabindex={on ? 0 : -1}
-          onclick={() => sessions.select(g.current.id)}
-          onkeydown={(e) => onKey(e, i)}
-        >
-          <span class="dot" data-phase={sessions.groupPhase(g)}></span>
-          <Flag code={g.flag} size={14} />
-          <span class="name">{g.label}</span>
-        </button>
-        <button
-          class="close"
-          aria-label={m.tab_disconnect()}
-          title={m.tab_disconnect()}
-          onclick={() => closeServer(g.key)}><X size={12} /></button
-        >
-      </div>
+      <TabMenu group={g}>
+        {#snippet children(props)}
+          <div {...props} class="tab" class:active={on} role="presentation">
+            <button
+              id={'tab-' + g.key}
+              class="tab-main"
+              role="tab"
+              aria-selected={on}
+              tabindex={on ? 0 : -1}
+              onclick={() => sessions.select(g.current.id)}
+              onkeydown={(e) => onKey(e, i)}
+            >
+              <span class="dot" data-phase={sessions.groupPhase(g)}></span>
+              <Flag code={g.flag} size={14} />
+              <span class="name">{g.label}</span>
+            </button>
+            <button
+              class="close"
+              aria-label={m.tab_disconnect()}
+              title={m.tab_disconnect()}
+              onclick={() => closeServer(g.key)}><X size={12} /></button
+            >
+          </div>
+        {/snippet}
+      </TabMenu>
     {/each}
     {#if hidden > 0}
       <button
@@ -123,6 +129,16 @@
           >
         </div>
       {/if}
+      {#if active.hostId}
+        {@const id = active.hostId}
+        <button
+          class="icon-btn"
+          onclick={() => connectAnother(id)}
+          aria-label={m.menu_connect_another()}
+          title="{m.menu_connect_another()} ({mod('⇧T').replace('Ctrl+⇧', 'Ctrl+Shift+')})"
+          ><CopyPlus size={16} /></button
+        >
+      {/if}
       {#if active.kind === 'terminal'}
         <button
           class="icon-btn"
@@ -156,6 +172,8 @@
     color: var(--text);
   }
   .bar {
+    user-select: none;
+    -webkit-user-select: none;
     container-type: inline-size;
     display: flex;
     align-items: center;

@@ -54,6 +54,8 @@ class UiState {
   /** The "Keyboard shortcuts" window. */
   hotkeysOpen = $state(false);
   settingsOpen = $state(false);
+  /** Settings section to scroll to when the window opens. */
+  settingsFocus = $state<'terminal' | 'known-hosts' | null>(null);
   editor = $state.raw<EditorTarget | null>(null);
   toasts = $state.raw<Toast[]>([]);
   /** Tree rows ask to start inline rename of this key. */
@@ -74,6 +76,11 @@ class UiState {
     this.editor = null;
   }
   /** Closes the editor, then asks to delete (the sheet's focus trap must release first). */
+  openSettings(section: 'terminal' | 'known-hosts'): void {
+    this.settingsFocus = section;
+    this.settingsOpen = true;
+  }
+
   deleteFromEditor(key: string): void {
     this.editor = null;
     setTimeout(() => (this.deleteKeys = [key]), 60);

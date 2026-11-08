@@ -1,27 +1,34 @@
-/** Terminal preferences shared by every terminal tab: font size (zoom) and scrollback. */
+/** Terminal preferences shared by every terminal tab: theme, font size (zoom) and scrollback. */
 import { api } from '$lib/api';
 
-const MIN = 9;
-const MAX = 28;
+export const FONT_MIN = 9;
+export const FONT_MAX = 28;
 export const DEFAULT_FONT = 13;
 
-const clamp = (n: number) => Math.min(MAX, Math.max(MIN, Math.round(n)));
+/** Scrollback sizes offered in Settings. */
+export const SCROLLBACK_CHOICES = [1_000, 5_000, 10_000, 50_000, 100_000] as const;
+
+const clamp = (n: number) => Math.min(FONT_MAX, Math.max(FONT_MIN, Math.round(n)));
 
 class TerminalPrefs {
   fontSize = $state(DEFAULT_FONT);
   scrollback = $state(10_000);
   /** Colour IPs, URLs, errors… in plain server output (highlight.ts). */
   highlight = $state(true);
+  /** App-wide terminal theme; `null` follows the light / dark appearance. */
+  theme = $state<string | null>(null);
   #loaded: Promise<void> | null = null;
 
   /** Read persisted values once. */
   load(): Promise<void> {
     this.#loaded ??= (async () => {
-      const [f, s, h] = await Promise.all([
+      const [f, s, h, t] = await Promise.all([
         api.settingsGet('term.font_size'),
         api.settingsGet('term.scrollback'),
-        api.settingsGet('term.highlight')
+        api.settingsGet('term.highlight'),
+        api.settingsGet('term.theme')
       ]);
+      if (t.status === 'ok' && typeof t.data === 'string') this.theme = t.data;
       if (h.status === 'ok' && h.data === false) this.highlight = false;
       if (f.status === 'ok' && typeof f.data === 'number') this.fontSize = clamp(f.data);
       if (s.status === 'ok' && typeof s.data === 'number')
@@ -33,6 +40,16 @@ class TerminalPrefs {
   setHighlight(on: boolean): void {
     this.highlight = on;
     void api.settingsSet('term.highlight', on);
+  }
+
+  setTheme(id: string | null): void {
+    this.theme = id;
+    void api.settingsSet('term.theme', id);
+  }
+
+  setScrollback(lines: number): void {
+    this.scrollback = lines;
+    void api.settingsSet('term.scrollback', lines);
   }
 
   /** ⌘+ / ⌘- (delta) or ⌘0 (reset). */

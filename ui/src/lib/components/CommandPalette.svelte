@@ -80,6 +80,12 @@
       run: () => (ui.hotkeysOpen = true)
     },
     {
+      id: 'a:term-theme',
+      group: 'action',
+      label: m.field_term_theme(),
+      run: () => ui.openSettings('terminal')
+    },
+    {
       id: 'a:theme',
       group: 'action',
       label: m.action_toggle_theme(),

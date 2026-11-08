@@ -2,8 +2,8 @@
 .dk .tabs {
   display: flex;
   max-width: 100%;
-  overflow-x: auto;
-  scrollbar-width: none;
+  /* Narrow panel: tabs wrap instead of hiding past the edge. */
+  flex-wrap: wrap;
 }
 .dk .tabs button {
   flex: none;

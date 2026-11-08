@@ -1,14 +1,14 @@
 <script lang="ts">
   import { onMount, type Snippet } from 'svelte';
   import { api } from '$lib/api';
-  import { closeServer } from '$lib/stores/actions';
+  import { closeServer, connectAnother } from '$lib/stores/actions';
   import * as m from '$lib/paraglide/messages.js';
   import { reachability } from '$lib/fleet/reachability.svelte';
   import { sessions } from '$lib/stores/sessions.svelte';
   import { settings } from '$lib/stores/settings.svelte';
   import { ui } from '$lib/stores/ui.svelte';
   import { vault } from '$lib/stores/vault.svelte';
-  import { isApple } from '$lib/util/platform';
+  import { isApple, shortcutKey } from '$lib/util/platform';
   import CloseServerDialog from './CloseServerDialog.svelte';
   import HotkeysDialog from '$lib/help/HotkeysDialog.svelte';
   import CommandPalette from './CommandPalette.svelte';
@@ -48,6 +48,15 @@
     );
   }
 
+  /** The webview's own menu (Look Up, Inspect…) is only useful for text the user can act on. */
+  function hideNativeMenu(e: MouseEvent) {
+    const t = e.target;
+    if (t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA)$/.test(t.tagName)))
+      return;
+    if (!window.getSelection()?.isCollapsed) return;
+    e.preventDefault();
+  }
+
   function onKeyDown(e: KeyboardEvent) {
     if (e.key === '?' && !e.metaKey && !e.ctrlKey && !e.altKey && !typing(e)) {
       e.preventDefault();
@@ -60,7 +69,15 @@
       return;
     }
     if (!(isApple ? e.metaKey : e.ctrlKey) || e.altKey) return;
-    const k = e.key.toLowerCase();
+    const k = shortcutKey(e);
+    if (e.shiftKey && k === 't') {
+      const id = sessions.active?.hostId;
+      if (id) {
+        e.preventDefault();
+        connectAnother(id);
+      }
+      return;
+    }
     if (e.shiftKey && k !== 'tab') return;
     if (k === 'k') ui.paletteOpen = !ui.paletteOpen;
     else if (k === 'b') ui.sidebarOpen = !ui.sidebarOpen;
@@ -70,7 +87,7 @@
     else if (k === 't') ui.paletteOpen = true;
     else if (k === 'w' && sessions.activeGroup) closeServer(sessions.activeGroup);
     else if (/^[1-9]$/.test(k)) {
-      const g = sessions.groups[Number(k) - 1];
+      const g = sessions.visibleGroups[Number(k) - 1];
       if (g) sessions.select(g.current.id);
     } else return;
     e.preventDefault();
@@ -96,7 +113,7 @@
   }
 </script>
 
-<svelte:window onkeydown={onKeyDown} />
+<svelte:window onkeydown={onKeyDown} oncontextmenu={hideNativeMenu} />
 
 <div class="shell" class:narrow style:--sw="{ui.sidebarOpen && !narrow ? ui.sidebarWidth : 0}px">
   <div

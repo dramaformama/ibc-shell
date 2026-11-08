@@ -6,24 +6,31 @@ import { sessions, type TabKind } from './sessions.svelte';
 import { tree } from './tree.svelte';
 import { ui } from './ui.svelte';
 
-function openFor(hostId: HostId, kind: TabKind, focus: boolean): void {
+function openFor(hostId: HostId, kind: TabKind, focus: boolean, instance = 1): void {
   const h = tree.host(hostId);
   if (!h) return;
   const flag = h.country_code ?? inheritedFlag(tree.data, h.folder_id)?.value ?? null;
-  sessions.open({ kind, hostId, label: h.label, flag, adhoc: null }, focus);
+  const label = instance > 1 ? `${h.label} · ${instance}` : h.label;
+  sessions.open({ kind, hostId, label, flag, adhoc: null, instance }, focus);
 }
 
 /**
  * Opens a view of a stored host, reusing an open one. Status reads metrics over the server's
  * terminal session, so a terminal is started behind it when none is open.
  */
-export function connectHost(hostId: HostId, kind: TabKind = 'terminal'): void {
+export function connectHost(hostId: HostId, kind: TabKind = 'terminal', instance = 1): void {
   if (!tree.host(hostId)) return;
   recent.push(hostId);
-  const open = sessions.find(hostId, kind);
+  const open = sessions.find(hostId, kind, instance);
   if (open) return sessions.select(open.id);
-  if (kind === 'status' && !sessions.find(hostId, 'terminal')) openFor(hostId, 'terminal', false);
-  openFor(hostId, kind, true);
+  if (kind === 'status' && !sessions.find(hostId, 'terminal', instance))
+    openFor(hostId, 'terminal', false, instance);
+  openFor(hostId, kind, true, instance);
+}
+
+/** Opens one more independent window (its own connection) of a saved host. */
+export function connectAnother(hostId: HostId): void {
+  connectHost(hostId, 'terminal', sessions.nextInstance(hostId));
 }
 
 /** Starts a terminal without switching to it (group open, run-everywhere). */
@@ -64,9 +71,9 @@ export function connectAdhoc(target: QuickConnect): void {
 export function switchKind(kind: TabKind): void {
   const t = sessions.active;
   if (!t?.hostId || t.kind === kind) return;
-  const open = sessions.find(t.hostId, kind);
+  const open = sessions.find(t.hostId, kind, t.instance ?? 1);
   if (open) sessions.select(open.id);
-  else connectHost(t.hostId, kind);
+  else connectHost(t.hostId, kind, t.instance ?? 1);
 }
 
 /**

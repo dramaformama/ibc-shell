@@ -55,6 +55,8 @@ export async function createEngine(el: HTMLElement, o: EngineOptions): Promise<E
     lineHeight: 1.2,
     scrollback: o.scrollback,
     theme: o.theme,
+    // Programs assume a dark screen and print white; xterm darkens such cells just enough to read.
+    minimumContrastRatio: 4.5,
     cursorBlink: false,
     cursorStyle: 'bar',
     cursorWidth: 2,

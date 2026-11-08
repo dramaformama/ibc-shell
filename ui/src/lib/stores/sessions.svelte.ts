@@ -18,6 +18,8 @@ export interface Tab {
   /** Flag code already resolved for display, or null. */
   flag: string | null;
   adhoc: QuickConnect | null;
+  /** Which window of the host this is: the same server can be open several times (1 = first). */
+  instance?: number;
   /** Opened for monitoring (startup, group connect): live, but not shown in the tab bar until the user opens it. */
   background?: boolean;
 }
@@ -32,8 +34,9 @@ export interface TabGroup {
   current: Tab;
 }
 
-/** Tabs of one stored host form a group; ad-hoc tabs stand alone. */
-export const groupKey = (t: Tab): string => (t.hostId ? `h:${t.hostId}` : t.id);
+/** Tabs of one window of a stored host form a group; ad-hoc tabs stand alone. */
+export const groupKey = (t: Tab): string =>
+  t.hostId ? `h:${t.hostId}${(t.instance ?? 1) > 1 ? `#${t.instance}` : ''}` : t.id;
 
 class SessionsStore {
   tabs = $state.raw<Tab[]>([]);
@@ -147,9 +150,21 @@ class SessionsStore {
     if (this.phases[id] !== phase) this.phases[id] = phase;
   }
 
-  /** The tab of `kind` already open for `hostId`, if any. */
-  find(hostId: HostId, kind: TabKind): Tab | null {
-    return this.tabs.find((t) => t.hostId === hostId && t.kind === kind) ?? null;
+  /** The tab of `kind` already open in that window of `hostId`, if any. */
+  find(hostId: HostId, kind: TabKind, instance = 1): Tab | null {
+    return (
+      this.tabs.find(
+        (t) => t.hostId === hostId && t.kind === kind && (t.instance ?? 1) === instance
+      ) ?? null
+    );
+  }
+
+  /** The lowest window number of `hostId` not in use. */
+  nextInstance(hostId: HostId): number {
+    const used = new Set(this.tabs.filter((t) => t.hostId === hostId).map((t) => t.instance ?? 1));
+    let n = 1;
+    while (used.has(n)) n++;
+    return n;
   }
 
   get active(): Tab | null {

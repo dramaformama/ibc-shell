@@ -3,7 +3,7 @@
   import { ChevronRight } from '@lucide/svelte';
   import Flag from '$lib/flags/Flag.svelte';
   import * as m from '$lib/paraglide/messages.js';
-  import { connectFolder, connectHost, hostsInFolder } from '$lib/stores/actions';
+  import { connectAnother, connectFolder, connectHost, hostsInFolder } from '$lib/stores/actions';
   import { settings } from '$lib/stores/settings.svelte';
   import { tree } from '$lib/stores/tree.svelte';
   import { ui } from '$lib/stores/ui.svelte';
@@ -55,6 +55,7 @@
 {:else}
   {#if only?.kind === 'host'}
     {@render item(m.menu_connect(), () => connectHost(only.id))}
+    {@render item(m.menu_connect_another(), () => connectAnother(only.id))}
     {@render item(m.menu_sftp(), () => connectHost(only.id, 'sftp'))}
     {@render item(m.menu_status(), () => connectHost(only.id, 'status'))}
     <div class="menu-sep"></div>

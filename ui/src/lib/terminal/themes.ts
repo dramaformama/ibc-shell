@@ -13,7 +13,7 @@ export const TERMINAL_THEMES: Record<string, ITheme> = {
     '#3a66d6',
     '#8a4fc2',
     '#12809a',
-    '#c9ccd2',
+    '#5f6672',
     '#6b7280',
     '#e05252',
     '#1f9d5f',
@@ -21,7 +21,7 @@ export const TERMINAL_THEMES: Record<string, ITheme> = {
     '#5479e0',
     '#9d63d6',
     '#1a97b5',
-    '#f2f3f5'
+    '#3f4550'
   ]),
   'ibc-dark': theme('#0e0f12', '#e6e8eb', '#5b8cff', 'rgba(91,140,255,0.30)', [
     '#1d2026',

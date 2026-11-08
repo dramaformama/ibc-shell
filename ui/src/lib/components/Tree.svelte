@@ -142,7 +142,8 @@
 
   // ── context menu ─────────────────────────────────────────
   function onContextMenu(e: MouseEvent, row: Row | null) {
-    e.stopPropagation();
+    // The event must reach ContextMenu.Trigger, so the empty-area handler skips clicks on rows.
+    if (!row && e.target instanceof Element && e.target.closest('[role="treeitem"]')) return;
     if (row && !tree.selected.has(row.key)) tree.select([row.key], row.key);
     ctx = {
       row,

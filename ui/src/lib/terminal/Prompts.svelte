@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { ui } from '$lib/stores/ui.svelte';
   import * as m from '$lib/paraglide/messages.js';
   import type { Connection } from './connection.svelte';
   import PaneDialog from './PaneDialog.svelte';
@@ -56,6 +57,8 @@
     </dl>
     <p>{m.term_hkc_hint()}</p>
     {#snippet actions()}
+      <button class="btn" onclick={() => ui.openSettings('known-hosts')}>{m.term_hkc_open()}</button
+      >
       <button class="btn" onclick={onclosetab} data-autofocus>{m.term_close_tab()}</button>
     {/snippet}
   </PaneDialog>

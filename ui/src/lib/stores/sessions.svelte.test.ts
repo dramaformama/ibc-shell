@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { sessions, type Tab } from './sessions.svelte';
+import { groupKey, sessions, type Tab } from './sessions.svelte';
 
 const tab = (hostId: string, kind: Tab['kind'] = 'terminal'): Omit<Tab, 'id'> => ({
   kind,
@@ -66,5 +66,33 @@ describe('background connections', () => {
     sessions.hideGroup('h:b');
     expect(sessions.activeId).toBeNull();
     expect(sessions.groups).toHaveLength(2);
+  });
+});
+
+const base = { hostId: 'h1', label: 'a', flag: null, adhoc: null } as Omit<Tab, 'id' | 'kind'>;
+
+describe('several windows of one host', () => {
+  beforeEach(() => sessions.clear());
+
+  it('keeps each window in its own group', () => {
+    sessions.open({ ...base, kind: 'terminal', instance: 1 });
+    sessions.open({ ...base, kind: 'terminal', instance: 2 });
+    sessions.open({ ...base, kind: 'sftp', instance: 2 });
+    expect(sessions.groups.map((g) => g.tabs.length)).toEqual([1, 2]);
+    expect(sessions.find('h1', 'sftp', 1)).toBeNull();
+    expect(sessions.find('h1', 'sftp', 2)?.instance).toBe(2);
+  });
+
+  it('reuses the lowest free window number', () => {
+    const one = sessions.open({ ...base, kind: 'terminal', instance: 1 });
+    sessions.open({ ...base, kind: 'terminal', instance: 2 });
+    expect(sessions.nextInstance('h1')).toBe(3);
+    sessions.close(one.id);
+    expect(sessions.nextInstance('h1')).toBe(1);
+  });
+
+  it('leaves the first window key unchanged', () => {
+    const t = sessions.open({ ...base, kind: 'terminal' });
+    expect(groupKey(t)).toBe('h:h1');
   });
 });

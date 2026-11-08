@@ -1,7 +1,7 @@
 /**
  * Mock: SSH sessions with a fake echo terminal.
  * Hosts whose label contains "new key" ask TOFU, "changed key" fail with HostKeyChanged,
- * "2FA" ask keyboard-interactive. Shell commands: help, colors, clear, flood, exit.
+ * "2FA" ask keyboard-interactive. Shell commands: help, colors, whites, clear, flood, exit.
  */
 import type { Channel } from '@tauri-apps/api/core';
 import type { Commands, RawCommands, SessionEvent } from '../types';
@@ -187,8 +187,20 @@ function runLine(s: Session, line: string): void {
     event(s, { type: 'Disconnected', reason: 'Remote shell exited', can_reconnect: true });
     return;
   }
+  if (cmd === 'whites') {
+    // Colours that real tools print assuming a dark screen.
+    out(
+      s,
+      '\x1b[1;97mService  IP  HTTP\x1b[0m\r\n\x1b[37mwhite 37\x1b[0m \x1b[97mbright 97\x1b[0m '
+    );
+    out(
+      s,
+      '\x1b[2;97mdim 2;97\x1b[0m \x1b[38;5;255mxterm 255\x1b[0m \x1b[38;2;255;255;255mrgb white\x1b[0m\r\n'
+    );
+    return prompt(s);
+  }
   if (cmd === 'help')
-    out(s, 'commands: help, colors, clear, flood, exit — anything else is echoed\r\n');
+    out(s, 'commands: help, colors, whites, clear, flood, exit — anything else is echoed\r\n');
   else if (cmd === 'clear') out(s, '\x1b[2J\x1b[H');
   else if (cmd === 'colors') {
     for (let i = 0; i < 16; i++) out(s, `\x1b[48;5;${i}m  ${String(i).padStart(2)}  \x1b[0m`);

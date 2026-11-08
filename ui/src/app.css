@@ -11,12 +11,15 @@
   --hover: rgb(60 60 67 / 0.07);
   --border: rgb(60 60 67 / 0.14);
   --text: #1c1c1e;
-  --muted: #6e6e73;
+  --muted: #626267;
   --accent: #007aff;
+  /* Solid accent surfaces and the text on them. */
+  --accent-fill: var(--accent);
+  --on-accent: #fff;
   --accent-soft: color-mix(in oklab, var(--accent) 13%, transparent);
-  --ok: #28a745;
-  --warn: #c77700;
-  --danger: #e5352b;
+  --ok: #1e8539;
+  --warn: #a86400;
+  --danger: #d42a21;
   /* Chart / section colours (SwiftServer-style cards). */
   --c-cyan: #12a5c7;
   --c-yellow: #e0a100;
@@ -65,6 +68,7 @@
   --text: #f2f2f7;
   --muted: #98989f;
   --accent: #0a84ff;
+  --accent-fill: #0a6fdc;
   --ok: #32d74b;
   --warn: #ffb340;
   --danger: #ff5a52;
@@ -105,27 +109,39 @@
   --accent: #636366;
 }
 :root[data-theme='dark'][data-accent='purple'] {
+  --accent-fill: color-mix(in oklab, var(--accent) 80%, black);
   --accent: #bf5af2;
 }
 :root[data-theme='dark'][data-accent='pink'] {
+  --accent-fill: color-mix(in oklab, var(--accent) 80%, black);
   --accent: #ff375f;
 }
 :root[data-theme='dark'][data-accent='red'] {
+  --accent-fill: color-mix(in oklab, var(--accent) 80%, black);
   --accent: #ff453a;
 }
 :root[data-theme='dark'][data-accent='orange'] {
+  --accent-fill: var(--accent);
+  --on-accent: #1c1c1e;
   --accent: #ff9f0a;
 }
 :root[data-theme='dark'][data-accent='green'] {
+  --accent-fill: var(--accent);
+  --on-accent: #1c1c1e;
   --accent: #30d158;
 }
 :root[data-theme='dark'][data-accent='teal'] {
+  --accent-fill: var(--accent);
+  --on-accent: #1c1c1e;
   --accent: #40c8e0;
 }
 :root[data-theme='dark'][data-accent='indigo'] {
+  --accent-fill: color-mix(in oklab, var(--accent) 80%, black);
   --accent: #5e5ce6;
 }
 :root[data-theme='dark'][data-accent='graphite'] {
+  --accent-fill: var(--accent);
+  --on-accent: #1c1c1e;
   --accent: #98989d;
 }
 
@@ -238,6 +254,10 @@ textarea {
   cursor: default;
   user-select: none;
   outline: none;
+}
+.menu-item[data-disabled] {
+  opacity: 0.45;
+  cursor: default;
 }
 .menu-item[data-highlighted] {
   background: var(--accent-soft);
