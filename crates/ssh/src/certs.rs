@@ -1,6 +1,7 @@
 //! TLS certificate expiry on the server (ADR-012): reads certificate files that web servers and
 //! Let's Encrypt keep (Let's Encrypt `live`, nginx / Apache `ssl_certificate` paths, Caddy, the
-//! common `/root/cert` of VPN panels) with `openssl x509`. Only public certificate fields leave
+//! common `/root/cert` of VPN panels, acme.sh) with `openssl x509`, plus the certificate the
+//! server really presents on 443 for those names. Only public certificate fields leave
 //! the server; files are never printed and private keys are never opened as keys.
 
 use std::time::Duration;
@@ -40,21 +41,39 @@ pub struct CertReport {
 
 const SCRIPT: &str = r#"export LC_ALL=C
 command -v openssl >/dev/null 2>&1 || { echo '@@IBC:NOOPENSSL@@'; exit 0; }
-for d in /etc/letsencrypt/live /root/cert /var/lib/caddy/.local/share/caddy/certificates; do
+for d in /etc/letsencrypt/live /root/cert /root/.acme.sh /var/lib/caddy/.local/share/caddy/certificates; do
   [ -e "$d" ] && [ ! -r "$d" -o ! -x "$d" ] && echo '@@IBC:DENIED@@'
 done
-{
+FILES=$({
   ls -d /etc/letsencrypt/live/*/cert.pem 2>/dev/null
   grep -rhsE '^[[:space:]]*(ssl_certificate|SSLCertificateFile)[[:space:]]' /etc/nginx /etc/apache2 /etc/httpd 2>/dev/null | awk '{print $2}' | tr -d ';"'"'"
+  find /opt /srv /root /home -maxdepth 4 -name '*.conf' -size -200k 2>/dev/null | head -300 | xargs grep -hsE '^[[:space:]]*ssl_certificate[[:space:]]' 2>/dev/null | awk '{print $2}' | tr -d ';"'"'"
   ls -d /var/lib/caddy/.local/share/caddy/certificates/*/*/*.crt 2>/dev/null
   ls -d /root/cert/*.crt /root/cert/*/fullchain.pem /root/cert/*/*.crt /root/cert/*/cert.pem 2>/dev/null
-} | grep -v '\$' | sort -u | head -48 | while IFS= read -r f; do
+  ls -d /root/.acme.sh/*/fullchain.cer /root/.acme.sh/*/*.cer /home/*/.acme.sh/*/fullchain.cer 2>/dev/null
+  ls -d /etc/ssl/*/*.crt /etc/x-ui/*.crt /etc/ssl/private/*.pem 2>/dev/null
+} | grep -v '\$' | sort -u | head -64)
+show() {
+  openssl x509 -noout -enddate -subject -issuer 2>/dev/null
+}
+printf '%s\n' "$FILES" | while IFS= read -r f; do
   [ -f "$f" ] || continue
   if [ ! -r "$f" ]; then echo '@@IBC:DENIED@@'; continue; fi
   echo '@@IBC:CERT@@'
   echo "path=$f"
   openssl x509 -in "$f" -noout -enddate -subject -issuer 2>/dev/null
   openssl x509 -in "$f" -noout -text 2>/dev/null | grep -o 'DNS:[^,]*' | head -20
+done
+# What the server really presents on 443 right now (Docker, a panel, any other way of issuing).
+printf '%s\n' "$FILES" | while IFS= read -r f; do
+  [ -r "$f" ] && openssl x509 -in "$f" -noout -text 2>/dev/null | grep -o 'DNS:[^,]*'
+done | sed 's/^DNS://' | grep -E '^[A-Za-z0-9][A-Za-z0-9.-]*$' | sort -u | head -8 | while IFS= read -r n; do
+  c=$(echo | { command -v timeout >/dev/null 2>&1 && timeout 5 openssl s_client -connect 127.0.0.1:443 -servername "$n" || openssl s_client -connect 127.0.0.1:443 -servername "$n"; } 2>/dev/null | openssl x509 2>/dev/null)
+  [ -n "$c" ] || continue
+  echo '@@IBC:CERT@@'
+  echo "path=live:$n:443"
+  printf '%s\n' "$c" | show
+  printf '%s\n' "$c" | openssl x509 -noout -text 2>/dev/null | grep -o 'DNS:[^,]*' | head -20
 done
 echo '@@IBC:END@@'
 "#;
@@ -162,6 +181,13 @@ pub(crate) fn parse_certs(text: &str) -> CertReport {
         }
     }
     rep.certs.sort_by_key(|c| c.not_after);
+    // A certificate that a later-expiring one covers completely (same names, renewed another
+    // way) is an old copy: the renewed one is what runs.
+    let all = rep.certs.clone();
+    rep.certs.retain(|c| {
+        !all.iter()
+            .any(|d| d.not_after > c.not_after && c.names.iter().all(|n| d.names.contains(n)))
+    });
     rep
 }
 
@@ -199,5 +225,19 @@ mod tests {
         assert_eq!(r.certs[1].names, vec!["a.example", "www.a.example"]);
         assert_eq!(r.certs[1].issuer.as_deref(), Some("Let's Encrypt"));
         assert!(parse_certs("@@IBC:NOOPENSSL@@\n").no_openssl);
+    }
+
+    #[test]
+    fn a_renewed_certificate_hides_the_old_copy() {
+        let text = "@@IBC:CERT@@\npath=/etc/letsencrypt/live/a/cert.pem\n\
+            notAfter=Jul 25 10:00:00 2026 GMT\nsubject=CN = a.example\nDNS:a.example\n\
+            @@IBC:CERT@@\npath=live:a.example:443\n\
+            notAfter=Feb  1 10:00:00 2027 GMT\nsubject=CN = a.example\nDNS:a.example\nDNS:www.a.example\n\
+            @@IBC:CERT@@\npath=/root/cert/b.pem\n\
+            notAfter=Jul 25 10:00:00 2026 GMT\nsubject=CN = b.example\nDNS:b.example\n\
+            @@IBC:END@@\n";
+        let r = parse_certs(text);
+        let paths: Vec<_> = r.certs.iter().map(|c| c.path.as_str()).collect();
+        assert_eq!(paths, vec!["/root/cert/b.pem", "live:a.example:443"]);
     }
 }

@@ -93,7 +93,9 @@
   }
   .row {
     display: grid;
-    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) auto 76px;
+    /* Fixed trailing columns: every row is its own grid, so an `auto` column would shift the
+       server name from row to row with the width of the date. */
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) 140px 76px;
     align-items: center;
     gap: 16px;
     min-height: 50px;
@@ -113,6 +115,9 @@
     font-weight: 600;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .until {
+    text-align: right;
   }
   .sub,
   .until {
