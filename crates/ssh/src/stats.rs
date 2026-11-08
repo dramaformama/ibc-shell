@@ -169,7 +169,7 @@ elif [ -d "/sys/block/$b" ]; then d=$b; else d=; fi
 echo '@@IBC:VIRT@@'; grep -qw hypervisor /proc/cpuinfo 2>/dev/null && echo 1
 echo '@@IBC:OS@@'; sed -n 's/^PRETTY_NAME=//p' /etc/os-release 2>/dev/null | head -1
 echo '@@IBC:PS@@'; ps -eo pid,user:16,pcpu,rss,comm --sort=-pcpu 2>/dev/null | head -9
-echo '@@IBC:LISTEN@@'; ss -Hltunp 2>/dev/null | head -64
+echo '@@IBC:LISTEN@@'; { ss -Hltnp; ss -Hlunp; } 2>/dev/null | head -400
 echo '@@IBC:CONN@@'; ss -Htni state established 2>/dev/null | head -3000
 fi
 echo '@@IBC:END@@'

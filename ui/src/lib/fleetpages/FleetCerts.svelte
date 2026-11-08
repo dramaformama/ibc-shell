@@ -62,12 +62,12 @@
     <section class="card list">
       {#each rows as r (r.s.key + r.path)}
         {@const days = daysLeft(r.not_after)}
-        <div class="row" data-tone={certTone(days)} title={r.path}>
+        <div class="row" data-tone={certTone(days)} title={[...r.names, r.path].join('\n')}>
           <div class="who">
             <span class="name">{r.names[0] ?? r.path}</span>
             <span class="sub"
-              >{#if r.names.length > 1}+{r.names.length - 1}<span class="sep">·</span
-                >{/if}{r.issuer ?? ''}</span
+              >{#if r.names.length > 1}{r.names.slice(1, 3).join(', ')}{#if r.names.length > 3}
+                  +{r.names.length - 3}{/if}<span class="sep">·</span>{/if}{r.issuer ?? ''}</span
             >
           </div>
           <span class="srv"><Flag code={r.s.group.flag} size={15} />{r.s.group.label}</span>

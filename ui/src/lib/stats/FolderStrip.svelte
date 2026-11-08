@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ChevronDown, Folder, Pencil, Play } from '@lucide/svelte';
+  import { ChevronDown, Folder, Pencil, Play, Trash2 } from '@lucide/svelte';
   import type { Server } from '$lib/fleet/model';
   import Flag from '$lib/flags/Flag.svelte';
   import * as m from '$lib/paraglide/messages.js';
@@ -7,6 +7,7 @@
   import { tree } from '$lib/stores/tree.svelte';
   import { ui } from '$lib/stores/ui.svelte';
   import { getLocale } from '$lib/paraglide/runtime.js';
+  import { fkey } from '$lib/util/tree-model';
   import { pluralForm } from './format';
 
   /**
@@ -117,6 +118,12 @@
               title={m.dash_folder_edit()}
               aria-label={m.dash_folder_edit()}
               onclick={() => ui.openFolderEditor(x.f.id)}><Pencil size={13} /></button
+            >
+            <button
+              class="icon-btn danger"
+              title={m.dash_folder_delete()}
+              aria-label={m.dash_folder_delete()}
+              onclick={() => (ui.deleteKeys = [fkey(x.f.id)])}><Trash2 size={13} /></button
             >
           </span>
         </div>
@@ -243,6 +250,10 @@
   .acts:focus-within,
   .folder.on .acts {
     opacity: 1;
+  }
+  .acts .danger:hover {
+    background: color-mix(in oklab, var(--danger) 12%, transparent);
+    color: var(--danger);
   }
   @media (hover: none) {
     .acts {

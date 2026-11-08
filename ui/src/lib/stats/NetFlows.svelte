@@ -89,7 +89,7 @@
           </li>
         {/each}
       </ul>
-      {#if d.listen.some((l) => l.proto === 'udp')}<p class="note">{m.net_udp_note()}</p>{/if}
+      <p class="note">{m.net_udp_note()}</p>
     {:else if !rows.length}
       <p class="note">{m.net_none()}</p>
     {:else}
@@ -130,11 +130,20 @@
     font-size: 12px;
     font-weight: 500;
   }
+  /* Three tabs with counters must fit a narrow card: they shrink and clip, never overflow. */
+  .seg {
+    width: 100%;
+  }
   .seg button {
-    flex: 1;
+    flex: 1 1 0;
+    min-width: 0;
+    gap: 5px;
+    padding-inline: 8px;
     justify-content: center;
+    white-space: nowrap;
   }
   .seg span {
+    flex: none;
     color: var(--muted);
     font-size: 11px;
     font-weight: 500;
@@ -151,9 +160,9 @@
   .port-row {
     position: relative;
     display: grid;
-    grid-template-columns: 76px minmax(0, 1fr) auto;
+    grid-template-columns: 60px minmax(0, 1fr) auto;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     min-height: 32px;
     padding: 4px 8px;
     border-radius: var(--r-inner);
@@ -203,6 +212,15 @@
   }
   .wide .flow {
     grid-template-columns: 110px minmax(0, 1fr) auto;
+    gap: 10px;
+  }
+  /* The address is the part that must stay whole: shrink the rest first. */
+  .flows-card:not(.wide) .peer {
+    font-size: 11.5px;
+    gap: 3px;
+  }
+  .flows-card:not(.wide) .rate {
+    font-size: 10.5px;
   }
   .wide .rate {
     grid-auto-flow: column;

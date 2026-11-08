@@ -14,6 +14,7 @@ import {
   type SessionId
 } from '$lib/api';
 import type { Tab } from '$lib/stores/sessions.svelte';
+import { SvelteSet } from 'svelte/reactivity';
 import { ConnectLog } from './connectlog.svelte';
 import { concat } from './text';
 
@@ -37,6 +38,12 @@ function makeChannel<T>(onmessage: (m: T) => void): Channel<T> {
 }
 
 const ACK_FLUSH = 64 * 1024;
+
+/**
+ * Every open connection. The unknown-host-key question is answered in one app-wide dialog, so
+ * a server opened in the background ("connect all" on a folder) asks without being opened first.
+ */
+export const openConnections = new SvelteSet<Connection>();
 
 export class Connection {
   phase = $state<Phase>('connecting');
@@ -65,6 +72,12 @@ export class Connection {
   constructor(tab: Tab, sink: (data: Uint8Array, done: () => void) => void) {
     this.#tab = tab;
     this.#sink = sink;
+    openConnections.add(this);
+  }
+
+  /** Name of the server this connection belongs to, for dialogs outside its tab. */
+  get label(): string {
+    return this.#tab.label;
   }
 
   get id(): SessionId | null {
@@ -260,6 +273,7 @@ export class Connection {
   }
 
   close(): void {
+    openConnections.delete(this);
     this.#closed = true;
     this.#generation++;
     this.log.dispose();

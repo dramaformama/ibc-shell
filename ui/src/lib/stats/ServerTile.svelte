@@ -1,5 +1,12 @@
 <script lang="ts">
-  import { FolderOpen, Gauge, Pencil, Server as ServerIcon, SquareTerminal } from '@lucide/svelte';
+  import {
+    FolderOpen,
+    Gauge,
+    Pencil,
+    Server as ServerIcon,
+    SquareTerminal,
+    Trash2
+  } from '@lucide/svelte';
   import { getLocale } from '$lib/paraglide/runtime.js';
   import { lastSeen } from '$lib/stores/lastseen.svelte';
   import { ago, ms, pct } from './format';
@@ -11,6 +18,7 @@
   import { sessions } from '$lib/stores/sessions.svelte';
   import { settings } from '$lib/stores/settings.svelte';
   import { ui } from '$lib/stores/ui.svelte';
+  import { hkey } from '$lib/util/tree-model';
   import { specText } from './spec-text';
   import { serverStatus } from './status';
 
@@ -92,6 +100,12 @@
         onclick={() => ui.openHostEditor(server.host!.id)}
         aria-label={m.dash_edit()}
         title={m.dash_edit()}><Pencil size={13} /></button
+      >
+      <button
+        class="mini danger"
+        onclick={() => (ui.deleteKeys = [hkey(server.host!.id)])}
+        aria-label={m.dash_delete()}
+        title={m.dash_delete()}><Trash2 size={13} /></button
       >
     {/if}
   </span>
@@ -281,5 +295,9 @@
   .mini:hover {
     background: var(--hover);
     color: var(--accent);
+  }
+  .mini.danger:hover {
+    background: color-mix(in oklab, var(--danger) 12%, transparent);
+    color: var(--danger);
   }
 </style>

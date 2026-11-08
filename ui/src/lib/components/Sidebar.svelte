@@ -19,6 +19,8 @@
   import { api } from '$lib/api';
   import { settings } from '$lib/stores/settings.svelte';
   import * as m from '$lib/paraglide/messages.js';
+  import { untrack } from 'svelte';
+  import { hkey } from '$lib/util/tree-model';
   import { sessions } from '$lib/stores/sessions.svelte';
   import { tree } from '$lib/stores/tree.svelte';
   import { ui } from '$lib/stores/ui.svelte';
@@ -29,14 +31,36 @@
 
   let { mac = false }: { mac?: boolean } = $props();
 
+  // The counters must not wait for the Docker / Domains pages to be opened once.
+  const liveSessions = $derived(connectedServers().map((x) => x.sid));
+
+  // The tree follows the open tab: switching tabs selects that server and opens its folders.
+  const activeHost = $derived(sessions.active?.hostId ?? null);
+  $effect(() => {
+    const id = tree.loaded ? activeHost : null;
+    const host = id ? untrack(() => tree.host(id)) : null;
+    if (!host) return;
+    untrack(() => {
+      const key = hkey(host.id);
+      if (tree.selected.size !== 1 || !tree.selected.has(key)) tree.select([key], key);
+      else tree.cursor = key;
+      for (let p = host.folder_id; p;) {
+        const f = tree.folder(p);
+        if (!f) break;
+        if (!f.expanded) void tree.setExpanded(f.id, true);
+        p = f.parent_id;
+      }
+    });
+  });
+  // Only live sessions count: reports of closed or reconnected sessions stay in the store and
+  // would double the numbers the pages themselves show.
   const running = $derived(
-    Object.values(services.docker).reduce(
-      (n, r) => n + r.containers.filter((c) => c.state === 'running').length,
+    liveSessions.reduce(
+      (n, sid) =>
+        n + (services.docker[sid]?.containers.filter((c) => c.state === 'running').length ?? 0),
       0
     )
   );
-  // The counters must not wait for the Docker / Domains pages to be opened once.
-  const liveSessions = $derived(connectedServers().map((x) => x.sid));
   $effect(() => {
     const stops = liveSessions.flatMap((sid) => [
       services.watch('docker', sid),
@@ -44,12 +68,10 @@
     ]);
     return () => stops.forEach((stop) => stop());
   });
-  const domains = $derived(Object.values(services.certs).reduce((n, r) => n + r.certs.length, 0));
+  const liveCerts = $derived(liveSessions.flatMap((sid) => services.certs[sid]?.certs ?? []));
+  const domains = $derived(liveCerts.length);
   const expiring = $derived(
-    Object.values(services.certs).reduce(
-      (n, r) => n + r.certs.filter((c) => certTone(daysLeft(c.not_after)) !== 'ok').length,
-      0
-    )
+    liveCerts.filter((c) => certTone(daysLeft(c.not_after)) !== 'ok').length
   );
   const pages = $derived([
     {

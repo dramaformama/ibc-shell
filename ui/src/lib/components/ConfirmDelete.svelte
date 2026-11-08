@@ -20,7 +20,11 @@
 
   const title = $derived(
     keys.length === 1
-      ? (tree.rows.find((r) => r.key === keys[0])?.label ?? '')
+      ? (tree.rows.find((r) => r.key === keys[0])?.label ??
+          (refs[0]?.kind === 'host'
+            ? tree.host(refs[0].id)?.label
+            : tree.folder(refs[0]?.id ?? '')?.name) ??
+          '')
       : m.delete_n_items({ count: keys.length })
   );
 

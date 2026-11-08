@@ -11,6 +11,12 @@ use crate::stats_parse::sanitize;
 const MAX_LISTEN: usize = 32;
 /// At most this many peer rows are reported (busiest first).
 const MAX_PEERS: usize = 40;
+/// First port of Linux's default ephemeral range.
+const EPHEMERAL_FROM: u16 = 32768;
+/// A program with more UDP sockets than this in the ephemeral range is a client with one socket
+/// per exchange (a proxy, a resolver), not a service somebody connects to. A lone high port
+/// such as 51820 (`WireGuard`) stays.
+const MAX_HIGH_UDP: usize = 3;
 
 /// A socket accepting connections (`ss -ltun`).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
@@ -81,6 +87,18 @@ pub(crate) fn parse_listen(s: &str) -> Vec<Listener> {
                 })
         })
         .collect();
+    let mut high: HashMap<Option<String>, usize> = HashMap::new();
+    for l in out
+        .iter()
+        .filter(|l| l.proto == "udp" && l.port >= EPHEMERAL_FROM)
+    {
+        *high.entry(l.process.clone()).or_default() += 1;
+    }
+    out.retain(|l| {
+        !(l.proto == "udp"
+            && l.port >= EPHEMERAL_FROM
+            && high.get(&l.process).is_some_and(|n| *n > MAX_HIGH_UDP))
+    });
     out.sort_by(|a, b| (a.port, &a.proto).cmp(&(b.port, &b.proto)));
     out.truncate(MAX_LISTEN);
     out
@@ -159,6 +177,7 @@ pub(crate) fn parse_flows(s: &str, listen: &[Listener]) -> (Vec<PeerFlow>, u32) 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fmt::Write;
 
     const LISTEN: &str = "tcp   LISTEN 0 4096 0.0.0.0:22 0.0.0.0:* users:((\"sshd\",pid=1,fd=3))
 tcp   LISTEN 0 4096    [::]:22    [::]:* users:((\"sshd\",pid=1,fd=4))
@@ -178,6 +197,24 @@ tcp   LISTEN 0 4096 127.0.0.53%lo:53 0.0.0.0:* users:((\"systemd-resolve\",pid=4
 0 0 127.0.0.1:5000 127.0.0.1:41234
 \t cubic bytes_acked:99999 bytes_received:99999
 ";
+
+    #[test]
+    fn client_udp_sockets_in_the_ephemeral_range_are_not_listed() {
+        let mut text = String::from(LISTEN);
+        for p in 40000..40010 {
+            let _ = writeln!(
+                text,
+                "udp   UNCONN 0 0 0.0.0.0:{p} 0.0.0.0:* users:((\"rw-core\",pid=7,fd={}))",
+                p - 39000
+            );
+        }
+        let l = parse_listen(&text);
+        assert!(
+            l.iter().all(|x| x.process.as_deref() != Some("rw-core")),
+            "{l:?}"
+        );
+        assert!(l.iter().any(|x| x.proto == "udp" && x.port == 51820));
+    }
 
     #[test]
     fn listeners_keep_ports_and_programs() {

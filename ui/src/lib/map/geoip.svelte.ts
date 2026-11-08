@@ -1,6 +1,6 @@
 /**
  * Opt-in server location by IP (ADR-011): host name → IP on the backend (`hostLookupIp`), then
- * city and coordinates from ipapi.is. Each answer is kept for good (settings `map.geo`) and is
+ * city and coordinates from ipapi.is (ipinfo.io when that has no answer). Each answer is kept for good (settings `map.geo`) and is
  * looked up again only when the host's address is edited; deleting the host drops it. Only
  * public server IPs are sent; nothing happens until the user turns it on.
  */
@@ -10,6 +10,7 @@ import { geoFetch } from '$lib/api/mock/geo';
 const ON_KEY = 'map.geoip';
 const CACHE_KEY = 'map.geo';
 const ENDPOINT = 'https://api.ipapi.is/';
+const FALLBACK = 'https://ipinfo.io/';
 const PARALLEL = 4;
 
 export interface GeoHit {
@@ -59,15 +60,36 @@ export function isPublicIp(ip: string): boolean {
   );
 }
 
-/** Reads an ipapi.is answer; null when it has no usable coordinates. */
+const CC = /^[a-z]{2}$/;
+
+/**
+ * Reads an ipapi.is answer, either the documented `location` block or the flat form
+ * (`lat`/`lon`/`city`) the free tier sometimes returns; null without usable coordinates.
+ */
 export function parseAnswer(addr: string, ip: string, body: unknown, now: number): GeoHit | null {
-  const loc = (body as { location?: Record<string, unknown> } | null)?.location;
-  if (!loc) return null;
-  const lat = Number(loc.latitude);
-  const lon = Number(loc.longitude);
-  const cc = typeof loc.country_code === 'string' ? loc.country_code.toLowerCase() : '';
-  if (!Number.isFinite(lat) || !Number.isFinite(lon) || !/^[a-z]{2}$/.test(cc)) return null;
+  const b = body as Record<string, unknown> | null;
+  if (!b || typeof b !== 'object') return null;
+  const loc = (b.location && typeof b.location === 'object' ? b.location : b) as Record<
+    string,
+    unknown
+  >;
+  const lat = Number(loc.latitude ?? loc.lat);
+  const lon = Number(loc.longitude ?? loc.lon);
+  const code = loc.country_code ?? loc.countryCode ?? loc.country;
+  const cc = typeof code === 'string' ? code.toLowerCase() : '';
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || !CC.test(cc)) return null;
   const city = typeof loc.city === 'string' ? loc.city.slice(0, 64) : '';
+  return { addr, ip, cc, city, lat, lon, at: now };
+}
+
+/** Reads an ipinfo.io answer (`loc` is `"lat,lon"`); the second source when ipapi.is fails. */
+export function parseIpinfo(addr: string, ip: string, body: unknown, now: number): GeoHit | null {
+  const b = body as { loc?: unknown; country?: unknown; city?: unknown } | null;
+  if (!b || typeof b.loc !== 'string') return null;
+  const [lat, lon] = b.loc.split(',').map(Number) as [number, number];
+  const cc = typeof b.country === 'string' ? b.country.toLowerCase() : '';
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || !CC.test(cc)) return null;
+  const city = typeof b.city === 'string' ? b.city.slice(0, 64) : '';
   return { addr, ip, cc, city, lat, lon, at: now };
 }
 
@@ -140,13 +162,7 @@ class GeoStore {
       const r = await api.hostLookupIp(id);
       const ip = r.status === 'ok' ? r.data.find(isPublicIp) : undefined;
       if (!ip) return;
-      const res = await fetcher(`${ENDPOINT}?q=${encodeURIComponent(ip)}`, {
-        credentials: 'omit',
-        referrerPolicy: 'no-referrer',
-        signal: AbortSignal.timeout(8000)
-      });
-      if (!res.ok) return;
-      const hit = parseAnswer(hostname, ip, await res.json(), Date.now());
+      const hit = await this.#ask(hostname, ip);
       if (!hit) return;
       this.hits = { ...this.hits, [id]: hit };
       this.#save();
@@ -155,6 +171,23 @@ class GeoStore {
     } finally {
       this.busy--;
     }
+  }
+
+  /** ipapi.is first, ipinfo.io when it has no usable answer (limit, outage, odd format). */
+  async #ask(addr: string, ip: string): Promise<GeoHit | null> {
+    const get = async (url: string): Promise<unknown> => {
+      const res = await fetcher(url, {
+        credentials: 'omit',
+        referrerPolicy: 'no-referrer',
+        signal: AbortSignal.timeout(8000)
+      });
+      return res.ok ? res.json() : null;
+    };
+    const first = await get(`${ENDPOINT}?q=${encodeURIComponent(ip)}`).catch(() => null);
+    const hit = parseAnswer(addr, ip, first, Date.now());
+    if (hit) return hit;
+    const second = await get(`${FALLBACK}${encodeURIComponent(ip)}/json`).catch(() => null);
+    return parseIpinfo(addr, ip, second, Date.now());
   }
 
   #save(): void {

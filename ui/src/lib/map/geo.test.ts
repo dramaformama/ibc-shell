@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { fitView, project, projectLonLat, spread, WORLD } from './geo';
-import { isPublicIp, parseAnswer } from './geoip.svelte';
+import { isPublicIp, parseAnswer, parseIpinfo } from './geoip.svelte';
 import { GRID } from './world';
 
 describe('map geometry', () => {
@@ -90,5 +90,16 @@ describe('ip location', () => {
         5
       )
     ).toBeNull();
+  });
+
+  it('reads the flat ipapi.is form and an ipinfo.io answer', () => {
+    expect(
+      parseAnswer('a', '1.1.1.1', { city: 'Moscow', lat: 55.75, lon: 37.6, country_code: 'RU' }, 1)
+    ).toMatchObject({ cc: 'ru', city: 'Moscow', lat: 55.75, lon: 37.6 });
+    expect(
+      parseIpinfo('a', '1.1.1.1', { loc: '55.0415,82.9346', country: 'RU', city: 'Novosibirsk' }, 1)
+    ).toMatchObject({ cc: 'ru', city: 'Novosibirsk', lat: 55.0415, lon: 82.9346 });
+    expect(parseIpinfo('a', '1.1.1.1', { loc: 'x,y', country: 'RU' }, 1)).toBeNull();
+    expect(parseIpinfo('a', '1.1.1.1', null, 1)).toBeNull();
   });
 });

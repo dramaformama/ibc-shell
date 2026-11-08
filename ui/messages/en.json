@@ -411,14 +411,14 @@
   "net_port": "Port",
   "net_speed": "Speed",
   "net_more": "{count} more",
-  "net_udp_note": "UDP (e.g. WireGuard) is not tracked per address by the kernel; only the open port is shown.",
+  "net_udp_note": "Ports the server listens on. Whether a firewall blocks them is not visible from here. The kernel does not count UDP per address, so only the port is shown.",
   "stat_live_short": "Live",
   "stat_last": "Last seen · {when}",
   "stat_last_hint": "Not connected. Showing the last sample from {time}.",
   "stat_watch": "Connect at startup",
   "stat_watch_hint": "The server connects in the background after unlock so its metrics are there right away",
   "map_geo": "Location by IP",
-  "map_geo_hint": "Look up each server's city from its IP address via ipapi.is. Only server IP addresses are sent; results stay on this device.",
+  "map_geo_hint": "Look up each server's city from its IP address via ipapi.is (ipinfo.io if that has no answer). Only server IP addresses are sent; results stay on this device.",
   "map_geo_on": "Turn on",
   "map_geo_busy": "Locating…",
   "tray_open": "Open iBC Shell",
@@ -682,5 +682,8 @@
   "start_key_added": "Key added",
   "start_backup_title": "Make a backup",
   "start_backup_hint": "An encrypted file with all servers and keys: handy if you ever have to reinstall your system.",
-  "start_backup_action": "Open settings"
+  "start_backup_action": "Open settings",
+  "dash_delete": "Delete server",
+  "dash_folder_delete": "Delete folder",
+  "term_hk_more": "{count} more waiting"
 }

@@ -6,6 +6,7 @@
     FolderOpen,
     Gauge,
     Pencil,
+    Trash2,
     Server as ServerIcon,
     SquareTerminal
   } from '@lucide/svelte';
@@ -18,6 +19,7 @@
   import { settings } from '$lib/stores/settings.svelte';
   import { stats } from '$lib/stores/stats.svelte';
   import { ui } from '$lib/stores/ui.svelte';
+  import { hkey } from '$lib/util/tree-model';
   import { rate, uptime } from './format';
   import Ring from './Ring.svelte';
   import SpecLine from './SpecLine.svelte';
@@ -78,6 +80,12 @@
         onclick={() => ui.openHostEditor(server.host!.id)}
         aria-label={m.dash_edit()}
         title={m.dash_edit()}><Pencil size={14} /></button
+      >
+      <button
+        class="icon-btn del"
+        onclick={() => (ui.deleteKeys = [hkey(server.host!.id)])}
+        aria-label={m.dash_delete()}
+        title={m.dash_delete()}><Trash2 size={14} /></button
       >{/if}
   </header>
 
@@ -219,9 +227,14 @@
   .live.stale {
     color: var(--warn);
   }
-  .edit {
+  .edit,
+  .del {
     width: 28px;
     height: 28px;
+  }
+  .del:hover {
+    background: color-mix(in oklab, var(--danger) 12%, transparent);
+    color: var(--danger);
   }
   .rings {
     display: grid;

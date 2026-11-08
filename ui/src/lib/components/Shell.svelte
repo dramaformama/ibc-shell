@@ -13,6 +13,7 @@
   import HotkeysDialog from '$lib/help/HotkeysDialog.svelte';
   import CommandPalette from './CommandPalette.svelte';
   import ConfirmDelete from './ConfirmDelete.svelte';
+  import HostKeyDialog from '$lib/terminal/HostKeyDialog.svelte';
   import FolderEditor from './FolderEditor.svelte';
   import HostEditor from './HostEditor.svelte';
   import SettingsDialog from './SettingsDialog.svelte';
@@ -139,6 +140,7 @@
 <CommandPalette />
 <SettingsDialog />
 <ConfirmDelete />
+<HostKeyDialog />
 <CloseServerDialog />
 <HotkeysDialog />
 <Toasts />

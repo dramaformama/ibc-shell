@@ -59,26 +59,6 @@
       <button class="btn" onclick={onclosetab} data-autofocus>{m.term_close_tab()}</button>
     {/snippet}
   </PaneDialog>
-{:else if prompt?.kind === 'hostkey'}
-  <PaneDialog title={m.term_hk_title()} onescape={() => void conn.rejectHostKey()}>
-    <p>{m.term_hk_body({ host: prompt.info.host, port: prompt.info.port })}</p>
-    <dl class="fp">
-      <dt>{m.term_hk_type()}</dt>
-      <dd>{prompt.info.key_type}</dd>
-      <dt>{m.term_hk_fp()}</dt>
-      <dd>{prompt.info.fingerprint}</dd>
-    </dl>
-    <pre class="art" aria-label={m.term_hk_art()}>{prompt.info.randomart}</pre>
-    {#snippet actions()}
-      <button class="btn btn-ghost" onclick={() => void conn.rejectHostKey()}
-        >{m.action_cancel()}</button
-      >
-      <button class="btn" onclick={() => void conn.acceptHostKey(false)}>{m.term_hk_once()}</button>
-      <button class="btn btn-primary" data-autofocus onclick={() => void conn.acceptHostKey(true)}
-        >{m.term_hk_save()}</button
-      >
-    {/snippet}
-  </PaneDialog>
 {:else if prompt?.kind === 'kbd'}
   {#key prompt.pendingId}
     <PaneDialog title={prompt.name || m.term_kbd_title()} onescape={cancelKbd}>
@@ -187,7 +167,6 @@
   .fp .bad {
     color: var(--danger);
   }
-  .art,
   .url {
     margin: 0;
     padding: 10px 12px;
@@ -196,10 +175,6 @@
     font-family: var(--font-mono);
     font-size: 12px;
     color: var(--text);
-  }
-  .art {
-    justify-self: start;
-    line-height: 1.25;
   }
   .url {
     overflow-wrap: anywhere;

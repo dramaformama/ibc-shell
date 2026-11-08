@@ -35,7 +35,7 @@
 - **Windows.** В окне SmartScreen нажмите «Подробнее», затем «Выполнить в любом случае».
 - **Linux.** `chmod +x` на AppImage и запуск, либо `sudo apt install ./файл.deb`.
 
-Выпуск делается тегом: `git tag v0.1.1 && git push origin v0.1.1`. [Workflow](.github/workflows/release.yml) собирает установщики для всех систем и сразу публикует релиз: по тегу появляются ссылки выше.
+Выпуск делается тегом: `git tag v0.1.2 && git push origin v0.1.2`. [Workflow](.github/workflows/release.yml) собирает установщики для всех систем и сразу публикует релиз: по тегу появляются ссылки выше.
 
 ## Зачем
 
