@@ -76,7 +76,8 @@
       </Dialog.Description>
       <div class="actions">
         <Dialog.Close class="btn btn-ghost">{m.action_cancel()}</Dialog.Close>
-        <button class="btn btn-primary danger-fill" onclick={remove}>{m.action_delete()}</button>
+        <button class="btn btn-primary btn-danger-fill" onclick={remove}>{m.action_delete()}</button
+        >
       </div>
     </Dialog.Content>
   </Dialog.Portal>
@@ -122,12 +123,5 @@
     justify-content: flex-end;
     gap: 8px;
     margin-top: 4px;
-  }
-  .danger-fill {
-    background: var(--danger);
-    border-color: var(--danger);
-  }
-  .danger-fill:hover:not(:disabled) {
-    background: color-mix(in oklab, var(--danger) 88%, black);
   }
 </style>

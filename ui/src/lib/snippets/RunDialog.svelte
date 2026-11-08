@@ -155,7 +155,7 @@
     {/if}
   </form>
   {#snippet footer()}
-    <button class="btn" type="button" onclick={close}>{m.action_cancel()}</button>
+    <button class="btn btn-ghost" type="button" onclick={close}>{m.action_cancel()}</button>
     <button class="btn btn-primary" type="submit" form="run-form" disabled={!count}
       ><Play size={14} />{many ? m.snip_run_on({ count }) : m.snip_run()}</button
     >

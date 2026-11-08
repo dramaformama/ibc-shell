@@ -27,7 +27,9 @@
       {/if}
       <div class="sf-actions">
         <button class="btn btn-ghost" onclick={cancel}>{m.action_cancel()}</button>
-        <button class="btn btn-primary sf-danger" onclick={confirm}>{m.action_delete()}</button>
+        <button class="btn btn-primary btn-danger-fill" onclick={confirm}
+          >{m.action_delete()}</button
+        >
       </div>
     </Dialog.Content>
   </Dialog.Portal>

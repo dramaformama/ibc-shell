@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Braces } from '@lucide/svelte';
+  import { Braces, Trash2 } from '@lucide/svelte';
   import Sheet from '$lib/components/Sheet.svelte';
   import * as m from '$lib/paraglide/messages.js';
   import { parseVars } from './model';
@@ -90,12 +90,11 @@
   </form>
   {#snippet footer()}
     {#if editing}
-      <button class="btn btn-ghost btn-danger" type="button" onclick={remove}
-        >{m.action_delete()}</button
+      <button class="btn btn-ghost btn-danger btn-delete" type="button" onclick={remove}
+        ><Trash2 size={14} />{m.action_delete()}</button
       >
     {/if}
-    <span class="sp"></span>
-    <button class="btn" type="button" onclick={close}>{m.action_cancel()}</button>
+    <button class="btn btn-ghost" type="button" onclick={close}>{m.action_cancel()}</button>
     <button class="btn btn-primary" type="submit" form="snippet-form" disabled={!valid || busy}
       >{m.action_save()}</button
     >
@@ -125,8 +124,5 @@
     border-radius: 999px;
     background: var(--accent-soft);
     color: var(--accent);
-  }
-  .sp {
-    flex: 1;
   }
 </style>

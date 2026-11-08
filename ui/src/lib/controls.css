@@ -46,6 +46,17 @@
 .btn-danger {
   color: var(--danger);
 }
+/* The red "Delete" of a confirmation: pair with .btn-primary. */
+.btn-danger-fill,
+.btn-primary.btn-danger-fill {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+  box-shadow: var(--lift);
+}
+.btn-primary.btn-danger-fill:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--danger) 88%, black);
+}
 .btn-ghost {
   border-color: transparent;
   background: transparent;

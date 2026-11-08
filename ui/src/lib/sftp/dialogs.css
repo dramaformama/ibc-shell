@@ -42,10 +42,6 @@
 .sf-choices {
   flex-wrap: wrap;
 }
-.sf-danger.btn-primary {
-  background: var(--danger);
-  border-color: var(--danger);
-}
 .sf-conflict {
   width: min(460px, calc(100vw - 32px));
 }

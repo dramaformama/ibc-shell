@@ -272,7 +272,7 @@
     {#if host}
       <button
         type="button"
-        class="btn btn-danger btn-delete"
+        class="btn btn-ghost btn-danger btn-delete"
         disabled={busy}
         onclick={() => ui.deleteFromEditor(hkey(host.id))}
         ><Trash2 size={14} />{m.action_delete()}</button
