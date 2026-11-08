@@ -91,7 +91,7 @@ pub enum ApiError {
 | `vault_change_password` | `old_password: string, new_password: string` | `null` |
 | `vault_remove_password` | `password: string` (current master password; ADR-014) | `null` (vault moved to `OsKeychain` mode and left unlocked) |
 | `vault_export` | `password: string` (≥ 10 chars; backend opens the save dialog, ADR-007) | `boolean` (false = cancelled) |
-| `vault_import` | `password: string` (backend opens the file dialog, ADR-007) | `ImportSummary \| null` (null = cancelled; + event `tree://changed`) |
+| `vault_import` | `password: string` (backend opens the file dialog, ADR-007) | `ImportSummary \| null` (null = cancelled; + event `tree://changed`; also restores settings, `ImportSummary.settings`, ADR-015) |
 
 ## Commands — sessions (SSH)
 | command | args | returns |
@@ -108,11 +108,11 @@ pub enum ApiError {
 | `passphrase_reply` | `pending_id, passphrase: string \| null` (null = cancel) | `null` |
 
 `session_open*` resolves once the session task is spawned; everything else arrives on `on_event`.
-`SessionEvent` (tag `type`): `Connecting{step: ConnectStep, hop}`, `HostKeyPrompt{pending_id, info: HostKeyInfo}`,
+`SessionEvent` (tag `type`): `Connecting{step: ConnectStep, hop}`, `Attempt{hop, addr, failure: string|null}` (one TCP attempt at `ip:port`; `failure` = `Timeout` or the IO error kind; ADR-015), `HostKeyPrompt{pending_id, info: HostKeyInfo}`,
 `KbdInteractive{pending_id, name, instruction, prompts: KbdPrompt[]}`, `PassphrasePrompt{pending_id, identity_label}`,
 `Connected{server_banner: string|null}`, `Failed{error: ApiError}` (before Connected: host key changed, auth, network),
-`Disconnected{reason, can_reconnect}`, `ExitStatus{code}`, `ForwardStatus{forward_id, state: ForwardState, error|null}`.
-`ConnectStep`: `Resolving | Connecting | Handshake | Authenticating | OpeningChannel`.
+`Disconnected{reason, can_reconnect}` (`reason` is a code: `closed`, `shell_exited`, `keepalive`, `inactivity`, `server:<DisconnectCode>`, `network:<IoKind>`, `protocol`; ADR-015), `ExitStatus{code}`, `ForwardStatus{forward_id, state: ForwardState, error|null}`.
+`ConnectStep`: `Resolving` (DNS) `| Connecting` (TCP) `| Handshake` (key exchange, host key) `| Authenticating | OpeningChannel`, in that order (ADR-015).
 
 ### Streaming & backpressure (normative, ADR-004)
 - Rust → UI: `on_data: Channel<RawBytes>`; `RawBytes` sends `InvokeResponseBody::Raw` → JS `ArrayBuffer` (TS `Channel<ArrayBuffer>`). `Channel<Vec<u8>>` is FORBIDDEN (JSON number array). Coalesce: flush when buffer ≥ 64 KiB or 8 ms elapsed.
@@ -170,7 +170,7 @@ pub enum ApiError {
 | `host_lookup_ip` | `host_id` | `string[]` — IP addresses of the host name (IPv4 first, ≤ 4), DNS only, 3 s, no connection. Unlocked vault required, passive. For the map's opt-in location lookup. Errors: `VaultLocked`, `NotFound`, `Timeout`, `Network`. ADR-011. |
 | `stats_sample` | `session_id` | `HostStats` (~1 s: samples `/proc` twice, 1 s apart, over an exec channel of the session's connection). Errors: `NotFound`, `Network` (not connected), `Timeout` (8 s), `Unsupported` (non-Linux). Passive: does not reset auto-lock. |
 
-`HostStats` (percent 0–100, bytes, bytes/s; u64 → TS `number`): `cpu_pct, cores, cpu_cores: number[], cpu_core_split: CoreSplit[]` (same order; `{ user, system, nice, iowait, steal }` %, ADR-012)`, cpu_user, cpu_system, cpu_nice, cpu_iowait, cpu_steal, load1, load5, load15, mem_total, mem_used (total − available), mem_cached, swap_total, swap_used, disk_total, disk_used (root fs), mem_free, net_rx_bps, net_tx_bps (non-lo), ifaces: NetIface[] (≤ 8, busiest first: name, rx_bps, tx_bps, rx_total, tx_total), disk_read_bps, disk_write_bps (whole disks), uptime_s, os_name: string|null, temp_c: number|null, procs: ProcRow[]` (top 8 by CPU), `listen: Listener[]` (≤ 32: proto, addr, port, process|null), `flows: PeerFlow[]` (≤ 40, busiest first: inbound, port, peer, conns, bytes_in, bytes_out — lifetime bytes of the open TCP connections), `conns: u32`, `full: bool`. Slow fields (`disk_total/used`, `os_name`, `cores`, `procs`, `listen`, `flows`, `conns`) are re-read every 15 s; in between the backend copies them from the session's last full sample (ADR-009 amendment 2026-11-07).
+`HostStats` (percent 0–100, bytes, bytes/s; u64 → TS `number`): `cpu_pct, cores, cpu_cores: number[], cpu_core_split: CoreSplit[]` (same order; `{ user, system, nice, iowait, steal }` %, ADR-012)`, cpu_user, cpu_system, cpu_nice, cpu_iowait, cpu_steal, load1, load5, load15, mem_total, mem_used (total − available), mem_cached, swap_total, swap_used, disk_total, disk_used (root fs), mem_free, net_rx_bps, net_tx_bps (non-lo), ifaces: NetIface[] (≤ 8, busiest first: name, rx_bps, tx_bps, rx_total, tx_total), disk_read_bps, disk_write_bps (whole disks), uptime_s, os_name: string|null, cpu_model: string|null, disk_dev_bytes (physical disk holding `/`), disk_kind: `NVMe`|`SSD`|`HDD`|null (ADR-015), temp_c: number|null, procs: ProcRow[]` (top 8 by CPU), `listen: Listener[]` (≤ 32: proto, addr, port, process|null), `flows: PeerFlow[]` (≤ 40, busiest first: inbound, port, peer, conns, bytes_in, bytes_out — lifetime bytes of the open TCP connections), `conns: u32`, `full: bool`. Slow fields (`disk_total/used`, `os_name`, `cpu_model`, `disk_dev_bytes`, `disk_kind`, `cores`, `procs`, `listen`, `flows`, `conns`) are re-read every 15 s; in between the backend copies them from the session's last full sample (ADR-009 amendment 2026-11-07).
 `ProcRow { pid, user, cpu, mem_bytes, command }`. Server strings are stripped of control chars, ≤ 128 chars.
 
 ## Commands — services (ADR-012)

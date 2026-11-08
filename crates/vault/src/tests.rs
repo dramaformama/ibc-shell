@@ -20,6 +20,7 @@ struct MemStorage {
     meta: Mutex<HashMap<String, Vec<u8>>>,
     rows: Mutex<HashMap<SecretId, SecretRow>>,
     snap: Mutex<Snapshot>,
+    settings: Mutex<Vec<(String, String)>>,
 }
 
 impl VaultStorage for MemStorage {
@@ -49,6 +50,14 @@ impl VaultStorage for MemStorage {
     }
     fn import_snapshot(&self, _s: Snapshot) -> Result<ImportCounts, StoreError> {
         Ok(ImportCounts::default())
+    }
+    fn settings_export(&self) -> Result<Vec<(String, String)>, StoreError> {
+        Ok(self.settings.lock().unwrap().clone())
+    }
+    fn settings_import(&self, items: Vec<(String, String)>) -> Result<u32, StoreError> {
+        let n = items.len() as u32;
+        *self.settings.lock().unwrap() = items;
+        Ok(n)
     }
 }
 
@@ -302,12 +311,18 @@ fn backup_roundtrip_and_failures() {
         v.export_backup(&path, &pw("short")),
         Err(VaultError::WeakPassword)
     ));
+    *st.settings.lock().unwrap() = vec![
+        ("term.font_size".into(), "15".into()),
+        ("ui.local".into(), r#"{"ibc.theme":"dark"}"#.into()),
+    ];
     v.export_backup(&path, &pw("backup password")).unwrap();
 
     // Import into a fresh vault: secret re-encrypted under the new DEK, same id.
     let (st2, _ks2, v2) = setup();
     v2.init(VaultMode::OsKeychain, None).unwrap();
-    v2.import_backup(&path, &pw("backup password")).unwrap();
+    let summary = v2.import_backup(&path, &pw("backup password")).unwrap();
+    assert_eq!(summary.settings, 2);
+    assert_eq!(*st2.settings.lock().unwrap(), *st.settings.lock().unwrap());
     assert_eq!(v2.get_secret(id).unwrap().as_slice(), b"top secret");
     assert_ne!(
         st.secret_get(id).unwrap().unwrap().ciphertext,

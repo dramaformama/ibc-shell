@@ -25,6 +25,7 @@
   const cachedShown = $derived(Math.min(d.mem_cached, Math.max(0, d.mem_total - d.mem_used)));
   const freeShown = $derived(Math.max(0, d.mem_total - d.mem_used - cachedShown));
   const share = (v: number) => `${((v / total) * 100).toFixed(2)}%`;
+  const topCpu = $derived(Math.max(1, ...d.procs.map((p) => p.cpu ?? 0)));
   const diskPct = $derived(d.disk_total ? (d.disk_used / d.disk_total) * 100 : 0);
 </script>
 
@@ -45,11 +46,14 @@
           height={56}
         />
       {/if}
-      <CoreBars
-        cores={d.cpu_cores}
-        split={d.cpu_core_split}
-        columns={wide && d.cpu_cores.length > 4 ? 2 : 1}
-      />
+      <!-- One core: the headline above already is that core. -->
+      {#if d.cpu_cores.length > 1}
+        <CoreBars
+          cores={d.cpu_cores}
+          split={d.cpu_core_split}
+          columns={wide && d.cpu_cores.length > 4 ? 2 : 1}
+        />
+      {/if}
       <dl class="legend tnum">
         {#each [[m.stat_user(), d.cpu_user, 'var(--c-cyan)'], [m.stat_system(), d.cpu_system, 'var(--danger)'], [m.stat_nice(), d.cpu_nice, 'var(--c-green)'], [m.stat_iowait(), d.cpu_iowait, 'var(--c-purple)'], [m.stat_steal(), d.cpu_steal, 'var(--c-orange)']] as [label, v, color] (label)}
           <div>
@@ -180,18 +184,29 @@
       <table class="procs tnum">
         <thead>
           <tr>
-            <th>PID</th><th>{m.stat_process()}</th>{#if wide}<th class="owner">{m.stat_owner()}</th
-              >{/if}<th>CPU</th><th>{m.stat_mem()}</th>
+            <th>{m.stat_process()}</th><th class="num cpu">CPU</th><th class="num mem"
+              >{m.stat_mem()}</th
+            >
           </tr>
         </thead>
         <tbody>
           {#each d.procs as p (p.pid)}
             <tr>
-              <td class="muted">{p.pid}</td>
-              <td class="cmd" title="{p.command} · {p.user}">{p.command}</td>
-              {#if wide}<td class="muted cmd">{p.user}</td>{/if}
-              <td>{decimal(p.cpu, 1)}</td>
-              <td>{bytes(p.mem_bytes)}</td>
+              <td class="cmd" title="{p.command} · {p.user} · PID {p.pid}">
+                <div>
+                  <b>{p.command}</b>
+                  <small>{p.user} · {p.pid}</small>
+                </div>
+              </td>
+              <td class="num cpu">
+                <div>
+                  <span class="pbar" aria-hidden="true"
+                    ><i style:width="{Math.max(2, ((p.cpu ?? 0) / topCpu) * 100)}%"></i></span
+                  >
+                  <span class="pv">{decimal(p.cpu, 1)}</span>
+                </div>
+              </td>
+              <td class="num mem">{bytes(p.mem_bytes)}</td>
             </tr>
           {/each}
         </tbody>

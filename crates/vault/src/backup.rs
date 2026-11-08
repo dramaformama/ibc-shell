@@ -37,10 +37,20 @@ impl Drop for BackupSecret {
     }
 }
 
+/// One setting: key and its JSON text.
+#[derive(Serialize, Deserialize)]
+struct BackupSetting {
+    k: String,
+    v: String,
+}
+
 #[derive(Serialize, Deserialize)]
 struct Payload {
     snapshot: Snapshot,
     secrets: Vec<BackupSecret>,
+    /// Absent in backups made before settings were included.
+    #[serde(default)]
+    settings: Vec<BackupSetting>,
 }
 
 fn io_err(_: std::io::Error) -> VaultError {
@@ -61,7 +71,17 @@ pub(crate) fn export(vault: &Vault, path: &Path, password: &SecretString) -> Res
             data: data.to_vec(),
         });
     }
-    let payload = Payload { snapshot, secrets };
+    let settings = vault
+        .storage()
+        .settings_export()?
+        .into_iter()
+        .map(|(k, v)| BackupSetting { k, v })
+        .collect();
+    let payload = Payload {
+        snapshot,
+        secrets,
+        settings,
+    };
     let mut cbor = Zeroizing::new(Vec::new());
     ciborium::into_writer(&payload, &mut *cbor).map_err(|_| VaultError::Corrupt)?;
     let compressed = Zeroizing::new(zstd::encode_all(cbor.as_slice(), 3).map_err(io_err)?);
@@ -189,6 +209,12 @@ pub(crate) fn import(vault: &Vault, path: &Path, password: &SecretString) -> Res
             return Err(e.into());
         }
     };
+    let settings = payload
+        .settings
+        .drain(..)
+        .map(|s| (s.k, s.v))
+        .collect::<Vec<_>>();
+    let settings = vault.storage().settings_import(settings)?;
     let written = [
         counts.folders,
         counts.hosts,
@@ -209,6 +235,7 @@ pub(crate) fn import(vault: &Vault, path: &Path, password: &SecretString) -> Res
         snippets: counts.snippets,
         forwards: counts.forwards,
         known_hosts: counts.known_hosts,
+        settings,
         skipped: u32::try_from(total.saturating_sub(written)).unwrap_or(u32::MAX),
     })
 }

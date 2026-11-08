@@ -19,6 +19,7 @@
   import { ui } from '$lib/stores/ui.svelte';
   import { rate, uptime } from './format';
   import Ring from './Ring.svelte';
+  import SpecLine from './SpecLine.svelte';
   import Spark from './Spark.svelte';
 
   /** Live card of a connected server (overview top section). */
@@ -80,6 +81,7 @@
   {#if s?.unsupported}
     <p class="note">{m.stat_unsupported()}</p>
   {:else}
+    {#if d}<SpecLine {d} model />{/if}
     <div class="rings">
       <div class="gauge">
         <Ring value={d?.cpu_pct ?? null} size={66} label={m.stat_cpu()} tone="var(--c-cyan)" />

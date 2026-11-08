@@ -12,7 +12,7 @@ use crate::config::PtyRequest;
 use crate::error::map_russh;
 use crate::forward::{ForwardHandle, ForwardSpec};
 use crate::shell::Shell;
-use crate::verify::ClientHandler;
+use crate::verify::{ClientHandler, CloseSlot};
 use crate::SshError;
 
 /// Credit window: the shell stops reading from the SSH channel while unacked bytes exceed this.
@@ -24,6 +24,8 @@ pub struct Connection {
     handle: Handle<ClientHandler>,
     _upstream: Vec<Handle<ClientHandler>>,
     banner: Option<String>,
+    /// Close reasons, target hop first.
+    closed: Vec<CloseSlot>,
 }
 
 impl std::fmt::Debug for Connection {
@@ -39,12 +41,24 @@ impl Connection {
         handle: Handle<ClientHandler>,
         upstream: Vec<Handle<ClientHandler>>,
         banner: Option<String>,
+        closed: Vec<CloseSlot>,
     ) -> Self {
         Self {
             handle,
             _upstream: upstream,
             banner,
+            closed,
         }
+    }
+
+    /// Why the connection ended, once it has: `server:<DisconnectCode>`, `keepalive`,
+    /// `inactivity`, `network:<IoKind>` or `protocol` (fixed vocabulary, no server text).
+    /// A jump host that dropped is reported when the target itself said nothing.
+    #[must_use]
+    pub fn close_reason(&self) -> Option<String> {
+        self.closed
+            .iter()
+            .find_map(|c| c.lock().ok().and_then(|g| g.clone()))
     }
 
     /// Server banner received during auth, if any (plain text).

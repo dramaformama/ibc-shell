@@ -147,6 +147,14 @@ impl Prompter for EventPrompter {
         });
     }
 
+    fn attempt(&self, hop_label: &str, addr: &str, failure: Option<&str>) {
+        let _ = self.events.send(SessionEvent::Attempt {
+            hop: hop_label.to_owned(),
+            addr: addr.to_owned(),
+            failure: failure.map(str::to_owned),
+        });
+    }
+
     async fn confirm_unknown_host(&self, info: HostKeyInfo) -> HostKeyDecision {
         let (tx, rx) = oneshot::channel();
         let pending_id = self.pending.put(self.owner, Slot::HostKey(tx));

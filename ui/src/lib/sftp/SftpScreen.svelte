@@ -8,6 +8,8 @@
   import type { Tab } from '$lib/stores/sessions.svelte';
   import { ui } from '$lib/stores/ui.svelte';
   import { errorText } from '$lib/util/errors';
+  import ConnectCard from '$lib/terminal/ConnectCard.svelte';
+  import { ConnectLog } from '$lib/terminal/connectlog.svelte';
   import ConflictDialog from './ConflictDialog.svelte';
   import DeleteDialog from './DeleteDialog.svelte';
   import NameDialog from './NameDialog.svelte';
@@ -48,49 +50,68 @@
     if (panes[side].error) ui.toast(errorText(panes[side].error!), 'error');
   }
 
+  const log = new ConnectLog();
+  let closed = false;
+  let id: SftpId | null = null;
+
+  async function connect() {
+    status = 'connecting';
+    failure = '';
+    log.reset();
+    if (!tab.hostId) {
+      status = 'failed';
+      failure = m.sftp_no_host();
+      return;
+    }
+    const ch = new Channel<SessionEvent>();
+    ch.onmessage = (e) => {
+      log.feed(e);
+      if (e.type === 'Failed') {
+        status = 'failed';
+        failure = errorText(e.error);
+      } else if (e.type === 'Disconnected') {
+        status = 'failed';
+        failure = e.reason;
+      }
+    };
+    const group = sessions.groups.find((g) => g.tabs.some((t) => t.id === tab.id));
+    const sid = group ? sessions.groupSession(group) : null;
+    const r = await api.sftpOpen(
+      sid ? { kind: 'session', session_id: sid } : { kind: 'host', host_id: tab.hostId },
+      ch
+    );
+    if (r.status === 'error') {
+      log.feed({ type: 'Failed', error: r.error });
+      status = 'failed';
+      failure = errorText(r.error);
+      return;
+    }
+    id = r.data;
+    if (closed) {
+      void api.sftpClose(id);
+      return;
+    }
+    sftpId = id;
+    status = 'ready';
+    await Promise.all([attach('left', 'local'), attach('right', 'remote')]);
+  }
+
+  /** Try again after a failure: drop the half-open SFTP session, then connect afresh. */
+  function retry() {
+    if (id) void api.sftpClose(id);
+    id = null;
+    sftpId = null;
+    void connect();
+  }
+
   onMount(() => {
-    let closed = false;
-    let id: SftpId | null = null;
+    closed = false;
     void transfers.start();
-    void (async () => {
-      if (!tab.hostId) {
-        status = 'failed';
-        failure = m.sftp_no_host();
-        return;
-      }
-      const ch = new Channel<SessionEvent>();
-      ch.onmessage = (e) => {
-        if (e.type === 'Failed') {
-          status = 'failed';
-          failure = errorText(e.error);
-        } else if (e.type === 'Disconnected') {
-          status = 'failed';
-          failure = e.reason;
-        }
-      };
-      const group = sessions.groups.find((g) => g.tabs.some((t) => t.id === tab.id));
-      const sid = group ? sessions.groupSession(group) : null;
-      const r = await api.sftpOpen(
-        sid ? { kind: 'session', session_id: sid } : { kind: 'host', host_id: tab.hostId },
-        ch
-      );
-      if (r.status === 'error') {
-        status = 'failed';
-        failure = errorText(r.error);
-        return;
-      }
-      id = r.data;
-      if (closed) {
-        void api.sftpClose(id);
-        return;
-      }
-      sftpId = id;
-      status = 'ready';
-      await Promise.all([attach('left', 'local'), attach('right', 'remote')]);
-    })();
+    void connect();
     const offOs = listenOsDrop();
     return () => {
       closed = true;
+      log.dispose();
       if (id) void api.sftpClose(id);
       sessions.setPhase(tab.id, 'disconnected');
       void offOs.then((f) => f());
@@ -235,13 +256,21 @@
   style:--sf-c-mtime="{sftpLayout.cols.mtime}px"
   style:--sf-c-mode="{sftpLayout.cols.mode}px"
 >
-  {#if status === 'failed'}
+  {#if status === 'failed' && !log.error}
     <div class="sf-state" role="alert">
       <p>{m.sftp_connect_failed()}</p>
       <p class="muted">{failure}</p>
     </div>
-  {:else if status === 'connecting'}
-    <div class="sf-state"><p class="muted">{m.sftp_connecting()}</p></div>
+  {:else if status === 'failed' || status === 'connecting'}
+    <div class="sf-state">
+      <ConnectCard
+        {log}
+        name={tab.label}
+        failed={status === 'failed'}
+        onclosetab={() => sessions.close(tab.id)}
+        onretry={retry}
+      />
+    </div>
   {:else}
     <div
       class="sf-panes"

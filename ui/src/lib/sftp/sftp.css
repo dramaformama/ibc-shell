@@ -52,7 +52,7 @@
 .sf-state {
   flex: 1;
   display: grid;
-  place-content: center;
+  place-items: center;
   gap: 4px;
   text-align: center;
   padding: 24px;

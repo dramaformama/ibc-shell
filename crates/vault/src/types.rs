@@ -42,6 +42,8 @@ pub struct ImportSummary {
     pub forwards: u32,
     /// Known hosts added.
     pub known_hosts: u32,
+    /// Settings restored (replacing the same ones here).
+    pub settings: u32,
     /// Rows skipped because the id already existed.
     pub skipped: u32,
 }

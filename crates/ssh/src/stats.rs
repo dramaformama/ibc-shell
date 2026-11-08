@@ -116,6 +116,13 @@ pub struct HostStats {
     pub uptime_s: u64,
     /// `PRETTY_NAME` of the OS.
     pub os_name: Option<String>,
+    /// CPU model name (`model name` of `/proc/cpuinfo`, or `lscpu`) — slow field.
+    pub cpu_model: Option<String>,
+    /// Size of the physical disk that holds `/`, bytes (what was bought, not the file system).
+    pub disk_dev_bytes: u64,
+    /// `NVMe`, `SSD` or `HDD`. A virtual machine's disk that claims to be rotational is left
+    /// unnamed (hypervisors report that flag wrongly) — slow field.
+    pub disk_kind: Option<String>,
     /// Temperature of thermal zone 0, °C.
     pub temp_c: Option<f32>,
     /// Top 8 processes by CPU.
@@ -149,6 +156,17 @@ echo '@@IBC:TEMP@@'; cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null
 if [ "$1" = full ]; then
 echo '@@IBC:DF@@'; df -kP / 2>/dev/null
 echo '@@IBC:NPROC@@'; nproc 2>/dev/null
+echo '@@IBC:CPU@@'
+m=$(sed -n 's/^model name[[:space:]]*:[[:space:]]*//p' /proc/cpuinfo 2>/dev/null | head -1)
+[ -n "$m" ] || m=$(lscpu 2>/dev/null | sed -n 's/^Model name:[[:space:]]*//p' | head -1)
+echo "$m"
+echo '@@IBC:DISKDEV@@'
+s=$(df -P / 2>/dev/null | awk 'NR==2{print $1}'); b=${s##*/}
+if [ -e "/sys/class/block/$b/partition" ]; then d=$(basename "$(dirname "$(readlink -f "/sys/class/block/$b")")")
+elif [ -d "/sys/block/$b" ]; then d=$b; else d=; fi
+{ [ -n "$d" ] && [ -d "/sys/block/$d" ]; } || d=$(ls /sys/block 2>/dev/null | grep -Ev '^(loop|ram|zram|dm-|sr|md|nbd|fd)' | head -1)
+[ -n "$d" ] && echo "$d $(cat "/sys/block/$d/size" 2>/dev/null) $(cat "/sys/block/$d/queue/rotational" 2>/dev/null)"
+echo '@@IBC:VIRT@@'; grep -qw hypervisor /proc/cpuinfo 2>/dev/null && echo 1
 echo '@@IBC:OS@@'; sed -n 's/^PRETTY_NAME=//p' /etc/os-release 2>/dev/null | head -1
 echo '@@IBC:PS@@'; ps -eo pid,user:16,pcpu,rss,comm --sort=-pcpu 2>/dev/null | head -9
 echo '@@IBC:LISTEN@@'; ss -Hltunp 2>/dev/null | head -64

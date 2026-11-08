@@ -803,6 +803,15 @@ export type HostStats = {
 	uptime_s: number,
 	/**  `PRETTY_NAME` of the OS. */
 	os_name: string | null,
+	/**  CPU model name (`model name` of `/proc/cpuinfo`, or `lscpu`) — slow field. */
+	cpu_model: string | null,
+	/**  Size of the physical disk that holds `/`, bytes (what was bought, not the file system). */
+	disk_dev_bytes: number,
+	/**
+	 *  `NVMe`, `SSD` or `HDD`. A virtual machine's disk that claims to be rotational is left
+	 *  unnamed (hypervisors report that flag wrongly) — slow field.
+	 */
+	disk_kind: string | null,
 	/**  Temperature of thermal zone 0, °C. */
 	temp_c: number | null,
 	/**  Top 8 processes by CPU. */
@@ -912,6 +921,8 @@ export type ImportSummary = {
 	forwards: number,
 	/**  Known hosts added. */
 	known_hosts: number,
+	/**  Settings restored (replacing the same ones here). */
+	settings: number,
 	/**  Rows skipped because the id already existed. */
 	skipped: number,
 };
@@ -1081,6 +1092,14 @@ export type SessionEvent =
 step: ConnectStep; 
 /**  Hop label. */
 hop: string } | 
+/**  One TCP attempt at an address of the hop (several when the name has many addresses). */
+{ type: "Attempt"; 
+/**  Hop label. */
+hop: string; 
+/**  `ip:port` that was tried. */
+addr: string; 
+/**  `None` = connected; else `Timeout` or the IO error kind (`ConnectionRefused`, …). */
+failure: string | null } | 
 /**  TOFU: reply with `hostkey_accept` or `session_close`. */
 { type: "HostKeyPrompt"; 
 /**  Reply id. */
@@ -1113,7 +1132,10 @@ server_banner: string | null } |
 error: ApiError } | 
 /**  Connection closed after `Connected`. */
 { type: "Disconnected"; 
-/**  Human-readable reason (sanitized). */
+/**
+ *  Reason code: `closed`, `shell_exited`, `keepalive`, `inactivity`,
+ *  `server:<DisconnectCode>`, `network:<IoKind>`, `protocol` (the UI localizes them).
+ */
 reason: string; 
 /**  `session_reconnect` is possible. */
 can_reconnect: boolean } | 

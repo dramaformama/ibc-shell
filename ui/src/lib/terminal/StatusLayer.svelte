@@ -1,51 +1,54 @@
 <script lang="ts">
   import * as m from '$lib/paraglide/messages.js';
+  import ConnectCard from './ConnectCard.svelte';
   import type { Connection } from './connection.svelte';
 
   let { conn, name, onclosetab }: { conn: Connection; name: string; onclosetab: () => void } =
     $props();
 
-  const stepText = $derived(
-    {
-      Resolving: m.term_step_resolving(),
-      Connecting: m.term_step_connecting(),
-      Handshake: m.term_step_handshake(),
-      Authenticating: m.term_step_authenticating(),
-      OpeningChannel: m.term_step_channel()
-    }[conn.step ?? 'Resolving']
-  );
-
-  const failText = $derived(
-    conn.reason === 'AuthFailed'
-      ? m.term_failed_auth()
-      : conn.reason === 'Network' || conn.reason === 'Timeout'
-        ? m.term_failed_network()
-        : conn.reason === 'Cancelled'
-          ? m.term_failed_cancelled()
-          : m.term_failed()
-  );
+  /** Localized reason of a dropped connection (codes from the backend), else the raw text. */
+  function endText(r: string | null): string | null {
+    if (!r || r === 'closed') return null;
+    if (r === 'shell_exited') return m.term_end_shell_exited();
+    if (r === 'keepalive') return m.term_end_keepalive();
+    if (r === 'inactivity') return m.term_end_inactivity();
+    if (r === 'protocol') return m.term_end_protocol();
+    if (r.startsWith('server:')) {
+      const code = r.slice(7);
+      if (code === 'ByApplication') return m.term_end_server_ByApplication();
+      if (code === 'TooManyConnections') return m.term_end_server_TooManyConnections();
+      if (code === 'ConnectionLost') return m.term_end_server_ConnectionLost();
+      return m.term_end_server({ code });
+    }
+    if (r.startsWith('network:')) {
+      const kind = r.slice(8);
+      if (kind === 'ConnectionReset' || kind === 'ConnectionAborted' || kind === 'BrokenPipe')
+        return m.term_end_reset();
+      if (kind === 'TimedOut') return m.term_end_timeout();
+      return m.term_end_network({ kind });
+    }
+    return r;
+  }
+  const endReason = $derived(endText(conn.reason));
 
   const blocked = $derived(conn.prompt?.kind === 'changed');
 </script>
 
-{#if conn.phase === 'connecting' && !conn.prompt}
-  <div class="center" role="status">
-    <p class="title">{m.term_connecting_to({ name })}</p>
-    <p class="sub"><span class="pulse" aria-hidden="true"></span>{stepText}</p>
-  </div>
-{:else if conn.phase === 'failed' && !blocked}
-  <div class="center" role="alert">
-    <p class="title">{failText}</p>
-    <div class="row">
-      <button class="btn btn-ghost" onclick={onclosetab}>{m.term_close_tab()}</button>
-      <button class="btn" onclick={() => void conn.retry()}>{m.term_retry()}</button>
-    </div>
+{#if (conn.phase === 'connecting' && !conn.prompt) || (conn.phase === 'failed' && !blocked)}
+  <div class="center">
+    <ConnectCard
+      log={conn.log}
+      {name}
+      failed={conn.phase === 'failed'}
+      {onclosetab}
+      onretry={() => void conn.retry()}
+    />
   </div>
 {:else if conn.phase === 'disconnected'}
   <div class="banner" role="status">
     <span class="msg">
       <span class="dot" aria-hidden="true"></span>
-      {conn.reason ? `${m.term_disconnected()} · ${conn.reason}` : m.term_disconnected()}
+      {endReason ? `${m.term_disconnected()} · ${endReason}` : m.term_disconnected()}
     </span>
     {#if conn.canReconnect}
       <button class="btn btn-primary" onclick={() => void conn.reconnect()}
@@ -63,42 +66,9 @@
     position: absolute;
     inset: 0;
     display: grid;
-    place-content: center;
-    justify-items: center;
-    gap: 6px;
-    text-align: center;
+    place-items: center;
     padding: 24px;
     pointer-events: none;
-    color: var(--t-fg);
-    animation: fade 200ms var(--ease) 120ms backwards;
-  }
-  .center p {
-    margin: 0;
-  }
-  .title {
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: -0.005em;
-  }
-  .sub {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12px;
-    opacity: 0.6;
-  }
-  .row {
-    display: flex;
-    gap: 8px;
-    margin-top: 10px;
-    pointer-events: auto;
-  }
-  .pulse {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--accent);
-    animation: pulse 1.2s ease-in-out infinite;
   }
   .banner {
     position: absolute;
@@ -136,20 +106,10 @@
     font-size: 12px;
     color: var(--muted);
   }
-  @keyframes fade {
-    from {
-      opacity: 0;
-    }
-  }
   @keyframes up {
     from {
       opacity: 0;
       transform: translate(-50%, 6px);
-    }
-  }
-  @keyframes pulse {
-    50% {
-      opacity: 0.25;
     }
   }
 </style>

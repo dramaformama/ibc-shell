@@ -2,6 +2,7 @@
 //! authentication.
 
 use std::future::Future;
+use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -16,7 +17,7 @@ use crate::error::map_russh;
 use crate::hostkey::KnownHosts;
 use crate::policy::client_config;
 use crate::session::Connection;
-use crate::verify::{ClientHandler, VerifyCtx, VerifyReq};
+use crate::verify::{ClientHandler, CloseSlot, VerifyCtx, VerifyReq};
 use crate::SshError;
 
 /// TCP connect timeout per address.
@@ -57,19 +58,41 @@ where
     }
 }
 
-async fn tcp(host: &str, port: u16) -> Result<TcpStream, SshError> {
+/// DNS lookup (also accepts an IP literal).
+async fn resolve(host: &str, port: u16) -> Result<Vec<SocketAddr>, SshError> {
     let addrs: Vec<_> = tokio::time::timeout(TCP_TIMEOUT, tokio::net::lookup_host((host, port)))
         .await
         .map_err(|_| SshError::Timeout)?
         .map_err(|e| SshError::Network(format!("{:?}", e.kind())))?
         .collect();
+    if addrs.is_empty() {
+        return Err(SshError::Network("no address".into()));
+    }
+    Ok(addrs)
+}
+
+/// Tries the addresses in order and reports every attempt, so the UI can show which address
+/// answered and which one did not.
+async fn tcp_connect<P: Prompter>(
+    addrs: &[SocketAddr],
+    label: &str,
+    prompter: &P,
+) -> Result<TcpStream, SshError> {
     let mut last = SshError::Network("no address".into());
     for a in addrs {
-        match tokio::time::timeout(TCP_TIMEOUT, TcpStream::connect(a)).await {
-            Ok(Ok(s)) => return Ok(s),
-            Ok(Err(e)) => last = SshError::Network(format!("{:?}", e.kind())),
-            Err(_) => last = SshError::Timeout,
-        }
+        let (err, failure) = match tokio::time::timeout(TCP_TIMEOUT, TcpStream::connect(a)).await {
+            Ok(Ok(s)) => {
+                prompter.attempt(label, &a.to_string(), None);
+                return Ok(s);
+            }
+            Ok(Err(e)) => {
+                let kind = format!("{:?}", e.kind());
+                (SshError::Network(kind.clone()), kind)
+            }
+            Err(_) => (SshError::Timeout, "Timeout".to_owned()),
+        };
+        prompter.attempt(label, &a.to_string(), Some(&failure));
+        last = err;
     }
     Err(last)
 }
@@ -79,7 +102,7 @@ async fn handshake<S, K, P>(
     hop: &Hop,
     known: &K,
     prompter: &P,
-) -> Result<(Handle<ClientHandler>, Option<String>), SshError>
+) -> Result<(Handle<ClientHandler>, Option<String>, CloseSlot), SshError>
 where
     S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
     K: KnownHosts,
@@ -87,9 +110,11 @@ where
 {
     let (tx, mut rx) = mpsc::unbounded_channel();
     let banner = Arc::new(Mutex::new(None));
+    let closed: CloseSlot = Arc::new(Mutex::new(None));
     let handler = ClientHandler {
         tx,
         banner: Arc::clone(&banner),
+        closed: Arc::clone(&closed),
     };
     let mut ctx = VerifyCtx {
         host: &hop.host,
@@ -139,7 +164,7 @@ where
         .await?;
     }
     let banner = banner.lock().ok().and_then(|mut b| b.take());
-    Ok((handle, banner))
+    Ok((handle, banner, closed))
 }
 
 async fn connect_hop<K, P>(
@@ -147,7 +172,7 @@ async fn connect_hop<K, P>(
     previous: Option<&Handle<ClientHandler>>,
     known: &K,
     prompter: &P,
-) -> Result<(Handle<ClientHandler>, Option<String>), SshError>
+) -> Result<(Handle<ClientHandler>, Option<String>, CloseSlot), SshError>
 where
     K: KnownHosts,
     P: Prompter,
@@ -155,8 +180,9 @@ where
     match previous {
         None => {
             prompter.progress(&hop.label, ConnectStep::Resolving);
-            let s = tcp(&hop.host, hop.port).await?;
+            let addrs = resolve(&hop.host, hop.port).await?;
             prompter.progress(&hop.label, ConnectStep::Connecting);
+            let s = tcp_connect(&addrs, &hop.label, prompter).await?;
             handshake(s, hop, known, prompter).await
         }
         Some(prev) => {
@@ -185,13 +211,16 @@ where
     }
     let mut handles: Vec<Handle<ClientHandler>> = Vec::with_capacity(chain.len());
     let mut banner = None;
+    let mut slots = Vec::with_capacity(chain.len());
     for hop in &chain {
-        let (h, b) = connect_hop(hop, handles.last(), known, prompter).await?;
+        let (h, b, c) = connect_hop(hop, handles.last(), known, prompter).await?;
         banner = b;
         handles.push(h);
+        slots.push(c);
     }
     let last = handles.pop().ok_or(SshError::InvalidChain)?;
-    Ok(Connection::new(last, handles, banner))
+    slots.reverse(); // the target hop first
+    Ok(Connection::new(last, handles, banner, slots))
 }
 
 #[cfg(test)]
@@ -226,6 +255,65 @@ mod tests {
         async fn passphrase(&self, _: &str) -> Option<SecretString> {
             None
         }
+    }
+
+    /// Records progress and attempts, in order.
+    #[derive(Default)]
+    struct Recorder(Mutex<Vec<String>>);
+    #[allow(clippy::unused_async_trait_impl)]
+    impl Prompter for Recorder {
+        fn progress(&self, hop: &str, step: ConnectStep) {
+            self.0.lock().unwrap().push(format!("{hop}:{step:?}"));
+        }
+        fn attempt(&self, hop: &str, addr: &str, failure: Option<&str>) {
+            self.0
+                .lock()
+                .unwrap()
+                .push(format!("{hop}:{addr}:{}", failure.unwrap_or("ok")));
+        }
+        async fn confirm_unknown_host(&self, _: HostKeyInfo) -> HostKeyDecision {
+            HostKeyDecision::Reject
+        }
+        async fn keyboard_interactive(
+            &self,
+            _: KbdInteractiveRequest,
+        ) -> Option<Vec<SecretString>> {
+            None
+        }
+        async fn passphrase(&self, _: &str) -> Option<SecretString> {
+            None
+        }
+    }
+
+    #[tokio::test]
+    async fn refused_port_reports_steps_then_the_failed_attempt() {
+        // A port nobody listens on: bind, note it, drop.
+        let port = std::net::TcpListener::bind("127.0.0.1:0")
+            .unwrap()
+            .local_addr()
+            .unwrap()
+            .port();
+        let hop = Hop {
+            label: "h".into(),
+            host: "127.0.0.1".into(),
+            port,
+            username: "u".into(),
+            auth: Vec::new(),
+            keepalive_s: 0,
+            legacy_algorithms: false,
+        };
+        let rec = Recorder::default();
+        let r = connect_chain(vec![hop], &NoKnown, &rec).await;
+        assert!(matches!(r, Err(SshError::Network(k)) if k == "ConnectionRefused"));
+        let log = rec.0.lock().unwrap().clone();
+        assert_eq!(
+            log,
+            [
+                "h:Resolving".to_owned(),
+                "h:Connecting".to_owned(),
+                format!("h:127.0.0.1:{port}:ConnectionRefused"),
+            ]
+        );
     }
 
     #[tokio::test(start_paused = true)]

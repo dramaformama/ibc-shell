@@ -216,6 +216,27 @@ fn parse_procs(s: &str) -> Vec<ProcRow> {
         .collect()
 }
 
+/// `vda 167772160 0` → (bytes, kind): sector count (512 B) and the `rotational` flag. On a
+/// virtual machine "rotational" is what the hypervisor defaults to, not a fact: no kind then.
+fn parse_disk_dev(s: &str, virt: bool) -> (u64, Option<String>) {
+    let mut it = s.split_whitespace();
+    let (Some(name), Some(sectors)) = (it.next(), it.next()) else {
+        return (0, None);
+    };
+    let bytes = sectors.parse::<u64>().unwrap_or(0).saturating_mul(512);
+    let kind = if name.starts_with("nvme") {
+        "NVMe"
+    } else if it.next() == Some("1") {
+        if virt {
+            return (bytes, None);
+        }
+        "HDD"
+    } else {
+        "SSD"
+    };
+    (bytes, (bytes > 0).then(|| kind.to_owned()))
+}
+
 /// Parses the whole script output; `full` = the slow sections were requested.
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 pub(crate) fn parse_report(text: &str, full: bool) -> Result<HostStats, SshError> {
@@ -300,6 +321,10 @@ pub(crate) fn parse_report(text: &str, full: bool) -> Result<HostStats, SshError
     }
     let os = sanitize(get("OS").trim().trim_matches(|c| c == '"' || c == '\''));
     h.os_name = (!os.is_empty()).then_some(os);
+    let cpu = get("CPU").split_whitespace().collect::<Vec<_>>().join(" ");
+    let cpu = sanitize(&cpu);
+    h.cpu_model = (!cpu.is_empty()).then_some(cpu);
+    (h.disk_dev_bytes, h.disk_kind) = parse_disk_dev(get("DISKDEV"), get("VIRT").trim() == "1");
     h.temp_c = get("TEMP").trim().parse::<f32>().ok().map(|t| t / 1000.0);
     h.procs = parse_procs(get("PS"));
     h.listen = crate::stats_net::parse_listen(get("LISTEN"));

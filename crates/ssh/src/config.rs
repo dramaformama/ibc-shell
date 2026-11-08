@@ -104,6 +104,10 @@ pub struct KbdInteractiveRequest {
 pub trait Prompter: Send + Sync {
     /// Progress notification (non-blocking).
     fn progress(&self, hop_label: &str, step: ConnectStep);
+    /// One TCP attempt at an address of the hop (`addr` is `ip:port`). `failure` is `None` when
+    /// it connected, otherwise `Timeout` or the IO error kind (`ConnectionRefused`, …).
+    /// Non-blocking; the default ignores it.
+    fn attempt(&self, _hop_label: &str, _addr: &str, _failure: Option<&str>) {}
     /// Unknown host key (never called for a changed key).
     fn confirm_unknown_host(
         &self,

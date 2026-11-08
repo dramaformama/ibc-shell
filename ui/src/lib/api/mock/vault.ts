@@ -112,6 +112,7 @@ export const vaultImport: Commands['vaultImport'] = async (pw) => {
     snippets: 0,
     forwards: 0,
     known_hosts: 0,
+    settings: 0,
     skipped: 0
   });
 };

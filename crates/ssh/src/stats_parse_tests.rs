@@ -48,6 +48,10 @@ Filesystem 1024-blocks Used Available Capacity Mounted on
 /dev/vda1 100000 40000 60000 40% /
 @@IBC:NPROC@@
 2
+@@IBC:CPU@@
+AMD  EPYC 7543   32-Core Processor
+@@IBC:DISKDEV@@
+vda 167772160 0
 @@IBC:OS@@
 \"Ubuntu 24.04 LTS\"
 @@IBC:PS@@
@@ -87,6 +91,12 @@ fn parses_full_report() {
     assert_eq!((h.load1, h.load5, h.load15), (0.5, 0.75, 1.25));
     assert_eq!(h.uptime_s, 101);
     assert_eq!(h.os_name.as_deref(), Some("Ubuntu 24.04 LTS"));
+    assert_eq!(
+        h.cpu_model.as_deref(),
+        Some("AMD EPYC 7543 32-Core Processor")
+    );
+    assert_eq!(h.disk_dev_bytes, 80 * 1024 * 1024 * 1024);
+    assert_eq!(h.disk_kind.as_deref(), Some("SSD"));
     assert_eq!(h.temp_c, Some(45.5));
     assert_eq!(h.mem_free, 1_000_000 * 1024);
     assert_eq!(h.ifaces.len(), 1);
@@ -157,4 +167,20 @@ fn disk_filter() {
 fn sanitize_caps_and_strips() {
     assert_eq!(sanitize("a\x07b\n"), "ab");
     assert_eq!(sanitize(&"x".repeat(500)).chars().count(), 128);
+}
+
+#[test]
+fn disk_kind_from_name_and_rotational_flag() {
+    let n = |x: &str| Some(x.to_owned());
+    assert_eq!(
+        parse_disk_dev("nvme0n1 1000 0", false),
+        (512_000, n("NVMe"))
+    );
+    assert_eq!(parse_disk_dev("sda 2000 1", false), (1_024_000, n("HDD")));
+    assert_eq!(parse_disk_dev("sda 2000 0", false), (1_024_000, n("SSD")));
+    // A virtual machine's "rotational" is a hypervisor default: not claimed as HDD.
+    assert_eq!(parse_disk_dev("vda 2000 1", true), (1_024_000, None));
+    assert_eq!(parse_disk_dev("vda 2000 0", true), (1_024_000, n("SSD")));
+    assert_eq!(parse_disk_dev("", false), (0, None));
+    assert_eq!(parse_disk_dev("vda", false), (0, None));
 }

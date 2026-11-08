@@ -15,7 +15,7 @@ Status: `FROZEN v1` (2026-11-07). Changes only via ADR, bump to `v1.x`. Crypto p
 ```rust
 pub enum VaultState { Uninitialized, Locked, Unlocked }          // IPC VaultStatus.state
 pub enum VaultMode { OsKeychain, MasterPassword }                 // IPC VaultStatus.mode / vault_init
-pub struct ImportSummary { folders, hosts, identities, tags, snippets, forwards, known_hosts, skipped: u32 }
+pub struct ImportSummary { folders, hosts, identities, tags, snippets, forwards, known_hosts, settings, skipped: u32 }
 pub enum VaultError { Locked, AlreadyInitialized, Uninitialized, WrongPassword, WeakPassword, Corrupt,
                       UnsupportedVersion(u16), Store(StoreError), KeyStore(KeyStoreError), Io(String), Unimplemented }
 pub struct Vault;   // Send + Sync, manual Debug; all methods blocking (Argon2) → bridge calls via spawn_blocking
@@ -48,7 +48,7 @@ Bridge maps `VaultError::Locked → ApiError::VaultLocked`, `WrongPassword → W
 Typed passwords / passphrases / kbd answers arrive as `SecretInput` (`#[serde(transparent)] SecretString`, TS `string`, redacted `Debug`) or `Option<SecretString>` fields with `#[specta(type = Option<String>)]`. They are never echoed, logged, or returned.
 
 ## Backup format `.tlvault`
-`magic "TLVAULT\0" | u16 version=1 | kdf params (CBOR) | salt 16B | nonce 24B | ciphertext(XChaCha20-Poly1305, aad=header bytes) of zstd(CBOR{folders,hosts,identities WITH decrypted secrets,tags,snippets,forwards,known_hosts})`. Export password independent of vault password; min 10 chars, zxcvbn-style strength hint in UI.
+`magic "TLVAULT\0" | u16 version=1 | kdf params (CBOR) | salt 16B | nonce 24B | ciphertext(XChaCha20-Poly1305, aad=header bytes) of zstd(CBOR{folders,hosts,identities WITH decrypted secrets,tags,snippets,forwards,known_hosts, settings (optional, ADR-015)})`. Export password independent of vault password; min 10 chars, zxcvbn-style strength hint in UI.
 
 ## SSH policy
 - KEX: `mlkem768x25519-sha256` (if supported by russh version), `curve25519-sha256`, `curve25519-sha256@libssh.org`, `ecdh-sha2-nistp256/384/521`, `diffie-hellman-group16-sha512`, `diffie-hellman-group14-sha256`. Strict-kex (`kex-strict-c-v00@openssh.com`) ALWAYS offered.

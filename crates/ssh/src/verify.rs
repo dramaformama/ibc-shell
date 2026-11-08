@@ -67,6 +67,24 @@ pub(crate) struct VerifyReq {
 pub(crate) struct ClientHandler {
     pub tx: mpsc::UnboundedSender<VerifyReq>,
     pub banner: std::sync::Arc<std::sync::Mutex<Option<String>>>,
+    /// Why the transport ended (see [`close_code`]); read through `Connection::close_reason`.
+    pub closed: CloseSlot,
+}
+
+/// Shared slot for the reason a connection ended.
+pub(crate) type CloseSlot = std::sync::Arc<std::sync::Mutex<Option<String>>>;
+
+/// Short, fixed-vocabulary code for the end of a connection (never the server's own text):
+/// `server:<DisconnectCode>`, `keepalive`, `inactivity`, `network:<IoKind>`, `protocol`.
+pub(crate) fn close_code(reason: &russh::client::DisconnectReason<russh::Error>) -> String {
+    use russh::client::DisconnectReason as R;
+    match reason {
+        R::ReceivedDisconnect(info) => format!("server:{:?}", info.reason_code),
+        R::Error(russh::Error::KeepaliveTimeout) => "keepalive".into(),
+        R::Error(russh::Error::InactivityTimeout) => "inactivity".into(),
+        R::Error(russh::Error::IO(io)) => format!("network:{:?}", io.kind()),
+        R::Error(_) => "protocol".into(),
+    }
 }
 
 impl Handler for ClientHandler {
@@ -82,6 +100,20 @@ impl Handler for ClientHandler {
             *b = Some(clean_banner(banner));
         }
         Ok(())
+    }
+
+    #[allow(clippy::unused_async_trait_impl)]
+    async fn disconnected(
+        &mut self,
+        reason: russh::client::DisconnectReason<Self::Error>,
+    ) -> Result<(), Self::Error> {
+        if let Ok(mut c) = self.closed.lock() {
+            c.get_or_insert_with(|| close_code(&reason));
+        }
+        match reason {
+            russh::client::DisconnectReason::ReceivedDisconnect(_) => Ok(()),
+            russh::client::DisconnectReason::Error(e) => Err(e),
+        }
     }
 
     async fn check_server_key(
@@ -223,6 +255,30 @@ impl<K: KnownHosts, P: Prompter> VerifyCtx<'_, K, P> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn close_codes_are_fixed_vocabulary() {
+        use russh::client::{DisconnectReason as R, RemoteDisconnectInfo};
+        let io = |k| R::Error(russh::Error::IO(std::io::Error::new(k, "secret detail")));
+        assert_eq!(
+            close_code(&R::Error(russh::Error::KeepaliveTimeout)),
+            "keepalive"
+        );
+        assert_eq!(
+            close_code(&io(std::io::ErrorKind::ConnectionReset)),
+            "network:ConnectionReset"
+        );
+        assert_eq!(close_code(&R::Error(russh::Error::Kex)), "protocol");
+        let info = RemoteDisconnectInfo {
+            reason_code: russh::Disconnect::TooManyConnections,
+            message: "evil\x1b[31m text".into(),
+            lang_tag: String::new(),
+        };
+        assert_eq!(
+            close_code(&R::ReceivedDisconnect(info)),
+            "server:TooManyConnections"
+        );
+    }
+
     use super::*;
 
     fn k(id: &str, ty: &str, blob: &[u8]) -> KnownKey {

@@ -151,10 +151,18 @@
   border-top: 1px solid var(--border);
   font-size: 11px;
 }
+.cards .legend > div {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-width: 0;
+}
 .cards .legend dt {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
+  max-width: 100%;
   overflow: hidden;
   white-space: nowrap;
   color: var(--muted);
@@ -292,30 +300,70 @@
   font-weight: 500;
   text-align: left;
 }
-.cards .procs th.owner {
-  width: 96px;
-}
-.cards .procs th:nth-child(1) {
-  width: 56px;
-}
-.cards .procs th:nth-last-child(1),
-.cards .procs th:nth-last-child(2) {
-  width: 56px;
+.cards .procs th.num {
   text-align: right;
+}
+.cards .procs th.cpu,
+.cards .procs td.cpu {
+  width: 150px;
+}
+.cards .procs th.mem,
+.cards .procs td.mem {
+  width: 72px;
 }
 .cards .procs td {
   padding: 5px 0;
   border-top: 1px solid var(--border);
+  vertical-align: middle;
 }
-.cards .procs td:nth-last-child(1),
-.cards .procs td:nth-last-child(2) {
+.cards .procs td.num {
   text-align: right;
 }
-.cards .cmd {
+.cards .procs td.cmd {
+  padding-right: 12px;
+}
+.cards .procs td.cmd > div {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.cards .procs td.cmd b {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding-right: 8px !important;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.cards .procs td.cmd small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 11px;
+}
+.cards .procs td.cpu > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cards .procs .pbar {
+  flex: 1;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.cards .procs .pbar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--tone);
+  transition: width 600ms var(--ease);
+}
+.cards .procs .pv {
+  flex: none;
+  width: 34px;
+  text-align: right;
 }
 .cards .muted {
   color: var(--muted);
@@ -323,6 +371,6 @@
 .cards .legend dt i {
   flex: none;
   width: 6px;
-  height: 10px;
-  border-radius: 3px;
+  height: 6px;
+  border-radius: 50%;
 }

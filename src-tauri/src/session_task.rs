@@ -109,6 +109,11 @@ async fn run_session(
     });
 
     let user_closed = pump(shell, &mut rx, &closed, &handle).await;
+    let reason = if user_closed {
+        "closed".to_owned()
+    } else {
+        end_reason(&conn).await
+    };
     handle
         .live
         .lock()
@@ -116,13 +121,28 @@ async fn run_session(
         .conn = None;
     conn.disconnect().await;
     let _ = events.send(SessionEvent::Disconnected {
-        reason: if user_closed {
-            "closed".into()
-        } else {
-            "connection closed".into()
-        },
+        reason,
         can_reconnect: !user_closed,
     });
+}
+
+/// Why the shell ended without the user closing it: the connection's own reason when the
+/// transport reports one (it does so a moment after the channel closes, hence the short wait),
+/// `shell_exited` when only the shell finished and the connection is still up.
+async fn end_reason(conn: &ibc_shell_ssh::Connection) -> String {
+    for _ in 0..6 {
+        if let Some(r) = conn.close_reason() {
+            return r;
+        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+    conn.close_reason().unwrap_or_else(|| {
+        if conn.is_closed() {
+            "connection closed".into()
+        } else {
+            "shell_exited".into()
+        }
+    })
 }
 
 /// Runs until the channel closes or `Close`; returns `true` when the user closed it.

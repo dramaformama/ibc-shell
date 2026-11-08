@@ -129,6 +129,34 @@ async fn password_auth_exec() {
 
 #[tokio::test]
 #[ignore = "needs docker (TL_E2E=1)"]
+async fn stats_report_names_the_server_configuration() {
+    if !enabled() {
+        return;
+    }
+    let hosts = Hosts::default();
+    let c = connect(
+        vec![hop(
+            &need("TL_SSH_PORT"),
+            &host(),
+            vec![pw(&need("TL_SSH_PASSWORD"))],
+        )],
+        &hosts,
+        &accept(),
+    )
+    .await
+    .expect("connect");
+    let h = ibc_shell_ssh::sample_stats(&c, true).await.expect("stats");
+    assert!(h.cores > 0 && h.mem_total > 0, "{h:?}");
+    // The container sees its host VM's disk: a real device with a size and a kind.
+    assert!(h.disk_dev_bytes > 0, "{h:?}");
+    assert!(matches!(
+        h.disk_kind.as_deref(),
+        Some("SSD" | "HDD" | "NVMe")
+    ));
+}
+
+#[tokio::test]
+#[ignore = "needs docker (TL_E2E=1)"]
 async fn wrong_password_fails() {
     if !enabled() {
         return;

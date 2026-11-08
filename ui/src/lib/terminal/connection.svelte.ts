@@ -5,6 +5,7 @@
 import { Channel } from '@tauri-apps/api/core';
 import {
   api,
+  type ApiError,
   type ConnectStep,
   type HostKeyInfo,
   type HostKeyMismatch,
@@ -13,6 +14,7 @@ import {
   type SessionId
 } from '$lib/api';
 import type { Tab } from '$lib/stores/sessions.svelte';
+import { ConnectLog } from './connectlog.svelte';
 import { concat } from './text';
 
 export type Phase = 'connecting' | 'connected' | 'disconnected' | 'failed';
@@ -43,6 +45,8 @@ export class Connection {
   /** Reason shown in the banner (disconnect reason or localized-free failure code). */
   reason = $state<string | null>(null);
   canReconnect = $state(false);
+  /** Steps of the current connect, with times and addresses. */
+  readonly log = new ConnectLog();
 
   #id: SessionId | null = null;
   #tab: Tab;
@@ -76,6 +80,7 @@ export class Connection {
     this.step = null;
     this.reason = null;
     this.prompt = null;
+    this.log.reset();
     const gen = ++this.#generation;
     const onData = makeChannel<ArrayBuffer>((buf) => {
       if (gen === this.#generation) this.#receive(new Uint8Array(buf));
@@ -94,7 +99,11 @@ export class Connection {
       return;
     }
     if (r?.status === 'ok') this.#id = r.data;
-    else this.#fail(r?.status === 'error' ? r.error.code : 'Internal');
+    else {
+      const error: ApiError = r?.status === 'error' ? r.error : { code: 'Internal', detail: '' };
+      this.log.feed({ type: 'Failed', error });
+      this.#fail(error.code);
+    }
   }
 
   #receive(data: Uint8Array): void {
@@ -124,6 +133,7 @@ export class Connection {
   }
 
   #event(e: SessionEvent): void {
+    this.log.feed(e);
     switch (e.type) {
       case 'Connecting':
         this.step = e.step;
@@ -172,12 +182,14 @@ export class Connection {
     const p = this.prompt;
     if (p?.kind !== 'hostkey') return;
     this.prompt = null;
+    this.log.resume();
     await api.hostkeyAccept(p.pendingId, remember);
   }
 
   /** Reject = close the session (contract: reject is `session_close`). */
   async rejectHostKey(): Promise<void> {
     this.prompt = null;
+    this.log.feed({ type: 'Failed', error: { code: 'Cancelled' } });
     this.#fail('Cancelled');
     if (this.#id) await api.sessionClose(this.#id);
     this.#id = null;
@@ -187,6 +199,7 @@ export class Connection {
     const p = this.prompt;
     if (p?.kind !== 'kbd') return;
     this.prompt = null;
+    this.log.resume();
     await api.kbdInteractiveReply(p.pendingId, answers);
   }
 
@@ -194,6 +207,7 @@ export class Connection {
     const p = this.prompt;
     if (p?.kind !== 'passphrase') return;
     this.prompt = null;
+    this.log.resume();
     await api.passphraseReply(p.pendingId, passphrase);
   }
 
@@ -233,6 +247,7 @@ export class Connection {
     this.phase = 'connecting';
     this.step = null;
     this.reason = null;
+    this.log.reset();
     await api.sessionReconnect(this.#id);
   }
 
@@ -247,6 +262,7 @@ export class Connection {
   close(): void {
     this.#closed = true;
     this.#generation++;
+    this.log.dispose();
     clearTimeout(this.#resizeTimer);
     if (this.#raf) cancelAnimationFrame(this.#raf);
     if (this.#id) void api.sessionClose(this.#id);

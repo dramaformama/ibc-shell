@@ -11,6 +11,7 @@
   import { sessions } from '$lib/stores/sessions.svelte';
   import { settings } from '$lib/stores/settings.svelte';
   import { ui } from '$lib/stores/ui.svelte';
+  import { specText } from './spec-text';
   import { serverStatus } from './status';
 
   /** One saved server in the overview list: identity, availability and quick actions. */
@@ -48,6 +49,9 @@
     <span class="id">
       <b>{server.label}</b>
       <small>{server.address}</small>
+      {#if snap && snap.d.cores}<small class="spec tnum" title={snap.d.cpu_model ?? undefined}
+          >{specText(snap.d)}</small
+        >{/if}
     </span>
     {#if snap}
       <span class="snap tnum" title={m.stat_last({ when: ago(snap.at, getLocale()) })}>
@@ -201,6 +205,10 @@
   .meta small {
     color: var(--muted);
     font-size: 11px;
+  }
+  .id .spec {
+    font-size: 10.5px;
+    opacity: 0.85;
   }
   .meta {
     display: grid;

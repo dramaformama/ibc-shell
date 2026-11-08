@@ -66,6 +66,9 @@ Demo mode: sample servers and metrics.
 
 ## What's new
 
+- **A connection you can read.** Every step is shown: address lookup, connecting (to which IP), secure channel, sign-in, terminal, and how long each took. When it fails you see which step stopped and what that usually means (address not found, port closed, server dropped the connection, sign-in refused). There is a Copy report button. A dropped session is explained too.
+- **Server configuration.** Cores, processor, memory and disk (NVMe, SSD or HDD) on the cards and in Status, like a hosting plan.
+- **Backup.** Settings → Backup: one encrypted file with servers, folders, passwords and keys, snippets, trusted keys and settings. Open it on another computer with Restore and everything is back.
 - **Docker.** A server's containers with state, ports and load; start, stop and restart (stop and restart ask first); logs. The Docker tab shows every connected server at once.
 - **SSL certificates.** Finds Let's Encrypt, nginx, Apache and Caddy certificates, shows expiry and warns ahead. The Domains tab gathers them from all servers.
 - **macOS menu-bar icon.** A short summary of your servers, one click to jump to a server. Can be turned off in settings.
@@ -103,7 +106,7 @@ A release is made by a tag: `git tag v0.1.0 && git push origin v0.1.0`. The [wor
 | SFTP engine: queue, resume, pause, conflict policies, remote-to-remote         | done, tested                 |
 | Terminal, files, overview, server status, Docker, SSL, snippets, menu-bar icon | done, working in the app     |
 | Installers for macOS, Windows, Linux                                           | built in CI                  |
-| Port forwarding, `ssh_config` import, key manager, split panes, backups        | planned (Phase 3)            |
+| Port forwarding, `ssh_config` import, key manager, split panes                 | planned (Phase 3)            |
 | Mobile                                                                         | planned (Phase 4)            |
 
 Tested on a Mac. Docker and SSL are checked on demo data, not yet on a real server. The Windows and Linux builds have not been run on real machines.

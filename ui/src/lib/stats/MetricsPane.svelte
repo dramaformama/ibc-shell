@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { Clock, Cpu, History, MemoryStick, ServerCog } from '@lucide/svelte';
+  import { Clock, History, ServerCog } from '@lucide/svelte';
   import { getLocale } from '$lib/paraglide/runtime.js';
   import { lastSeen } from '$lib/stores/lastseen.svelte';
   import * as m from '$lib/paraglide/messages.js';
   import { sessions, type TabGroup } from '$lib/stores/sessions.svelte';
   import { stats } from '$lib/stores/stats.svelte';
-  import { ago, bytes, uptime } from './format';
+  import { ago, uptime } from './format';
+  import SpecLine from './SpecLine.svelte';
   import StatsCards from './StatsCards.svelte';
 
   /** Live metrics of a server: compact in the side panel, a card grid on the Status page. */
@@ -40,6 +41,7 @@
     <History size={13} />{m.stat_last({ when: ago(snap.at, getLocale()) })}
     {#if phase === 'connecting'}<span class="dot" data-phase="connecting"></span>{/if}
   </p>
+  <div class="rspec"><SpecLine {d} model={wide} /></div>
   <StatsCards {s} {d} {wide} />
 {:else if !sid}
   <div class="state">
@@ -63,8 +65,7 @@
   <header class="head" class:wide>
     <div class="facts tnum">
       {#if d.os_name}<span class="os">{d.os_name}</span>{/if}
-      <span><Cpu size={13} />{d.cores} {m.stat_cores().toLowerCase()}</span>
-      <span><MemoryStick size={13} />{bytes(d.mem_total)}</span>
+      <SpecLine {d} model={wide} />
       <span title={m.stat_uptime()}
         ><Clock size={13} />{uptime(d.uptime_s, m.unit_d(), m.unit_h(), m.unit_m())}</span
       >
@@ -92,6 +93,9 @@
     color: color-mix(in oklab, var(--warn) 60%, var(--text));
     font-size: 12px;
     font-weight: 500;
+  }
+  .rspec {
+    margin: 0 0 12px;
   }
   .last .dot {
     margin-left: auto;

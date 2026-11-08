@@ -21,6 +21,7 @@ mod resolve;
 mod resolver;
 mod schema;
 mod search;
+mod settings_io;
 mod siblings;
 mod snapshot;
 pub mod sort_key;

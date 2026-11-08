@@ -21,6 +21,14 @@ pub trait VaultStorage: Send + Sync {
     fn export_snapshot(&self) -> Result<Snapshot, StoreError>;
     /// Merges a snapshot.
     fn import_snapshot(&self, s: Snapshot) -> Result<ImportCounts, StoreError>;
+    /// Settings for a backup, `(key, JSON text)`.
+    fn settings_export(&self) -> Result<Vec<(String, String)>, StoreError> {
+        Ok(Vec::new())
+    }
+    /// Writes settings from a backup; returns how many were taken.
+    fn settings_import(&self, _items: Vec<(String, String)>) -> Result<u32, StoreError> {
+        Ok(0)
+    }
 }
 
 impl VaultStorage for Store {
@@ -47,5 +55,11 @@ impl VaultStorage for Store {
     }
     fn import_snapshot(&self, s: Snapshot) -> Result<ImportCounts, StoreError> {
         Store::import_snapshot(self, s)
+    }
+    fn settings_export(&self) -> Result<Vec<(String, String)>, StoreError> {
+        Store::settings_export(self)
+    }
+    fn settings_import(&self, items: Vec<(String, String)>) -> Result<u32, StoreError> {
+        Store::settings_import(self, items)
     }
 }

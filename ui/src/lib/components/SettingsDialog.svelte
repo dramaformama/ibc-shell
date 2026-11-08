@@ -8,6 +8,7 @@
   import { AUTOLOCK_CHOICES } from '$lib/util/autolock';
   import { errorText } from '$lib/util/errors';
   import { MIN_PASSWORD, passwordStrength } from '$lib/util/strength';
+  import BackupSection from './BackupSection.svelte';
   import Sheet from './Sheet.svelte';
 
   let info = $state<AppInfo | null>(null);
@@ -209,6 +210,7 @@
           </div>
         {/if}
       </section>
+      <BackupSection />
       {#if info}
         <p class="note tnum">{m.app_name()} {info.version} · {info.platform} {info.arch}</p>
       {/if}

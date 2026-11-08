@@ -174,6 +174,15 @@ pub enum SessionEvent {
         /// Hop label.
         hop: String,
     },
+    /// One TCP attempt at an address of the hop (several when the name has many addresses).
+    Attempt {
+        /// Hop label.
+        hop: String,
+        /// `ip:port` that was tried.
+        addr: String,
+        /// `None` = connected; else `Timeout` or the IO error kind (`ConnectionRefused`, …).
+        failure: Option<String>,
+    },
     /// TOFU: reply with `hostkey_accept` or `session_close`.
     HostKeyPrompt {
         /// Reply id.
@@ -211,7 +220,8 @@ pub enum SessionEvent {
     },
     /// Connection closed after `Connected`.
     Disconnected {
-        /// Human-readable reason (sanitized).
+        /// Reason code: `closed`, `shell_exited`, `keepalive`, `inactivity`,
+        /// `server:<DisconnectCode>`, `network:<IoKind>`, `protocol` (the UI localizes them).
         reason: String,
         /// `session_reconnect` is possible.
         can_reconnect: bool,

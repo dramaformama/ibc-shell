@@ -91,6 +91,9 @@ export const statsSample: Commands['statsSample'] = async () => {
     disk_write_bps: Math.round(wave(0.1, 8, 37, 1) * MIB),
     uptime_s: 3 * 86400 + 4 * 3600 + Math.floor((Date.now() - t0) / 1000),
     os_name: 'Ubuntu 24.04 LTS',
+    cpu_model: 'AMD EPYC 7543 32-Core Processor',
+    disk_dev_bytes: 250 * GIB,
+    disk_kind: 'NVMe',
     temp_c: wave(44, 58, 60),
     procs: PROCS.map(([pid, user, cpu, gib, command]) => ({
       pid,

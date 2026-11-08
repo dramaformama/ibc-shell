@@ -47,10 +47,78 @@ function banner(s: Session): void {
   prompt(s);
 }
 
+/** Demo failures by name, so every explanation can be seen: `dns`, `refused`, `timeout`,
+ * `dropped`, `badauth`, `slow` (a slow but successful connect). */
+async function scripted(s: Session): Promise<boolean> {
+  const key = `${s.label} ${s.hostname}`;
+  const step = async (
+    name: 'Resolving' | 'Connecting' | 'Handshake' | 'Authenticating',
+    ms = 160
+  ) => {
+    event(s, { type: 'Connecting', step: name, hop: s.label });
+    await delay(ms);
+  };
+  if (key.includes('dns')) {
+    await step('Resolving');
+    event(s, { type: 'Failed', error: { code: 'Network', detail: 'Uncategorized' } });
+    return true;
+  }
+  if (key.includes('refused')) {
+    await step('Resolving');
+    await step('Connecting');
+    event(s, {
+      type: 'Attempt',
+      hop: s.label,
+      addr: '203.0.113.7:22',
+      failure: 'ConnectionRefused'
+    });
+    event(s, { type: 'Failed', error: { code: 'Network', detail: 'ConnectionRefused' } });
+    return true;
+  }
+  if (key.includes('timeout')) {
+    await step('Resolving');
+    await step('Connecting', 2600);
+    event(s, { type: 'Attempt', hop: s.label, addr: '[2001:db8::7]:22', failure: 'Timeout' });
+    event(s, { type: 'Attempt', hop: s.label, addr: '203.0.113.7:22', failure: 'Timeout' });
+    event(s, { type: 'Failed', error: { code: 'Timeout' } });
+    return true;
+  }
+  if (key.includes('dropped')) {
+    await step('Resolving');
+    await step('Connecting');
+    event(s, { type: 'Attempt', hop: s.label, addr: '203.0.113.7:22', failure: null });
+    await step('Handshake');
+    event(s, { type: 'Failed', error: { code: 'Network', detail: 'ConnectionReset' } });
+    return true;
+  }
+  if (key.includes('badauth')) {
+    await step('Resolving');
+    await step('Connecting');
+    event(s, { type: 'Attempt', hop: s.label, addr: '203.0.113.7:22', failure: null });
+    await step('Handshake');
+    await step('Authenticating');
+    event(s, {
+      type: 'Failed',
+      error: { code: 'AuthFailed', detail: { methods_left: ['publickey', 'password'] } }
+    });
+    return true;
+  }
+  if (key.includes('slow')) {
+    await step('Resolving');
+    await step('Connecting', 3200);
+    event(s, { type: 'Attempt', hop: s.label, addr: '203.0.113.7:22', failure: null });
+    return false;
+  }
+  return false;
+}
+
 async function connect(s: Session): Promise<void> {
+  if (await scripted(s)) return;
   const steps = ['Resolving', 'Connecting', 'Handshake'] as const;
   for (const step of steps) {
     event(s, { type: 'Connecting', step, hop: s.label });
+    if (step === 'Connecting')
+      event(s, { type: 'Attempt', hop: s.label, addr: `${s.hostname}:22`, failure: null });
     await delay(120);
   }
   if (s.label.includes('changed key')) {
