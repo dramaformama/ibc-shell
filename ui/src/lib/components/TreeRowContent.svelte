@@ -1,5 +1,11 @@
 <script lang="ts">
-  import { ChevronRight, Folder as FolderIcon, FolderOpen, SquareTerminal } from '@lucide/svelte';
+  import {
+    ChevronRight,
+    Folder as FolderIcon,
+    FolderOpen,
+    Pencil,
+    SquareTerminal
+  } from '@lucide/svelte';
   import { connectHost } from '$lib/stores/actions';
   import Flag from '$lib/flags/Flag.svelte';
   import * as m from '$lib/paraglide/messages.js';
@@ -94,6 +100,16 @@
         onclick={(e) => (e.stopPropagation(), connectHost(row.id, 'sftp'))}
         onpointerdown={(e) => e.stopPropagation()}
         ondblclick={(e) => e.stopPropagation()}><FolderOpen size={13} /></button
+      >
+      <button
+        type="button"
+        class="icon-btn act"
+        tabindex="-1"
+        title={m.dash_edit()}
+        aria-label={m.dash_edit()}
+        onclick={(e) => (e.stopPropagation(), ui.openHostEditor(row.id))}
+        onpointerdown={(e) => e.stopPropagation()}
+        ondblclick={(e) => e.stopPropagation()}><Pencil size={12} /></button
       >
     </span>
   {:else}

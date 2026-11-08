@@ -4,6 +4,7 @@ import { inheritedFlag } from '$lib/util/tree-model';
 import { recent } from './recent.svelte';
 import { sessions, type TabKind } from './sessions.svelte';
 import { tree } from './tree.svelte';
+import { ui } from './ui.svelte';
 
 function openFor(hostId: HostId, kind: TabKind, focus: boolean): void {
   const h = tree.host(hostId);
@@ -66,4 +67,15 @@ export function switchKind(kind: TabKind): void {
   const open = sessions.find(t.hostId, kind);
   if (open) sessions.select(open.id);
   else connectHost(t.hostId, kind);
+}
+
+/**
+ * The user closes a server tab. A saved server that is live keeps feeding the overview, so
+ * closing asks whether to keep it in the background for monitoring or to disconnect.
+ */
+export function closeServer(key: string): void {
+  const g = sessions.groups.find((x) => x.key === key);
+  const live = !!g && !!g.tabs[0]?.hostId && sessions.groupPhase(g) === 'connected';
+  if (live) ui.closeAsk = key;
+  else sessions.closeGroup(key);
 }

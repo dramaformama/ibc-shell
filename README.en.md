@@ -15,6 +15,28 @@ Nested folders, country flags, a terminal that stays out of your way, and secret
 > **Status: early development.** The core (SSH, SFTP engine, encrypted vault, terminal and file UI) is built and tested.
 > Installers are built automatically from a tag, see [Download](#download).
 
+## Download
+
+Click your system and the file starts downloading. It is always the latest version.
+
+<p align="center">
+  <a href="https://github.com/dramaformama/ibc-shell/releases/latest/download/iBC-Shell-macOS-Apple-Silicon.dmg"><img alt="Download macOS · Apple Silicon" src="https://img.shields.io/badge/Download-macOS%20%C2%B7%20Apple%20Silicon-000000?style=for-the-badge&logo=apple&logoColor=white"></a>
+  <a href="https://github.com/dramaformama/ibc-shell/releases/latest/download/iBC-Shell-macOS-Intel.dmg"><img alt="Download macOS · Intel" src="https://img.shields.io/badge/Download-macOS%20%C2%B7%20Intel-555555?style=for-the-badge&logo=apple&logoColor=white"></a>
+  <a href="https://github.com/dramaformama/ibc-shell/releases/latest/download/iBC-Shell-Windows-x64-setup.exe"><img alt="Download Windows 10/11" src="https://img.shields.io/badge/Download-Windows%2010/11-0078D4?style=for-the-badge&logo=windows&logoColor=white"></a>
+  <a href="https://github.com/dramaformama/ibc-shell/releases/latest/download/iBC-Shell-Linux-x64.AppImage"><img alt="Download Linux · AppImage" src="https://img.shields.io/badge/Download-Linux%20%C2%B7%20AppImage-E95420?style=for-the-badge&logo=linux&logoColor=white"></a>
+  <a href="https://github.com/dramaformama/ibc-shell/releases/latest/download/iBC-Shell-Linux-x64.deb"><img alt="Download Linux · .deb" src="https://img.shields.io/badge/Download-Linux%20%C2%B7%20.deb-A81D33?style=for-the-badge&logo=debian&logoColor=white"></a>
+</p>
+
+Older versions and checksums (`SHA256SUMS.txt`) are on the [Releases page](https://github.com/dramaformama/ibc-shell/releases). iOS and Android are planned (Phase 4).
+
+The builds are not signed with a paid certificate, so the system warns on first launch. That is expected; check the sum from `SHA256SUMS.txt`.
+
+- **macOS.** Drag the app to Applications. On first launch right-click it, choose Open, then Open in the dialog. If macOS says the app is damaged, run `xattr -dr com.apple.quarantine "/Applications/iBC Shell.app"`.
+- **Windows.** In the SmartScreen window click More info, then Run anyway.
+- **Linux.** `chmod +x` the AppImage and run it, or `sudo apt install ./file.deb`.
+
+A release is made by a tag: `git tag v0.1.0 && git push origin v0.1.0`. The [workflow](.github/workflows/release.yml) builds the installers for every system and publishes the release at once, so the links above start working.
+
 ## Why
 
 - **Light.** Small installer, low memory. Tauri and Rust, no Electron.
@@ -76,26 +98,6 @@ Demo mode: sample servers and metrics.
 - **Snippets without opening a server.** A tab of their own, run on one or several servers.
 - **Folders on the overview**, a folder filter, connect a whole folder.
 - **Everything over the SSH connection that is already open.** Nothing is installed on the server and no ports are opened.
-
-## Download
-
-Installers are on the [Releases page](https://github.com/dramaformama/ibc-shell/releases/latest), with a `SHA256SUMS.txt` next to them to verify the download.
-
-| Platform             | File                        | State             |
-| -------------------- | --------------------------- | ----------------- |
-| macOS, Apple Silicon | `iBC Shell_…_aarch64.dmg`   | built in CI       |
-| macOS, Intel         | `iBC Shell_…_x64.dmg`       | built in CI       |
-| Windows 10/11        | `iBC Shell_…_x64-setup.exe` | built in CI       |
-| Linux                | `.AppImage` and `.deb`      | built in CI       |
-| iOS, Android         | —                           | planned (Phase 4) |
-
-The builds are not signed with a paid certificate, so the system warns on first launch. That is expected; check the sum from `SHA256SUMS.txt`.
-
-- **macOS.** Drag the app to Applications. On first launch right-click it, choose Open, then Open in the dialog. If macOS says the app is damaged, run `xattr -dr com.apple.quarantine "/Applications/iBC Shell.app"`.
-- **Windows.** In the SmartScreen window click More info, then Run anyway.
-- **Linux.** `chmod +x` the AppImage and run it, or `sudo apt install ./file.deb`.
-
-A release is made by a tag: `git tag v0.1.0 && git push origin v0.1.0`. The [workflow](.github/workflows/release.yml) builds all four installers and puts them in a draft release that you publish by hand.
 
 ## What works today
 

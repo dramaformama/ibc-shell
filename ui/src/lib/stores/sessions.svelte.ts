@@ -102,6 +102,26 @@ class SessionsStore {
     for (const t of this.tabs.filter((x) => groupKey(x) === key)) this.close(t.id);
   }
 
+  /**
+   * Takes a server off the tab bar but keeps it connected for monitoring. Its status view (no
+   * connection of its own) is closed; terminal and files stay alive behind the overview.
+   */
+  hideGroup(key: string): void {
+    const mine = this.tabs.filter((t) => groupKey(t) === key);
+    if (!mine.length) return;
+    for (const t of mine.filter((x) => x.kind === 'status')) {
+      delete this.phases[t.id];
+      delete this.sessionIds[t.id];
+    }
+    this.tabs = this.tabs
+      .filter((t) => groupKey(t) !== key || t.kind !== 'status')
+      .map((t) => (groupKey(t) === key ? { ...t, background: true } : t));
+    if (this.activeId && mine.some((t) => t.id === this.activeId)) {
+      const next = this.visibleGroups[0];
+      this.activeId = next ? next.current.id : null;
+    }
+  }
+
   phase(id: string): TabPhase {
     return this.phases[id] ?? 'connecting';
   }

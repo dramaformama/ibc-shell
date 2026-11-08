@@ -58,6 +58,8 @@ class UiState {
   renameKey = $state<string | null>(null);
   /** Nodes awaiting delete confirmation (`f:<id>` / `h:<id>` keys). */
   deleteKeys = $state.raw<string[] | null>(null);
+  /** Server (tab group key) whose close asks: keep in background or disconnect. */
+  closeAsk = $state<string | null>(null);
   #seq = 0;
 
   openHostEditor(id: HostId | null, folderId: FolderId | null = null): void {

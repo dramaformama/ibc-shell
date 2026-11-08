@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, type Snippet } from 'svelte';
   import { api } from '$lib/api';
+  import { closeServer } from '$lib/stores/actions';
   import * as m from '$lib/paraglide/messages.js';
   import { reachability } from '$lib/fleet/reachability.svelte';
   import { sessions } from '$lib/stores/sessions.svelte';
@@ -8,6 +9,7 @@
   import { ui } from '$lib/stores/ui.svelte';
   import { vault } from '$lib/stores/vault.svelte';
   import { isApple } from '$lib/util/platform';
+  import CloseServerDialog from './CloseServerDialog.svelte';
   import CommandPalette from './CommandPalette.svelte';
   import ConfirmDelete from './ConfirmDelete.svelte';
   import FolderEditor from './FolderEditor.svelte';
@@ -51,7 +53,7 @@
       if (vault.canLock) void vault.lock();
     } else if (k === ',') ui.settingsOpen = true;
     else if (k === 't') ui.paletteOpen = true;
-    else if (k === 'w' && sessions.activeGroup) sessions.closeGroup(sessions.activeGroup);
+    else if (k === 'w' && sessions.activeGroup) closeServer(sessions.activeGroup);
     else if (/^[1-9]$/.test(k)) {
       const g = sessions.groups[Number(k) - 1];
       if (g) sessions.select(g.current.id);
@@ -123,6 +125,7 @@
 <CommandPalette />
 <SettingsDialog />
 <ConfirmDelete />
+<CloseServerDialog />
 <Toasts />
 
 <style>

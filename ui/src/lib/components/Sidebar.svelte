@@ -10,6 +10,7 @@
     ShieldCheck,
     Zap
   } from '@lucide/svelte';
+  import { connectedServers } from '$lib/fleetpages/connected.svelte';
   import { services } from '$lib/services/services.svelte';
   import { certTone, daysLeft } from '$lib/services/ports';
   import { snippets } from '$lib/snippets/snippets.svelte';
@@ -30,6 +31,16 @@
       0
     )
   );
+  // The counters must not wait for the Docker / Domains pages to be opened once.
+  const liveSessions = $derived(connectedServers().map((x) => x.sid));
+  $effect(() => {
+    const stops = liveSessions.flatMap((sid) => [
+      services.watch('docker', sid),
+      services.watch('certs', sid)
+    ]);
+    return () => stops.forEach((stop) => stop());
+  });
+  const domains = $derived(Object.values(services.certs).reduce((n, r) => n + r.certs.length, 0));
   const expiring = $derived(
     Object.values(services.certs).reduce(
       (n, r) => n + r.certs.filter((c) => certTone(daysLeft(c.not_after)) !== 'ok').length,
@@ -49,8 +60,8 @@
       id: 'domains' as const,
       label: m.fleet_domains(),
       icon: ShieldCheck,
-      count: expiring,
-      alert: true
+      count: domains,
+      alert: expiring > 0
     },
     {
       id: 'snippets' as const,

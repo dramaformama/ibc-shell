@@ -1,8 +1,8 @@
 <script lang="ts">
   import EmptyState from '$lib/components/EmptyState.svelte';
   import {
-    ChevronRight,
     CornerDownLeft,
+    Folder,
     FolderPlus,
     Pencil,
     Play,
@@ -14,30 +14,37 @@
   } from '@lucide/svelte';
   import type { Snippet } from '$lib/api';
   import * as m from '$lib/paraglide/messages.js';
+  import { getLocale } from '$lib/paraglide/runtime.js';
+  import { pluralForm } from '$lib/stats/format';
   import { frequent, parseVars, sections } from './model';
   import { snippets } from './snippets.svelte';
   import './snippets-panel.css';
 
   let q = $state('');
-  const secs = $derived(sections(snippets.items, snippets.layout, q));
+  const selected = $derived(
+    snippets.layout.groups.some((g) => g.id === snippets.selectedGroup)
+      ? snippets.selectedGroup
+      : null
+  );
+  const all = $derived(sections(snippets.items, snippets.layout, q));
+  // A picked folder card narrows the list to that folder; search always looks everywhere.
+  const secs = $derived(selected && !q ? all.filter((x) => x.group?.id === selected) : all);
   const top = $derived(q ? [] : frequent(snippets.items, snippets.layout));
-  let renaming = $state<string | null>(null);
-  let renameValue = $state('');
   let dragId = $state<string | null>(null);
   let dragGroup = $state<string | null>(null);
   let over = $state<string | null>(null);
 
   const firstLine = (b: string) => b.split('\n').find((l) => l.trim()) ?? '';
-
-  function newFolder() {
-    const id = snippets.addGroup(m.snip_folder_default());
-    renaming = id;
-    renameValue = m.snip_folder_default();
-  }
-  function commitRename() {
-    if (renaming && renameValue.trim()) snippets.renameGroup(renaming, renameValue.trim());
-    renaming = null;
-  }
+  const countOf = (id: string) =>
+    snippets.items.filter((x) => snippets.layout.of[x.id] === id).length;
+  const countText = (count: number) => {
+    const f = pluralForm(count, getLocale());
+    return f === 'one'
+      ? m.snip_count_one({ count })
+      : f === 'few'
+        ? m.snip_count_few({ count })
+        : m.snip_count_many({ count });
+  };
 
   // ---- drag & drop: snippets onto rows / folder headers, folders onto folder headers ----
   function dragSnippet(e: DragEvent, s: Snippet) {
@@ -89,17 +96,64 @@
     >
     <button
       class="icon-btn"
-      onclick={newFolder}
+      onclick={() => (snippets.folderDialog = { id: null })}
       aria-label={m.snip_new_folder()}
       title={m.snip_new_folder()}><FolderPlus size={16} /></button
     >
     <button
       class="icon-btn add"
-      onclick={() => (snippets.editing = { snippet: null, group: null })}
+      onclick={() => (snippets.editing = { snippet: null, group: selected })}
       aria-label={m.snip_new()}
       title={m.snip_new()}><Plus size={16} /></button
     >
   </div>
+
+  {#if snippets.layout.groups.length}
+    <div class="folders" role="group" aria-label={m.snip_folders()}>
+      {#each snippets.layout.groups as g (g.id)}
+        <div
+          class="fcard"
+          class:on={selected === g.id}
+          class:over={over === 'f:' + g.id}
+          role="group"
+          draggable="true"
+          ondragstart={(e) => dragFolder(e, g.id)}
+          ondragover={(e) => allow(e, 'f:' + g.id)}
+          ondragleave={() => (over = null)}
+          ondrop={(e) => dropOnFolder(e, g.id)}
+          ondragend={end}
+        >
+          <button
+            class="fmain"
+            aria-pressed={selected === g.id}
+            title={m.snip_folder_filter()}
+            onclick={() => (snippets.selectedGroup = selected === g.id ? null : g.id)}
+            ondblclick={() => (snippets.folderDialog = { id: g.id })}
+          >
+            <span class="badge"><Folder size={16} /></span>
+            <span class="ftext">
+              <span class="fname">{g.name}</span>
+              <span class="fmeta tnum">{countText(countOf(g.id))}</span>
+            </span>
+          </button>
+          <span class="facts">
+            <button
+              class="mini"
+              onclick={() => (snippets.folderDialog = { id: g.id })}
+              aria-label={m.menu_rename()}
+              title={m.menu_rename()}><Pencil size={12} /></button
+            >
+            <button
+              class="mini"
+              onclick={() => (snippets.folderDelete = g.id)}
+              aria-label={m.snip_delete_folder()}
+              title={m.snip_delete_folder()}><Trash2 size={12} /></button
+            >
+          </span>
+        </div>
+      {/each}
+    </div>
+  {/if}
 
   {#if !snippets.items.length && snippets.loaded}
     <EmptyState icon={Zap} title={m.snip_empty_title()} hint={m.snip_empty_hint()}>
@@ -126,123 +180,63 @@
     <div class="list">
       {#each secs as sec (sec.group?.id ?? '_')}
         {@const gid = sec.group?.id ?? null}
-        {@const closed = !!gid && !q && snippets.layout.collapsed.includes(gid)}
-        {#if sec.group || snippets.layout.groups.length}
+        {@const fname = !selected ? (sec.group?.name ?? null) : null}
+        {#each sec.items as s (s.id)}
+          {@const hasVars = parseVars(s.body).length > 0}
           <div
-            class="folder"
-            class:over={over === 'f:' + (gid ?? '_')}
-            role="group"
-            draggable={!!gid && renaming !== gid}
-            ondragstart={(e) => gid && dragFolder(e, gid)}
-            ondragover={(e) => allow(e, 'f:' + (gid ?? '_'))}
+            class="row"
+            class:over={over === 's:' + s.id}
+            class:dragging={dragId === s.id}
+            role="listitem"
+            draggable="true"
+            ondragstart={(e) => dragSnippet(e, s)}
+            ondragover={(e) => allow(e, 's:' + s.id)}
             ondragleave={() => (over = null)}
-            ondrop={(e) => dropOnFolder(e, gid)}
+            ondrop={(e) => dropOnRow(e, gid, s.id)}
             ondragend={end}
           >
-            {#if gid && renaming === gid}
-              <!-- svelte-ignore a11y_autofocus -->
-              <input
-                class="input rename"
-                bind:value={renameValue}
-                autofocus
-                aria-label={m.snip_folder_name()}
-                onblur={commitRename}
-                onkeydown={(e) => {
-                  if (e.key === 'Enter') commitRename();
-                  if (e.key === 'Escape') renaming = null;
-                }}
-              />
-            {:else}
+            <button class="main" onclick={() => snippets.run(s)} title={m.snip_run_hint()}>
+              <span class="name"
+                >{s.name}{#if hasVars}<span class="tag">{'{…}'}</span>{/if}{#if fname}<span
+                    class="tag in">{fname}</span
+                  >{/if}</span
+              >
+              <span class="cmd mono">{firstLine(s.body)}</span>
+            </button>
+            <span class="acts">
               <button
-                class="fold"
-                aria-expanded={!closed}
-                onclick={() => gid && snippets.toggleGroup(gid)}
-                disabled={!gid}
-                ><span class="chev" class:open={!closed}><ChevronRight size={13} /></span><span
-                  class="fname">{sec.group?.name ?? m.snip_no_folder()}</span
-                ><span class="count tnum">{sec.items.length}</span></button
+                class="mini"
+                onclick={() => snippets.run(s, 'here', false)}
+                aria-label={m.snip_insert()}
+                title={m.snip_insert()}><CornerDownLeft size={13} /></button
               >
-              {#if gid}
-                <span class="facts">
-                  <button
-                    class="mini"
-                    onclick={() => (snippets.editing = { snippet: null, group: gid })}
-                    aria-label={m.snip_new()}
-                    title={m.snip_new()}><Plus size={13} /></button
-                  >
-                  <button
-                    class="mini"
-                    onclick={() => ((renaming = gid), (renameValue = sec.group?.name ?? ''))}
-                    aria-label={m.menu_rename()}
-                    title={m.menu_rename()}><Pencil size={12} /></button
-                  >
-                  <button
-                    class="mini"
-                    onclick={() => snippets.removeGroup(gid)}
-                    aria-label={m.snip_delete_folder()}
-                    title={m.snip_delete_folder()}><Trash2 size={12} /></button
-                  >
-                </span>
-              {/if}
-            {/if}
+              <button
+                class="mini"
+                onclick={() => snippets.run(s, 'many')}
+                aria-label={m.snip_run_many()}
+                title={m.snip_run_many()}><Send size={13} /></button
+              >
+              <button
+                class="mini"
+                onclick={() => (snippets.editing = { snippet: s, group: null })}
+                aria-label={m.snip_edit()}
+                title={m.snip_edit()}><Pencil size={12} /></button
+              >
+            </span>
           </div>
-        {/if}
-        {#if !closed}
-          {#each sec.items as s (s.id)}
-            {@const hasVars = parseVars(s.body).length > 0}
+        {:else}
+          {#if gid && !q && selected}
             <div
-              class="row"
-              class:over={over === 's:' + s.id}
-              class:dragging={dragId === s.id}
+              class="drop-hint"
+              class:over={over === 'f:' + gid}
               role="listitem"
-              draggable="true"
-              ondragstart={(e) => dragSnippet(e, s)}
-              ondragover={(e) => allow(e, 's:' + s.id)}
-              ondragleave={() => (over = null)}
-              ondrop={(e) => dropOnRow(e, gid, s.id)}
-              ondragend={end}
+              ondragover={(e) => allow(e, 'f:' + gid)}
+              ondrop={(e) => dropOnFolder(e, gid)}
             >
-              <button class="main" onclick={() => snippets.run(s)} title={m.snip_run_hint()}>
-                <span class="name"
-                  >{s.name}{#if hasVars}<span class="tag">{'{…}'}</span>{/if}</span
-                >
-                <span class="cmd mono">{firstLine(s.body)}</span>
-              </button>
-              <span class="acts">
-                <button
-                  class="mini"
-                  onclick={() => snippets.run(s, 'here', false)}
-                  aria-label={m.snip_insert()}
-                  title={m.snip_insert()}><CornerDownLeft size={13} /></button
-                >
-                <button
-                  class="mini"
-                  onclick={() => snippets.run(s, 'many')}
-                  aria-label={m.snip_run_many()}
-                  title={m.snip_run_many()}><Send size={13} /></button
-                >
-                <button
-                  class="mini"
-                  onclick={() => (snippets.editing = { snippet: s, group: null })}
-                  aria-label={m.snip_edit()}
-                  title={m.snip_edit()}><Pencil size={12} /></button
-                >
-              </span>
+              {m.snip_folder_empty()}
             </div>
-          {:else}
-            {#if gid && !q}
-              <div
-                class="drop-hint"
-                class:over={over === 'f:' + gid}
-                role="listitem"
-                ondragover={(e) => allow(e, 'f:' + gid)}
-                ondrop={(e) => dropOnFolder(e, gid)}
-              >
-                {m.snip_folder_empty()}
-              </div>
-            {/if}
-          {/each}
-        {/if}
+          {/if}
+        {/each}
       {/each}
       {#if q && !secs.length}
         <p class="none">{m.dash_no_results()}</p>

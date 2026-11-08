@@ -15,6 +15,28 @@
 > **Статус: ранняя разработка.** Ядро (SSH, движок SFTP, зашифрованное хранилище, интерфейс терминала и файлов) написано и протестировано.
 > Установщики собираются автоматически по тегу, см. [Скачать](#скачать).
 
+## Скачать
+
+Нажмите на свою систему, и файл начнёт скачиваться. Всегда берётся последняя версия.
+
+<p align="center">
+  <a href="https://github.com/dramaformama/ibc-shell/releases/latest/download/iBC-Shell-macOS-Apple-Silicon.dmg"><img alt="Скачать macOS · Apple Silicon" src="https://img.shields.io/badge/%D0%A1%D0%BA%D0%B0%D1%87%D0%B0%D1%82%D1%8C-macOS%20%C2%B7%20Apple%20Silicon-000000?style=for-the-badge&logo=apple&logoColor=white"></a>
+  <a href="https://github.com/dramaformama/ibc-shell/releases/latest/download/iBC-Shell-macOS-Intel.dmg"><img alt="Скачать macOS · Intel" src="https://img.shields.io/badge/%D0%A1%D0%BA%D0%B0%D1%87%D0%B0%D1%82%D1%8C-macOS%20%C2%B7%20Intel-555555?style=for-the-badge&logo=apple&logoColor=white"></a>
+  <a href="https://github.com/dramaformama/ibc-shell/releases/latest/download/iBC-Shell-Windows-x64-setup.exe"><img alt="Скачать Windows 10/11" src="https://img.shields.io/badge/%D0%A1%D0%BA%D0%B0%D1%87%D0%B0%D1%82%D1%8C-Windows%2010/11-0078D4?style=for-the-badge&logo=windows&logoColor=white"></a>
+  <a href="https://github.com/dramaformama/ibc-shell/releases/latest/download/iBC-Shell-Linux-x64.AppImage"><img alt="Скачать Linux · AppImage" src="https://img.shields.io/badge/%D0%A1%D0%BA%D0%B0%D1%87%D0%B0%D1%82%D1%8C-Linux%20%C2%B7%20AppImage-E95420?style=for-the-badge&logo=linux&logoColor=white"></a>
+  <a href="https://github.com/dramaformama/ibc-shell/releases/latest/download/iBC-Shell-Linux-x64.deb"><img alt="Скачать Linux · .deb" src="https://img.shields.io/badge/%D0%A1%D0%BA%D0%B0%D1%87%D0%B0%D1%82%D1%8C-Linux%20%C2%B7%20.deb-A81D33?style=for-the-badge&logo=debian&logoColor=white"></a>
+</p>
+
+Другие версии и контрольные суммы (`SHA256SUMS.txt`) на странице [Releases](https://github.com/dramaformama/ibc-shell/releases). iOS и Android в планах (Фаза 4).
+
+Сборки не подписаны платным сертификатом, поэтому система предупредит при первом запуске. Это нормально, проверьте сумму из `SHA256SUMS.txt`.
+
+- **macOS.** Перетащите приложение в «Программы». При первом запуске нажмите правой кнопкой, «Открыть», затем «Открыть» в окне. Если macOS пишет, что приложение повреждено, выполните `xattr -dr com.apple.quarantine "/Applications/iBC Shell.app"`.
+- **Windows.** В окне SmartScreen нажмите «Подробнее», затем «Выполнить в любом случае».
+- **Linux.** `chmod +x` на AppImage и запуск, либо `sudo apt install ./файл.deb`.
+
+Выпуск делается тегом: `git tag v0.1.0 && git push origin v0.1.0`. [Workflow](.github/workflows/release.yml) собирает установщики для всех систем и сразу публикует релиз: по тегу появляются ссылки выше.
+
 ## Зачем
 
 - **Лёгкий.** Маленький установщик, мало памяти. Tauri и Rust, без Electron.
@@ -76,26 +98,6 @@ Docker на всех подключённых серверах: состояни
 - **Сниппеты без захода на сервер.** Отдельная вкладка, запуск на одном или на нескольких серверах.
 - **Папки на сводке**, фильтр по папке, подключение всей папки.
 - **Всё через уже открытое SSH-соединение.** Ничего не устанавливается на сервер, никакие порты не открываются.
-
-## Скачать
-
-Установщики лежат на странице [Releases](https://github.com/dramaformama/ibc-shell/releases/latest). Рядом файл `SHA256SUMS.txt` для проверки загрузки.
-
-| Платформа            | Файл                        | Состояние         |
-| -------------------- | --------------------------- | ----------------- |
-| macOS, Apple Silicon | `iBC Shell_…_aarch64.dmg`   | собирается в CI   |
-| macOS, Intel         | `iBC Shell_…_x64.dmg`       | собирается в CI   |
-| Windows 10/11        | `iBC Shell_…_x64-setup.exe` | собирается в CI   |
-| Linux                | `.AppImage` и `.deb`        | собирается в CI   |
-| iOS, Android         | —                           | в планах (Фаза 4) |
-
-Сборки не подписаны платным сертификатом, поэтому система предупредит при первом запуске. Это нормально, проверьте сумму из `SHA256SUMS.txt`.
-
-- **macOS.** Перетащите приложение в «Программы». При первом запуске нажмите правой кнопкой, «Открыть», затем «Открыть» в окне. Если macOS пишет, что приложение повреждено, выполните `xattr -dr com.apple.quarantine "/Applications/iBC Shell.app"`.
-- **Windows.** В окне SmartScreen нажмите «Подробнее», затем «Выполнить в любом случае».
-- **Linux.** `chmod +x` на AppImage и запуск, либо `sudo apt install ./файл.deb`.
-
-Выпуск делается тегом: `git tag v0.1.0 && git push origin v0.1.0`. [Workflow](.github/workflows/release.yml) собирает все четыре установщика и кладёт их в черновик релиза, который вы публикуете вручную.
 
 ## Что работает сейчас
 

@@ -1,5 +1,5 @@
 # Release builds: a tag `vX.Y.Z` builds macOS (Apple Silicon + Intel), Windows and Linux installers
-# and attaches them to a draft GitHub Release. Nothing is signed with a paid certificate:
+# and publishes them as a GitHub Release (stable file names, so README download links never change). Nothing is signed with a paid certificate:
 # macOS bundles are ad-hoc signed (bundle.macOS.signingIdentity "-"), Windows is unsigned.
 # Third-party actions are pinned by commit SHA, as in ci.yml; the release itself uses the gh CLI.
 name: Release
@@ -24,7 +24,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: macos-arm64, os: macos-14, target: aarch64-apple-darwin, bundles: dmg }
+          - { name: macos-arm64, os: macos-15, target: aarch64-apple-darwin, bundles: dmg }
           - { name: macos-x64, os: macos-15-intel, target: x86_64-apple-darwin, bundles: dmg }
           - { name: windows-x64, os: windows-2022, target: x86_64-pc-windows-msvc, bundles: nsis }
           - { name: linux-x64, os: ubuntu-24.04, target: x86_64-unknown-linux-gnu, bundles: "appimage,deb" }
@@ -80,9 +80,17 @@ jobs:
         shell: bash
         run: |
           mkdir -p dist
-          find "target/${{ matrix.target }}/release/bundle" -type f \
-            \( -name '*.dmg' -o -name '*-setup.exe' -o -name '*.AppImage' -o -name '*.deb' \) \
-            -exec cp {} dist/ \;
+          bundle="target/${{ matrix.target }}/release/bundle"
+          # Stable names: the README links to releases/latest/download/<name>.
+          case "${{ matrix.name }}" in
+            macos-arm64) pick() { find "$bundle" -name '*.dmg' -exec cp {} dist/iBC-Shell-macOS-Apple-Silicon.dmg \; ; } ;;
+            macos-x64) pick() { find "$bundle" -name '*.dmg' -exec cp {} dist/iBC-Shell-macOS-Intel.dmg \; ; } ;;
+            windows-x64) pick() { find "$bundle" -name '*-setup.exe' -exec cp {} dist/iBC-Shell-Windows-x64-setup.exe \; ; } ;;
+            linux-x64) pick() {
+              find "$bundle" -name '*.AppImage' -exec cp {} dist/iBC-Shell-Linux-x64.AppImage \; ;
+              find "$bundle" -name '*.deb' -exec cp {} dist/iBC-Shell-Linux-x64.deb \; ; } ;;
+          esac
+          pick
           ls -l dist
 
       - name: Upload
@@ -93,7 +101,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    name: draft release
+    name: publish release
     needs: build
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
@@ -109,10 +117,10 @@ jobs:
       - name: Checksums
         run: cd dist && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
 
-      - name: Create draft release
+      - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" dist/* \
-            --repo "$GITHUB_REPOSITORY" --draft --title "iBC Shell ${GITHUB_REF_NAME#v}" \
+            --repo "$GITHUB_REPOSITORY" --latest --title "iBC Shell ${GITHUB_REF_NAME#v}" \
             --notes "Установщики для macOS (Apple Silicon и Intel), Windows и Linux. Сборки без платной подписи: см. раздел «Скачать» в README."

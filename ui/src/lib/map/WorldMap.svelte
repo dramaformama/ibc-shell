@@ -23,6 +23,7 @@
   import { ms } from '$lib/stats/format';
   import { fitView, project, projectLonLat, spread, WORLD } from './geo';
   import { geo } from './geoip.svelte';
+  import { BORDER_SCALE, OUTLINES } from './borders';
   import { CENTROIDS, GRID, LAND } from './world';
   import './world-map.css';
 
@@ -110,6 +111,11 @@
 
   let open = $state<string | null>(null);
   const openPin = $derived(pins.find((p) => p.key === open) ?? null);
+  /** Countries that hold servers get filled in; the open pin's country stands out. */
+  const lit = $derived(
+    [...new Set(groups.map((g) => g.cc.toLowerCase()))].filter((c) => OUTLINES[c])
+  );
+  const openCc = $derived(openPin?.cc.toLowerCase() ?? null);
   const region = (cc: string) => flagName(cc, getLocale() === 'ru' ? 'ru' : 'en');
   const place = (p: Pin) => (p.city ? `${p.city}, ${region(p.cc)}` : region(p.cc));
 
@@ -137,7 +143,13 @@
       preserveAspectRatio="none"
       style:--dot={0.62 / Math.pow(GRID.cols / view.w, 0.55)}
     >
-      <path d={LAND} />
+      <path class="dots" d={LAND} />
+      <g transform="scale({BORDER_SCALE})">
+        <path class="borders" d={Object.values(OUTLINES).join('')} />
+        {#each lit as c (c)}
+          <path class="lit" class:on={c === openCc} d={OUTLINES[c]} />
+        {/each}
+      </g>
     </svg>
     {#each pins as p (p.key)}
       <button

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import type { Server } from '$lib/fleet/model';
+  import { settings } from '$lib/stores/settings.svelte';
   import ServerTile from './ServerTile.svelte';
 
   /**
@@ -13,10 +14,12 @@
   let viewH = $state(800);
   let scrollTop = $state(0);
   let offset = $state(0);
-  const ROW = 68;
-  const GAP = 10;
-  const STEP = ROW + GAP;
-  const columns = $derived(Math.max(1, Math.floor((width + GAP) / (300 + GAP))));
+  // Must match `--row-tile` / `--tile-gap` in app.css for each density.
+  const compact = $derived(settings.density === 'compact');
+  const ROW = $derived(compact ? 46 : 68);
+  const GAP = $derived(compact ? 6 : 10);
+  const STEP = $derived(ROW + GAP);
+  const columns = $derived(Math.max(1, Math.floor((width + GAP) / ((compact ? 250 : 300) + GAP))));
   const rowCount = $derived(Math.ceil(servers.length / columns));
   const first = $derived(Math.max(0, Math.floor((scrollTop - offset) / STEP) - 2));
   const last = $derived(Math.min(rowCount, first + Math.ceil(viewH / STEP) + 5));
@@ -60,6 +63,7 @@
     class="rows"
     style:transform="translateY({first * STEP}px)"
     style:grid-template-columns="repeat({columns}, minmax(0, 1fr))"
+    style:gap="{GAP}px"
   >
     {#each visible as server, i (server.id)}
       <div role="listitem" aria-setsize={servers.length} aria-posinset={first * columns + i + 1}>
@@ -78,6 +82,5 @@
     position: absolute;
     inset: 0 0 auto;
     display: grid;
-    gap: 10px;
   }
 </style>

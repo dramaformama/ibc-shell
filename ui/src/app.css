@@ -24,6 +24,12 @@
   --row-tile: 68px;
   --row-tree: 30px;
   --row-pad: 5px;
+  --tile-gap: 10px;
+  --card-pad: 16px;
+  --card-gap: 14px;
+  --grid-gap: 14px;
+  --page-px: 32px;
+  --page-pt: 30px;
   --load-calm: var(--c-cyan);
   --load-warm: var(--c-yellow);
   --load-hot: var(--danger);
@@ -259,9 +265,18 @@ textarea {
 }
 /* List density (Settings → Appearance): server rows, folder tree, process rows. */
 :root[data-density='compact'] {
-  --row-tile: 50px;
+  --row-tile: 46px;
   --row-tree: 26px;
   --row-pad: 2px;
+  --tile-gap: 6px;
+  --card-pad: 10px;
+  --card-gap: 8px;
+  --grid-gap: 8px;
+  --page-px: 20px;
+  --page-pt: 16px;
+  --control-h: 28px;
+  --r-card: 16px;
+  --r-field: 13px;
 }
 
 @media (prefers-reduced-motion: reduce) {

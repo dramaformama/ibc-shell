@@ -151,8 +151,8 @@
   }
   .folders {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(var(--folder-min, 230px), 1fr));
+    gap: var(--tile-gap);
     margin-bottom: 28px;
   }
   .folder {
@@ -176,7 +176,7 @@
     align-items: center;
     gap: 12px;
     min-width: 0;
-    padding: 12px 4px 12px 14px;
+    padding: var(--folder-pad, 12px 4px 12px 14px);
     border: 0;
     border-radius: inherit;
     background: none;
@@ -248,5 +248,18 @@
     .acts {
       opacity: 1;
     }
+  }
+  :global([data-density='compact']) .folders {
+    --folder-min: 190px;
+    --folder-pad: 6px 4px 6px 10px;
+    margin-bottom: 16px;
+  }
+  :global([data-density='compact']) .badge {
+    width: 28px;
+    height: 28px;
+    border-radius: 9px;
+  }
+  :global([data-density='compact']) .main {
+    gap: 9px;
   }
 </style>

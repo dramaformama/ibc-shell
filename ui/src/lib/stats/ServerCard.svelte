@@ -15,6 +15,7 @@
   import { connectHost } from '$lib/stores/actions';
   import { lastSeen } from '$lib/stores/lastseen.svelte';
   import { sessions } from '$lib/stores/sessions.svelte';
+  import { settings } from '$lib/stores/settings.svelte';
   import { stats } from '$lib/stores/stats.svelte';
   import { ui } from '$lib/stores/ui.svelte';
   import { rate, uptime } from './format';
@@ -36,6 +37,8 @@
   // Until the first live sample arrives, draw the remembered one (marked stale).
   const s = $derived(live?.latest ? live : snap ? lastSeen.toSeries(snap) : live);
   const d = $derived(s?.latest ?? null);
+  const compact = $derived(settings.density === 'compact');
+  const ring = $derived(compact ? 48 : 66);
 
   function open(kind: 'terminal' | 'sftp' | 'status') {
     if (server.host) connectHost(server.host.id, kind);
@@ -81,16 +84,16 @@
   {#if s?.unsupported}
     <p class="note">{m.stat_unsupported()}</p>
   {:else}
-    {#if d}<SpecLine {d} model />{/if}
+    {#if d}<SpecLine {d} model={!compact} />{/if}
     <div class="rings">
       <div class="gauge">
-        <Ring value={d?.cpu_pct ?? null} size={66} label={m.stat_cpu()} />
+        <Ring value={d?.cpu_pct ?? null} size={ring} label={m.stat_cpu()} />
         <span>{m.stat_cpu()}</span>
       </div>
       <div class="gauge">
         <Ring
           value={d && d.mem_total ? (d.mem_used / d.mem_total) * 100 : null}
-          size={66}
+          size={ring}
           label={m.stat_ram()}
         />
         <span>{m.stat_ram()}</span>
@@ -98,7 +101,7 @@
       <div class="gauge">
         <Ring
           value={d && d.disk_total ? (d.disk_used / d.disk_total) * 100 : null}
-          size={66}
+          size={ring}
           label={m.stat_disk()}
         />
         <span>{m.stat_disk()}</span>
@@ -110,7 +113,7 @@
           { values: s?.rx ?? [], color: 'var(--c-purple)', fill: true },
           { values: s?.tx ?? [], color: 'var(--c-cyan)' }
         ]}
-        height={34}
+        height={compact ? 22 : 34}
       />
       <div class="io tnum">
         <span class="rx"
@@ -144,8 +147,8 @@
   .srv {
     display: flex;
     flex-direction: column;
-    gap: 14px;
-    padding: 16px 16px 0;
+    gap: var(--card-gap);
+    padding: var(--card-pad) var(--card-pad) 0;
     overflow: hidden;
   }
   header {
@@ -237,7 +240,7 @@
   .net {
     display: grid;
     gap: 6px;
-    padding: 10px 12px;
+    padding: var(--net-pad, 10px 12px);
     border-radius: 14px;
     background: var(--surface-2);
   }
@@ -275,8 +278,29 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    margin: auto -16px 0;
-    padding: 10px 12px;
+    margin: auto calc(var(--card-pad) * -1) 0;
+    padding: var(--foot-pad, 10px 12px);
     border-top: 1px solid var(--border);
+  }
+  :global([data-density='compact']) .srv {
+    --net-pad: 6px 9px;
+    --foot-pad: 5px 8px;
+  }
+  :global([data-density='compact']) .server-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+  }
+  :global([data-density='compact']) .identity b {
+    font-size: 14px;
+  }
+  :global([data-density='compact']) .rings {
+    gap: 4px;
+  }
+  :global([data-density='compact']) .gauge {
+    gap: 2px;
+  }
+  :global([data-density='compact']) .io b {
+    font-size: 13px;
   }
 </style>

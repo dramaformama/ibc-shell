@@ -51,4 +51,20 @@ describe('background connections', () => {
     sessions.step(1);
     expect(sessions.activeId).toBe(c.id);
   });
+
+  it('hides a server from the tab bar but keeps its terminal connected', () => {
+    const a = sessions.open(tab('a'), true);
+    sessions.open(tab('a', 'status'), true);
+    const b = sessions.open(tab('b'), true);
+    sessions.select(a.id);
+    sessions.hideGroup('h:a');
+    expect(sessions.visibleGroups.map((g) => g.label)).toEqual(['b']);
+    expect(sessions.groups.find((g) => g.label === 'a')?.tabs.map((t) => t.kind)).toEqual([
+      'terminal'
+    ]);
+    expect(sessions.activeId).toBe(b.id);
+    sessions.hideGroup('h:b');
+    expect(sessions.activeId).toBeNull();
+    expect(sessions.groups).toHaveLength(2);
+  });
 });

@@ -34,6 +34,12 @@ class SnippetStore {
   pending = $state<PendingRun | null>(null);
   /** Editor sheet: a snippet to edit, `new` (optional folder), or closed. */
   editing = $state<{ snippet: Snippet | null; group: string | null } | null>(null);
+  /** Folder name dialog: `id` null = create, else rename. */
+  folderDialog = $state<{ id: string | null } | null>(null);
+  /** Folder awaiting delete confirmation. */
+  folderDelete = $state<string | null>(null);
+  /** Folder card picked in the panel (null = show everything). */
+  selectedGroup = $state<string | null>(null);
 
   async load(): Promise<void> {
     const [list, lay] = await Promise.all([api.snippetList(null), api.settingsGet(KEY)]);
@@ -47,6 +53,9 @@ class SnippetStore {
     this.layout = emptyLayout();
     this.pending = null;
     this.editing = null;
+    this.folderDialog = null;
+    this.folderDelete = null;
+    this.selectedGroup = null;
     this.loaded = false;
   }
 
@@ -105,6 +114,7 @@ class SnippetStore {
 
   /** Deletes a folder; its snippets move to "No folder". */
   removeGroup(id: string): void {
+    if (this.selectedGroup === id) this.selectedGroup = null;
     const of = Object.fromEntries(Object.entries(this.layout.of).filter(([, g]) => g !== id));
     this.#save({ ...this.layout, groups: this.layout.groups.filter((g) => g.id !== id), of });
   }

@@ -12,7 +12,7 @@
   } from '@lucide/svelte';
   import Flag from '$lib/flags/Flag.svelte';
   import * as m from '$lib/paraglide/messages.js';
-  import { switchKind } from '$lib/stores/actions';
+  import { closeServer, switchKind } from '$lib/stores/actions';
   import { sessions } from '$lib/stores/sessions.svelte';
   import { ui } from '$lib/stores/ui.svelte';
   import { mod } from '$lib/util/platform';
@@ -77,7 +77,7 @@
           class="close"
           aria-label={m.tab_disconnect()}
           title={m.tab_disconnect()}
-          onclick={() => sessions.closeGroup(g.key)}><X size={12} /></button
+          onclick={() => closeServer(g.key)}><X size={12} /></button
         >
       </div>
     {/each}

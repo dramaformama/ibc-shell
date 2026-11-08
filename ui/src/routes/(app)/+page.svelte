@@ -6,6 +6,7 @@
   import SidePanel from '$lib/stats/SidePanel.svelte';
   import StatusView from '$lib/stats/StatusView.svelte';
   import RunDialog from '$lib/snippets/RunDialog.svelte';
+  import FolderDialog from '$lib/snippets/FolderDialog.svelte';
   import SnippetEditor from '$lib/snippets/SnippetEditor.svelte';
   import { snippets } from '$lib/snippets/snippets.svelte';
   import { sessions } from '$lib/stores/sessions.svelte';
@@ -46,6 +47,7 @@
 {#if snippets.editing}
   <SnippetEditor />
 {/if}
+<FolderDialog />
 
 <style>
   .stage {
