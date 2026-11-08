@@ -27,6 +27,9 @@ export interface Target {
   hostId: string | null;
 }
 
+/** Pause between the typed text and the Enter that runs it. */
+const ENTER_DELAY_MS = 80;
+
 class SnippetStore {
   items = $state.raw<Snippet[]>([]);
   layout = $state.raw<Layout>(emptyLayout());
@@ -159,7 +162,10 @@ class SnippetStore {
       ...this.layout,
       uses: { ...this.layout.uses, [snippet.id]: (this.layout.uses[snippet.id] ?? 0) + 1 }
     });
-    const text = keystrokes(body, execute);
+    // Enter goes as its own keystroke a moment after the text, exactly like pressing it by hand.
+    // In one chunk with the text some shells and scripts swallow it, and the command only sat
+    // on the prompt.
+    const text = keystrokes(body, false);
     const tabs = targets
       .map((t) => {
         if (t.tabId) return t.tabId;
@@ -172,6 +178,7 @@ class SnippetStore {
       tabs.map(async (id) => {
         const h = terminal(id)?.phase() === 'connected' ? terminal(id) : await whenConnected(id);
         h?.send(text);
+        if (h && execute) setTimeout(() => h.send('\r'), ENTER_DELAY_MS);
         return !!h;
       })
     );
