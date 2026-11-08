@@ -76,7 +76,14 @@ jobs:
 
       # E2E (docker, tests/docker) is NOT run here; it lives in e2e.yml.
       - name: Rust unit tests
+        if: runner.os != 'Windows'
         run: cargo test --workspace
+
+      # The app crate's test binary links the Tauri runtime and cannot start on a Windows runner
+      # (0xc0000139: no comctl32 v6 manifest); it is covered on Linux and macOS.
+      - name: Rust unit tests (Windows, without the app crate)
+        if: runner.os == 'Windows'
+        run: cargo test --workspace --exclude ibc-shell
 
       - name: UI check (svelte-check)
         run: pnpm -C ui check
