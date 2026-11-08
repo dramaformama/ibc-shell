@@ -22,6 +22,10 @@ pub use transfer::{
     TransferEvent, TransferId, TransferJob,
 };
 
+/// Most entries read from one directory, and most items one transfer scan will plan.
+/// A real server never gets near it; a hostile one would otherwise fill memory.
+pub(crate) const MAX_DIR_ENTRIES: usize = 2_000_000;
+
 /// SFTP errors (sanitized messages).
 #[derive(Debug, thiserror::Error)]
 pub enum SftpError {

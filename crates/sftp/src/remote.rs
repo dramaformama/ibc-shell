@@ -173,6 +173,10 @@ impl Sftp {
                         }
                         entries.push(entry_from(f.filename, &f.attrs));
                     }
+                    if entries.len() > crate::MAX_DIR_ENTRIES {
+                        // A hostile server can answer `readdir` forever.
+                        break Err(SftpError::Protocol("directory is too large".into()));
+                    }
                 }
                 Err(e) if is_eof(&e) => break Ok(()),
                 Err(e) => break Err(map_err(&e)),

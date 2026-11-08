@@ -62,8 +62,11 @@ pub(crate) fn dst_name(src: &Side, dst: &Side, name: &str) -> Option<String> {
     }
 }
 
-fn unique(taken: &mut HashSet<String>, name: String) -> String {
-    if taken.insert(name.clone()) {
+/// Makes `name` unique among `taken`. `fold` compares case-insensitively (local destinations:
+/// macOS and Windows would otherwise write two names into one file).
+fn unique(taken: &mut HashSet<String>, name: String, fold: bool) -> String {
+    let key = |n: &str| if fold { n.to_lowercase() } else { n.to_owned() };
+    if taken.insert(key(&name)) {
         return name;
     }
     let (stem, ext) = match name.rfind('.') {
@@ -72,7 +75,7 @@ fn unique(taken: &mut HashSet<String>, name: String) -> String {
     };
     for n in 1u32.. {
         let cand = format!("{stem} ({n}){ext}");
-        if taken.insert(cand.clone()) {
+        if taken.insert(key(&cand)) {
             return cand;
         }
     }
@@ -103,12 +106,17 @@ pub(crate) async fn scan(
                 }
                 let mut taken = HashSet::new();
                 for e in src.list(&sdir).await? {
+                    if plan.files.len() + plan.dirs.len() + plan.skipped.len()
+                        > crate::MAX_DIR_ENTRIES
+                    {
+                        return Err(SftpError::Protocol("too many items to transfer".into()));
+                    }
                     let Some(n) = dst_name(src, dst, &e.name) else {
                         plan.skipped
                             .push(dst.join(&ddir, &e.name.replace('/', "_")));
                         continue;
                     };
-                    let n = unique(&mut taken, n);
+                    let n = unique(&mut taken, n, dst.is_local());
                     let spath = src.join(&sdir, &e.name);
                     match e.kind {
                         EntryKind::File => plan.push_file(&spath, &ddir, n, &e),
@@ -146,13 +154,23 @@ mod tests {
     use super::*;
 
     #[test]
+    fn unique_folds_case_for_local_destinations() {
+        let mut t = HashSet::new();
+        assert_eq!(unique(&mut t, "Readme.md".into(), true), "Readme.md");
+        assert_eq!(unique(&mut t, "README.md".into(), true), "README (1).md");
+        let mut t = HashSet::new();
+        assert_eq!(unique(&mut t, "Readme.md".into(), false), "Readme.md");
+        assert_eq!(unique(&mut t, "README.md".into(), false), "README.md");
+    }
+
+    #[test]
     fn unique_adds_counter_before_extension() {
         let mut t = HashSet::new();
-        assert_eq!(unique(&mut t, "a.txt".into()), "a.txt");
-        assert_eq!(unique(&mut t, "a.txt".into()), "a (1).txt");
-        assert_eq!(unique(&mut t, "a.txt".into()), "a (2).txt");
-        assert_eq!(unique(&mut t, "b".into()), "b");
-        assert_eq!(unique(&mut t, "b".into()), "b (1)");
+        assert_eq!(unique(&mut t, "a.txt".into(), false), "a.txt");
+        assert_eq!(unique(&mut t, "a.txt".into(), false), "a (1).txt");
+        assert_eq!(unique(&mut t, "a.txt".into(), false), "a (2).txt");
+        assert_eq!(unique(&mut t, "b".into(), false), "b");
+        assert_eq!(unique(&mut t, "b".into(), false), "b (1)");
     }
 
     #[test]

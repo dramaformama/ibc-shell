@@ -10,9 +10,9 @@ Scope: `src-tauri/`, `crates/ssh`, `crates/sftp`, `crates/vault`, UI IPC surface
 | 4 | Low | fixed | `ssh/verify.rs` | Server auth banner kept raw (control chars, unbounded). Now plain text, ≤ 4096 chars. |
 | 5 | Medium | fixed | `state.rs`, `session_task.rs` | Shell input queue unbounded; a hostile server that never opens its window stalls `shell.write` so `session_close` cannot interrupt it (leaked task/connection). Fix: byte-bounded queue + close signal raced against the write. Byte-bounded queue (1 MiB) and an out-of-band close signal are in `state.rs`. |
 | 6 | Medium | fixed | `tauri.conf.json`, `lib.rs` | No navigation / new-window guard. Fix: create the window in `setup` with `on_navigation` (app origins only) and `on_new_window → Deny`. Window is created in `window.rs` with `on_navigation` (app pages only) and `on_new_window → Deny`. |
-| 7 | Medium | open | `sftp/remote.rs`, `scan.rs` | Hostile server can return endless `readdir` batches (memory DoS in `list` / recursive scan). Fix: cap entries per listing and per scan. |
-| 8 | Low | open | `sftp/scan.rs` | Names unique only case-sensitively: on case-insensitive local FS two remote files can share one `.tlpart` in parallel. Fix: case-folded `unique()` for local destinations. |
-| 9 | Low | open | `sftp/job.rs` | `ResumeIfSmaller` on a non-prefix existing file overwrites it after the 1 MiB tail check fails; resume integrity only checks the last 1 MiB. |
+| 7 | Medium | fixed | `sftp/remote.rs`, `scan.rs` | Hostile server can return endless `readdir` batches (memory DoS in `list` / recursive scan). Fix: cap entries per listing and per scan. A listing or scan over 2,000,000 entries fails with a protocol error (`MAX_DIR_ENTRIES`). |
+| 8 | Low | fixed | `sftp/scan.rs` | Names unique only case-sensitively: on case-insensitive local FS two remote files can share one `.tlpart` in parallel. Fix: case-folded `unique()` for local destinations (test `unique_folds_case_for_local_destinations`). |
+| 9 | Low | fixed | `sftp/job.rs` | `ResumeIfSmaller` on a non-prefix existing file overwrites it after the 1 MiB tail check fails; resume integrity only checks the last 1 MiB. Now the first and last 1 MiB are compared before touching an existing file; a mismatch keeps it and writes the copy as `name (n).ext` (e2e `conflict_policies`). |
 | 10 | Low | fixed | `state.rs` | `ShellCmd` derives `Debug` incl. keystroke bytes (typed passwords). Not logged today; make Debug redacted. `WriteBytes` has a redacted `Debug`. |
 | 11 | Low | fixed | `lib.rs` | security.md's release panic hook (strip messages) is not installed. Release builds install a hook that prints only the location. |
 | 12 | Low | fixed | `capabilities/default.json` | `core:event:default` also grants `emit`/`emit_to`; `allow-listen` + `allow-unlisten` suffice (drag-drop, `vault://locked`). Capability now lists `allow-listen` and `allow-unlisten`. |
@@ -31,4 +31,4 @@ no `{@html}`; OSC 52 off (no clipboard addon); OSC 8 / links http(s) only after 
 - Backend idle timer counts IPC commands only: pointer-only activity does not extend it.
 - Open SSH sessions keep running after auto-lock (by design).
 - Local symlinks planted between scan and write (local attacker) are followed.
-- `.tlpart` resume trusts the earlier bytes of the partial file.
+- Resume compares only the first and last 1 MiB of the partial file; bytes in between are trusted.

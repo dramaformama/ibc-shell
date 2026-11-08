@@ -300,20 +300,23 @@ async fn resolve(ctx: &Ctx<'_>, t: &FileTask, final_path: &str) -> Result<Action
                 resume_final: ok,
             }
         }
-        ConflictChoice::Rename => {
-            let mut n = 1;
-            loop {
-                let cand = job.dst.join(&t.dst_dir, &renamed(&t.dst_name, n));
-                if job.dst.lstat(&cand).await?.is_none() {
-                    break Action::Go {
-                        target: cand,
-                        resume_final: false,
-                    };
-                }
-                n += 1;
-            }
-        }
+        ConflictChoice::Rename => Action::Go {
+            target: free_name(job, t).await?,
+            resume_final: false,
+        },
     })
+}
+
+/// First `name (n).ext` next to the destination that does not exist yet.
+async fn free_name(job: &Job, t: &FileTask) -> Result<String, SftpError> {
+    let mut n = 1;
+    loop {
+        let cand = job.dst.join(&t.dst_dir, &renamed(&t.dst_name, n));
+        if job.dst.lstat(&cand).await?.is_none() {
+            return Ok(cand);
+        }
+        n += 1;
+    }
 }
 
 async fn ask(
@@ -351,12 +354,27 @@ async fn ask(
     }
 }
 
-async fn tail_matches(job: &Job, t: &FileTask, tmp: &str, start: u64) -> Result<bool, SftpError> {
+/// Does the first `start` bytes of `path` (destination) equal the source's? Only the first and
+/// the last `TAIL_VERIFY` bytes are compared, which is enough to tell a stranger's file from ours.
+async fn prefix_matches(
+    job: &Job,
+    t: &FileTask,
+    path: &str,
+    start: u64,
+) -> Result<bool, SftpError> {
     let n = u32::try_from(start.min(TAIL_VERIFY)).unwrap_or(1 << 20);
-    let off = start - u64::from(n);
-    let a = read_at(job.src.open_read(&t.src).await?, off, n).await?;
-    let b = read_at(job.dst.open_read(tmp).await?, off, n).await?;
-    Ok(a.len() == n as usize && a == b)
+    let mut offsets = vec![start - u64::from(n)];
+    if start > u64::from(n) {
+        offsets.push(0);
+    }
+    for off in offsets {
+        let a = read_at(job.src.open_read(&t.src).await?, off, n).await?;
+        let b = read_at(job.dst.open_read(path).await?, off, n).await?;
+        if a.len() != n as usize || a != b {
+            return Ok(false);
+        }
+    }
+    Ok(true)
 }
 
 async fn one_file(ctx: &Ctx<'_>, t: &FileTask) -> Result<(), SftpError> {
@@ -366,7 +384,7 @@ async fn one_file(ctx: &Ctx<'_>, t: &FileTask) -> Result<(), SftpError> {
         ctx.progress.fetch_add(t.size, Ordering::Relaxed);
         return Ok(());
     }
-    let (target, resume_final) = match resolve(ctx, t, &final_path).await? {
+    let (mut target, mut resume_final) = match resolve(ctx, t, &final_path).await? {
         Action::Skip => {
             lk(&job.done).insert(final_path.clone());
             ctx.progress.fetch_add(t.size, Ordering::Relaxed);
@@ -386,6 +404,18 @@ async fn one_file(ctx: &Ctx<'_>, t: &FileTask) -> Result<(), SftpError> {
         () = token.cancelled() => return Err(SftpError::Cancelled),
         p = sh.sem.clone().acquire_owned() => p.map_err(|_| SftpError::Cancelled)?,
     };
+    if resume_final {
+        // An existing file that is not the beginning of this source is somebody else's:
+        // keep it and write next to it rather than overwrite it.
+        let have = job.dst.size_of(&target).await?;
+        if !prefix_matches(job, t, &target, have.min(t.size))
+            .await
+            .unwrap_or(false)
+        {
+            target = free_name(job, t).await?;
+            resume_final = false;
+        }
+    }
     let tmp = format!("{target}{TLPART}");
     let mut start = 0u64;
     match job.dst.lstat(&tmp).await? {
@@ -403,7 +433,7 @@ async fn one_file(ctx: &Ctx<'_>, t: &FileTask) -> Result<(), SftpError> {
         }
     }
     if start > 0
-        && !tail_matches(job, t, &tmp, start.min(t.size))
+        && !prefix_matches(job, t, &tmp, start.min(t.size))
             .await
             .unwrap_or(false)
     {

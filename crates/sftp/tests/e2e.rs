@@ -481,7 +481,17 @@ async fn conflict_policies() {
         "NEWDATA"
     );
     assert_eq!(std::fs::read_to_string(out.join("a.txt")).unwrap(), "old");
-    // ResumeIfSmaller: "old" is smaller than source but not a prefix -> restarts, ends correct
+    // ResumeIfSmaller: "old" is smaller than the source but is not its beginning -> it is kept
+    // and the new copy goes next to it
+    go(ConflictPolicy::ResumeIfSmaller);
+    run_to_end(&mut rx, 2).await;
+    assert_eq!(std::fs::read_to_string(out.join("a.txt")).unwrap(), "old");
+    assert_eq!(
+        std::fs::read_to_string(out.join("a (2).txt")).unwrap(),
+        "NEWDATA"
+    );
+    // a real beginning of the source is continued in place
+    std::fs::write(out.join("a.txt"), "NEWD").unwrap();
     go(ConflictPolicy::ResumeIfSmaller);
     run_to_end(&mut rx, 2).await;
     assert_eq!(
