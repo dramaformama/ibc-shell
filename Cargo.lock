@@ -2291,7 +2291,7 @@ dependencies = [
 
 [[package]]
 name = "ibc-shell"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "ibc-shell-sftp",
  "ibc-shell-ssh",
@@ -2314,14 +2314,14 @@ dependencies = [
 
 [[package]]
 name = "ibc-shell-geo"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "thiserror 2.0.21",
 ]
 
 [[package]]
 name = "ibc-shell-sftp"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "futures-util",
  "ibc-shell-ssh",
@@ -2340,7 +2340,7 @@ dependencies = [
 
 [[package]]
 name = "ibc-shell-ssh"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "bytes",
  "russh",
@@ -2354,7 +2354,7 @@ dependencies = [
 
 [[package]]
 name = "ibc-shell-store"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "rusqlite",
  "rusqlite_migration",
@@ -2367,7 +2367,7 @@ dependencies = [
 
 [[package]]
 name = "ibc-shell-vault"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "argon2 0.5.3",
  "chacha20poly1305",

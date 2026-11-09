@@ -63,6 +63,9 @@
     pushTray(buildMenu(entries, false));
   });
 
+  // Keep looking for new releases while the app stays open.
+  $effect(() => (vault.state === 'Unlocked' ? settings.watchUpdates() : undefined));
+
   // Load data when the vault opens; wipe it when it locks.
   $effect(() => {
     if (vault.state === 'Unlocked') {

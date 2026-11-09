@@ -184,6 +184,24 @@ class SettingsStore {
     this.update = await checkForUpdate(info.data.version);
   }
 
+  /** Re-checks every 6 h and when the window regains focus (at most once per hour). */
+  watchUpdates(): () => void {
+    let last = Date.now();
+    const run = () => {
+      last = Date.now();
+      void this.checkUpdate();
+    };
+    const timer = setInterval(run, 6 * 3600_000);
+    const onFocus = () => {
+      if (Date.now() - last > 3600_000) run();
+    };
+    window.addEventListener('focus', onFocus);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('focus', onFocus);
+    };
+  }
+
   setTray(on: boolean): void {
     this.tray = on;
     try {

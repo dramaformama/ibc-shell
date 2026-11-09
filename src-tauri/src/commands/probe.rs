@@ -5,7 +5,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use ibc_shell_store::HostId;
 use serde::Serialize;
 use tauri::State;
-use tokio::{net::TcpStream, sync::Semaphore, time::timeout};
+use tokio::{io::AsyncReadExt, net::TcpStream, sync::Semaphore, time::timeout};
 
 use crate::{
     api::{ApiError, ApiResult},
@@ -26,12 +26,23 @@ pub struct HostReachability {
     pub checked_at: i64,
 }
 
+/// True when the peer answers with an SSH identification string (`SSH-`). A bare TCP accept
+/// is not enough: VPN/TUN clients and transparent proxies accept every connection locally.
+async fn speaks_ssh(stream: &mut TcpStream) -> bool {
+    let mut magic = [0u8; 4];
+    matches!(
+        timeout(Duration::from_secs(3), stream.read_exact(&mut magic)).await,
+        Ok(Ok(_)) if &magic == b"SSH-"
+    )
+}
+
 async fn probe(hostname: &str, port: u16) -> HostReachability {
     let start = Instant::now();
-    let reachable = matches!(
-        timeout(Duration::from_secs(3), TcpStream::connect((hostname, port))).await,
-        Ok(Ok(_))
-    );
+    let reachable = match timeout(Duration::from_secs(3), TcpStream::connect((hostname, port))).await
+    {
+        Ok(Ok(mut stream)) => speaks_ssh(&mut stream).await,
+        _ => false,
+    };
     HostReachability {
         reachable,
         latency_ms: reachable
@@ -93,10 +104,32 @@ mod tests {
         let server = tokio::net::TcpListener::bind(("127.0.0.1", 0))
             .await
             .unwrap();
-        let result = probe("127.0.0.1", server.local_addr().unwrap().port()).await;
+        let port = server.local_addr().unwrap().port();
+        tokio::spawn(async move {
+            if let Ok((mut c, _)) = server.accept().await {
+                let _ = tokio::io::AsyncWriteExt::write_all(&mut c, b"SSH-2.0-test\r\n").await;
+                tokio::time::sleep(Duration::from_secs(1)).await;
+            }
+        });
+        let result = probe("127.0.0.1", port).await;
         assert!(result.reachable);
         assert!(result.latency_ms.is_some());
         assert!(result.checked_at > 0);
+    }
+
+    #[tokio::test]
+    async fn open_port_without_ssh_banner_is_unreachable() {
+        let server = tokio::net::TcpListener::bind(("127.0.0.1", 0))
+            .await
+            .unwrap();
+        let port = server.local_addr().unwrap().port();
+        tokio::spawn(async move {
+            if let Ok((mut c, _)) = server.accept().await {
+                let _ = tokio::io::AsyncWriteExt::write_all(&mut c, b"HTTP").await;
+                tokio::time::sleep(Duration::from_secs(1)).await;
+            }
+        });
+        assert!(!probe("127.0.0.1", port).await.reachable);
     }
 
     #[tokio::test]
