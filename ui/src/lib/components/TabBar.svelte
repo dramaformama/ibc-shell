@@ -18,6 +18,7 @@
   import { ui } from '$lib/stores/ui.svelte';
   import { mod } from '$lib/util/platform';
   import TabMenu from './TabMenu.svelte';
+  import { TabDrag } from './tab-drag.svelte';
 
   let { mac = false }: { mac?: boolean } = $props();
 
@@ -25,9 +26,24 @@
   /** Servers connected for monitoring that have no tab. */
   const hidden = $derived(sessions.groups.length - sessions.visibleGroups.length);
 
+  let tabsEl: HTMLDivElement;
+  const drag = new TabDrag(
+    () => [...tabsEl.querySelectorAll<HTMLElement>('[data-tab-key]')],
+    (key, to) => sessions.moveGroup(key, to)
+  );
+
   function onKey(e: KeyboardEvent, i: number) {
     const gs = sessions.visibleGroups;
     const n = gs.length;
+    // ⌥← / ⌥→ moves the focused tab.
+    if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      e.preventDefault();
+      const g = gs[i];
+      if (!g) return;
+      sessions.moveGroup(g.key, i + (e.key === 'ArrowRight' ? 1 : -1));
+      void Promise.resolve().then(() => document.getElementById('tab-' + g.key)?.focus());
+      return;
+    }
     const to = e.key === 'ArrowRight' ? (i + 1) % n : e.key === 'ArrowLeft' ? (i - 1 + n) % n : -1;
     if (to < 0) return;
     e.preventDefault();
@@ -58,24 +74,47 @@
     >
   {/if}
   <span class="sep" aria-hidden="true"></span>
-  <div class="tabs" role="tablist" aria-label={m.tabs_label()} data-tauri-drag-region>
+  <div
+    class="tabs"
+    class:dragging={drag.key !== null}
+    class:settling={drag.settling}
+    role="tablist"
+    aria-label={m.tabs_label()}
+    data-tauri-drag-region
+    bind:this={tabsEl}
+  >
     {#each sessions.visibleGroups as g, i (g.key)}
       {@const on = g.key === sessions.activeGroup}
       <TabMenu group={g}>
         {#snippet children(props)}
-          <div {...props} class="tab" class:active={on} role="presentation">
+          <div
+            {...props}
+            class="tab"
+            class:active={on}
+            class:lifted={drag.key === g.key}
+            role="presentation"
+            data-tab-key={g.key}
+            style:transform={drag.offset(g.key)}
+          >
             <button
               id={'tab-' + g.key}
               class="tab-main"
               role="tab"
               aria-selected={on}
               tabindex={on ? 0 : -1}
-              onclick={() => sessions.select(g.current.id)}
+              onpointerdown={(e) => drag.down(e, g.key)}
+              onclick={(e) => {
+                if (drag.swallowClick()) e.preventDefault();
+                else sessions.select(g.current.id);
+              }}
               onkeydown={(e) => onKey(e, i)}
             >
               <span class="dot" data-phase={sessions.groupPhase(g)}></span>
               <Flag code={g.flag} size={14} />
               <span class="name">{g.label}</span>
+              {#if !on && sessions.groupActivity(g)}
+                <span class="unseen" title={m.tab_unseen()}></span>
+              {/if}
             </button>
             <button
               class="close"
@@ -139,7 +178,7 @@
           ><CopyPlus size={16} /></button
         >
       {/if}
-      {#if active.kind === 'terminal'}
+      {#if active.kind === 'terminal' && !active.local}
         <button
           class="icon-btn"
           onclick={() => ui.toggleInspector()}
@@ -220,6 +259,30 @@
   .tab:hover {
     background: var(--hover);
     color: var(--text);
+  }
+  /* Drag to reorder: the others slide out of the way, the lifted one follows the pointer. */
+  .tabs.dragging .tab {
+    transition: transform 160ms var(--ease);
+  }
+  .tabs.dragging .tab.lifted {
+    z-index: 2;
+    transition: none;
+    background: var(--surface);
+    box-shadow:
+      var(--shadow),
+      0 0 0 0.5px var(--border);
+    cursor: grabbing;
+  }
+  .tabs.settling .tab {
+    transition: none;
+  }
+  .unseen {
+    flex: none;
+    width: 6px;
+    height: 6px;
+    margin-left: -2px;
+    border-radius: 50%;
+    background: var(--accent);
   }
   .tab.active {
     background: var(--surface);

@@ -11,8 +11,7 @@ serde_json.workspace = true
 thiserror.workspace = true
 uuid.workspace = true
 specta.workspace = true
-rusqlite = { version = "0.40", features = ["bundled"] }
-rusqlite_migration = "2.6.0"
+rusqlite = { version = "0.41", features = ["bundled"] }
 
 [lints]
 workspace = true

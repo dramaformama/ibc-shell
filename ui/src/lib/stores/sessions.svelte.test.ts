@@ -96,3 +96,86 @@ describe('several windows of one host', () => {
     expect(groupKey(t)).toBe('h:h1');
   });
 });
+
+describe('tab order (drag and drop)', () => {
+  beforeEach(() => sessions.clear());
+  const labels = () => sessions.visibleGroups.map((g) => g.label);
+
+  it('moves a server and keeps its views together', () => {
+    for (const h of ['a', 'b', 'c']) sessions.open(tab(h));
+    sessions.open(tab('a', 'sftp'));
+    sessions.moveGroup(groupKey(sessions.find('a', 'terminal')!), 2);
+    expect(labels()).toEqual(['b', 'c', 'a']);
+    expect(sessions.groups.find((g) => g.label === 'a')?.tabs.map((t) => t.kind)).toEqual([
+      'terminal',
+      'sftp'
+    ]);
+  });
+
+  it('moves left, clamps out-of-range targets, ignores unknown keys', () => {
+    for (const h of ['a', 'b', 'c']) sessions.open(tab(h));
+    sessions.moveGroup('h:c', 0);
+    expect(labels()).toEqual(['c', 'a', 'b']);
+    sessions.moveGroup('h:c', 99);
+    expect(labels()).toEqual(['a', 'b', 'c']);
+    sessions.moveGroup('nope', 0);
+    expect(labels()).toEqual(['a', 'b', 'c']);
+  });
+
+  it('counts positions among shown servers only', () => {
+    sessions.open(tab('a'));
+    sessions.open(tab('hidden'), false);
+    sessions.open(tab('b'));
+    sessions.moveGroup('h:b', 0);
+    expect(labels()).toEqual(['b', 'a']);
+    expect(sessions.groups).toHaveLength(3);
+  });
+});
+
+describe('local terminal', () => {
+  beforeEach(() => sessions.clear());
+
+  it('is started once, in the background, and is not a server', () => {
+    const a = sessions.ensureLocal('Mac');
+    expect(sessions.ensureLocal('Mac').id).toBe(a.id);
+    expect(sessions.activeId).toBeNull();
+    expect(sessions.groups).toHaveLength(0);
+    sessions.openLocal('Mac');
+    expect(sessions.activeId).toBe(a.id);
+    expect(sessions.visibleGroups).toHaveLength(0);
+    expect(sessions.activeGroup).toBeNull();
+  });
+
+  it('survives closing servers and is never picked as the next tab', () => {
+    const local = sessions.ensureLocal('Mac');
+    const a = sessions.open(tab('a'));
+    sessions.closeGroup(groupKey(local));
+    sessions.close(a.id);
+    expect(sessions.localTab?.id).toBe(local.id);
+    expect(sessions.activeId).toBeNull();
+  });
+
+  it('stays last when servers are reordered', () => {
+    sessions.ensureLocal('Mac');
+    sessions.open(tab('a'));
+    sessions.open(tab('b'));
+    sessions.moveGroup('h:b', 0);
+    expect(sessions.tabs.at(-1)?.local).toBe(true);
+  });
+});
+
+describe('activity marks', () => {
+  beforeEach(() => sessions.clear());
+
+  it('marks only tabs in the background and clears on open', () => {
+    const a = sessions.open(tab('a'));
+    const b = sessions.open(tab('b'));
+    sessions.markActivity(b.id);
+    expect(sessions.activity[b.id]).toBeUndefined();
+    sessions.markActivity(a.id);
+    const ga = sessions.groups.find((g) => g.label === 'a')!;
+    expect(sessions.groupActivity(ga)).toBe(true);
+    sessions.select(a.id);
+    expect(sessions.activity[a.id]).toBeUndefined();
+  });
+});

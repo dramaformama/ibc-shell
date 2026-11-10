@@ -4,6 +4,7 @@ import {
   api,
   type ConflictId,
   type ConflictInfo,
+  type ConflictPolicy,
   type Endpoint,
   type TransferEvent
 } from '$lib/api';
@@ -117,10 +118,16 @@ class TransfersStore {
     }
   }
 
-  async enqueue(src: Endpoint, dst: Endpoint, items: string[], dstDir: string): Promise<boolean> {
+  async enqueue(
+    src: Endpoint,
+    dst: Endpoint,
+    items: string[],
+    dstDir: string,
+    conflict: ConflictPolicy = 'Ask'
+  ): Promise<boolean> {
     if (!items.length) return true;
     await this.start();
-    const r = await api.transferEnqueue({ src, dst, items, dst_dir: dstDir, conflict: 'Ask' });
+    const r = await api.transferEnqueue({ src, dst, items, dst_dir: dstDir, conflict });
     return r.status === 'ok';
   }
 

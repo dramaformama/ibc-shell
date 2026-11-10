@@ -52,9 +52,3 @@ impl From<rusqlite::Error> for StoreError {
         }
     }
 }
-
-impl From<rusqlite_migration::Error> for StoreError {
-    fn from(e: rusqlite_migration::Error) -> Self {
-        Self::Db(e.to_string())
-    }
-}

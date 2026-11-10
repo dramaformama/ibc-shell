@@ -29,7 +29,13 @@
   let narrow = $state(false);
 
   onMount(() => {
-    void api.appInfo().then((r) => r.status === 'ok' && (mac = r.data.platform === 'macos'));
+    void api.appInfo().then((r) => {
+      if (r.status !== 'ok') return;
+      mac = r.data.platform === 'macos';
+      // The local terminal starts with the app and keeps running (desktop only).
+      if (['macos', 'windows', 'linux'].includes(r.data.platform))
+        sessions.ensureLocal(m.local_terminal());
+    });
     const mq = matchMedia('(max-width: 720px)');
     const sync = () => {
       if (mq.matches && !narrow) ui.sidebarOpen = false;
@@ -63,6 +69,11 @@
       ui.hotkeysOpen = !ui.hotkeysOpen;
       return;
     }
+    if (e.ctrlKey && !e.metaKey && !e.altKey && e.code === 'Backquote' && sessions.localTab) {
+      e.preventDefault();
+      toggleLocal();
+      return;
+    }
     if (e.ctrlKey && e.key === 'Tab') {
       e.preventDefault();
       sessions.step(e.shiftKey ? -1 : 1);
@@ -91,6 +102,19 @@
       if (g) sessions.select(g.current.id);
     } else return;
     e.preventDefault();
+  }
+
+  /** ⌃` : to the local terminal and back to where the user was. */
+  let beforeLocal: string | null = null;
+  function toggleLocal() {
+    const local = sessions.localTab;
+    if (!local) return;
+    if (sessions.activeId !== local.id) {
+      beforeLocal = sessions.activeId;
+      sessions.select(local.id);
+    } else if (beforeLocal && sessions.tabs.some((t) => t.id === beforeLocal))
+      sessions.select(beforeLocal);
+    else sessions.activeId = null;
   }
 
   // Sidebar resize: pointer drag on the 4 px handle, 200–420 px.

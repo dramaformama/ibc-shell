@@ -81,6 +81,7 @@ export const mockApi: Api = {
   // sessions
   sessionOpen: term.sessionOpen,
   sessionOpenAdhoc: term.sessionOpenAdhoc,
+  sessionOpenLocal: term.sessionOpenLocal,
   shellWrite: term.shellWrite,
   shellAck: term.shellAck,
   shellResize: term.shellResize,
@@ -128,5 +129,6 @@ export const mockApi: Api = {
   traySet: services.traySet,
   // app
   appInfo: vault.appInfo,
-  openExternal: vault.openExternal
+  openExternal: vault.openExternal,
+  appNotify: vault.appNotify
 };

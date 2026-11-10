@@ -16,6 +16,10 @@ interface Session {
   onEvent: Channel<SessionEvent>;
   line: string;
   open: boolean;
+  /** Current folder of the demo shell (`cd` changes it; reported via OSC 7 and the title). */
+  cwd: string;
+  /** The local terminal: no connect steps, no host. */
+  local?: boolean;
 }
 
 const sessions = new Map<string, Session>();
@@ -27,7 +31,16 @@ function out(s: Session, text: string): void {
   if (s.open) s.onData.onmessage(enc.encode(text).buffer as ArrayBuffer);
 }
 const event = (s: Session, e: SessionEvent) => s.onEvent.onmessage(e);
-const prompt = (s: Session) => out(s, `\x1b[1;32m${s.user}@${s.label}\x1b[0m:\x1b[1;34m~\x1b[0m$ `);
+const home = (s: Session) => (s.user === 'root' ? '/root' : `/home/${s.user}`);
+const shortCwd = (s: Session) =>
+  s.cwd.startsWith(home(s)) ? '~' + s.cwd.slice(home(s).length) : s.cwd;
+/** Like Debian's default bashrc: the title says `user@host: dir`; OSC 7 reports the folder. */
+const prompt = (s: Session) =>
+  out(
+    s,
+    `\x1b]0;${s.user}@${s.label}: ${shortCwd(s)}\x07\x1b]7;file://${s.hostname}${encodeURI(s.cwd)}\x07` +
+      `\x1b[1;32m${s.user}@${s.label}\x1b[0m:\x1b[1;34m${shortCwd(s)}\x1b[0m${s.local ? '%' : '$'} `
+  );
 
 function ask<T>(s: Session, e: (pendingId: string) => SessionEvent): Promise<T | null> {
   const id = uuid();
@@ -199,8 +212,33 @@ function runLine(s: Session, line: string): void {
     );
     return prompt(s);
   }
-  if (cmd === 'help')
-    out(s, 'commands: help, colors, whites, clear, flood, exit — anything else is echoed\r\n');
+  if (cmd === 'cd' || cmd.startsWith('cd ')) {
+    const arg = cmd.slice(2).trim();
+    s.cwd =
+      !arg || arg === '~'
+        ? home(s)
+        : arg.startsWith('/')
+          ? arg
+          : `${s.cwd.replace(/\/$/, '')}/${arg}`;
+    return prompt(s);
+  }
+  if (cmd === 'pwd') out(s, `${s.cwd}\r\n`);
+  else if (cmd === 'bell') out(s, '\x07');
+  else if (/^sleep \d+$/.test(cmd)) {
+    // A "long command": silence, then output and the prompt (background-tab notifications).
+    setTimeout(
+      () => {
+        out(s, `done after ${cmd.slice(6)} s\r\n`);
+        prompt(s);
+      },
+      Number(cmd.slice(6)) * 1000
+    );
+    return;
+  } else if (cmd === 'help')
+    out(
+      s,
+      'commands: help, cd, pwd, sleep N, bell, colors, whites, clear, flood, exit — anything else is echoed\r\n'
+    );
   else if (cmd === 'clear') out(s, '\x1b[2J\x1b[H');
   else if (cmd === 'colors') {
     for (let i = 0; i < 16; i++) out(s, `\x1b[48;5;${i}m  ${String(i).padStart(2)}  \x1b[0m`);
@@ -229,7 +267,8 @@ export const sessionOpen: Commands['sessionOpen'] = async (
     onData,
     onEvent,
     line: '',
-    open: true
+    open: true,
+    cwd: (h.username ?? 'root') === 'root' ? '/root' : `/home/${h.username}`
   };
   sessions.set(s.id, s);
   void connect(s);
@@ -252,10 +291,41 @@ export const sessionOpenAdhoc: Commands['sessionOpenAdhoc'] = async (
     onData,
     onEvent,
     line: '',
-    open: true
+    open: true,
+    cwd: (target.user ?? 'root') === 'root' ? '/root' : `/home/${target.user}`
   };
   sessions.set(s.id, s);
   void connect(s);
+  return ok(s.id);
+};
+
+function startLocal(s: Session): void {
+  event(s, { type: 'Connected', server_banner: null });
+  out(s, `\x1b[2mLast login: today on ttys001 (mock local shell)\x1b[0m\r\n`);
+  prompt(s);
+}
+
+export const sessionOpenLocal: Commands['sessionOpenLocal'] = async (
+  _cols,
+  _rows,
+  onData,
+  onEvent
+) => {
+  await delay();
+  const s: Session = {
+    id: uuid(),
+    label: 'MacBook',
+    user: 'me',
+    hostname: 'localhost',
+    onData,
+    onEvent,
+    line: '',
+    open: true,
+    cwd: '/home/me',
+    local: true
+  };
+  sessions.set(s.id, s);
+  startLocal(s);
   return ok(s.id);
 };
 
@@ -307,7 +377,8 @@ export const sessionReconnect: Commands['sessionReconnect'] = async (sessionId) 
   const s = sessions.get(sessionId);
   if (!s) return notFound();
   s.open = true;
-  void connect(s);
+  if (s.local) startLocal(s);
+  else void connect(s);
   return ok(null);
 };
 

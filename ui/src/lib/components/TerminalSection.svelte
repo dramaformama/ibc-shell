@@ -106,6 +106,17 @@
       onchange={(e) => terminalPrefs.setHighlight(e.currentTarget.checked)}
     />
   </label>
+
+  <label class="row">
+    <span class="lbl">{m.settings_notify()}</span>
+    <input
+      type="checkbox"
+      role="switch"
+      checked={terminalPrefs.notify}
+      onchange={(e) => terminalPrefs.setNotify(e.currentTarget.checked)}
+    />
+  </label>
+  <p class="note">{m.settings_notify_note()}</p>
 </section>
 
 <style>

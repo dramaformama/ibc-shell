@@ -1,6 +1,8 @@
 //! Migration 001 (data-model.md). PRAGMAs are applied per connection in `db.rs`.
 
-use rusqlite_migration::{Migrations, M};
+use rusqlite::Connection;
+
+use crate::{Result, StoreError};
 
 const V1: &str = r"
 CREATE TABLE folder (
@@ -86,7 +88,57 @@ CREATE INDEX idx_host_folder ON host(folder_id, sort_key);
 CREATE INDEX idx_folder_parent ON folder(parent_id, sort_key);
 ";
 
-/// All migrations, in order.
-pub(crate) fn migrations() -> Migrations<'static> {
-    Migrations::new(vec![M::up(V1)])
+/// All migrations, in order. `PRAGMA user_version` = how many are applied (the same scheme
+/// `rusqlite_migration` used, so existing databases open unchanged).
+const MIGRATIONS: &[&str] = &[V1];
+
+/// Applies the missing migrations, each in its own transaction with its version bump.
+pub(crate) fn migrate(conn: &mut Connection) -> Result<()> {
+    let applied: usize = conn
+        .query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))?
+        .try_into()
+        .map_err(|_| StoreError::Db("negative schema version".into()))?;
+    if applied > MIGRATIONS.len() {
+        return Err(StoreError::Db(format!(
+            "database schema v{applied} is newer than this app (v{})",
+            MIGRATIONS.len()
+        )));
+    }
+    for (i, sql) in MIGRATIONS.iter().enumerate().skip(applied) {
+        let tx = conn.transaction()?;
+        tx.execute_batch(sql)?;
+        tx.pragma_update(
+            None,
+            "user_version",
+            i64::try_from(i + 1).unwrap_or(i64::MAX),
+        )?;
+        tx.commit()?;
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn version(c: &Connection) -> i64 {
+        c.query_row("PRAGMA user_version", [], |r| r.get(0))
+            .unwrap()
+    }
+
+    #[test]
+    fn migrates_once_and_is_idempotent() {
+        let mut c = Connection::open_in_memory().unwrap();
+        migrate(&mut c).unwrap();
+        assert_eq!(version(&c), i64::try_from(MIGRATIONS.len()).unwrap());
+        migrate(&mut c).unwrap();
+        assert_eq!(version(&c), i64::try_from(MIGRATIONS.len()).unwrap());
+    }
+
+    #[test]
+    fn refuses_a_newer_schema() {
+        let mut c = Connection::open_in_memory().unwrap();
+        c.pragma_update(None, "user_version", 99_i64).unwrap();
+        assert!(migrate(&mut c).is_err());
+    }
 }

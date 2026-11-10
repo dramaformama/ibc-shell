@@ -84,6 +84,28 @@ pub async fn session_open_adhoc(
     ))
 }
 
+/// Opens the user's own login shell on this computer (desktop only, ADR-017). Same data path
+/// as SSH sessions: `shell_write` / `shell_ack` / `shell_resize` / `session_close` /
+/// `session_reconnect` (restarts the shell after it exited).
+#[tauri::command]
+#[specta::specta]
+pub async fn session_open_local(
+    state: State<'_, AppState>,
+    cols: u16,
+    rows: u16,
+    on_data: Channel<RawBytes>,
+    on_event: Channel<SessionEvent>,
+) -> ApiResult<SessionId> {
+    Ok(open(
+        &state,
+        SessionTarget::Local,
+        cols,
+        rows,
+        on_data,
+        on_event,
+    ))
+}
+
 /// Keystrokes. RAW command (not in generated bindings): body = raw bytes
 /// (`InvokeBody::Raw`), header `x-session-id` = session UUID. See ADR-004.
 #[tauri::command]

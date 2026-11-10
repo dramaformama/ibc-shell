@@ -25,6 +25,11 @@
   import { Highlighter } from './highlight';
   import { resolveTheme } from './themes';
   import { registerTerminal } from './registry';
+  import { ActivityWatch } from './activity';
+  import { listenDrop, tell, trackFolder } from './extras';
+  import DropOverlay from './DropOverlay.svelte';
+  import { windowFocus } from '$lib/util/window-focus.svelte';
+  import { filesLink } from './files-link.svelte';
 
   let { tab, active }: { tab: Tab; active: boolean } = $props();
 
@@ -37,11 +42,17 @@
   let hasSelection = $state(false);
   let link = $state<string | null>(null);
   let paste = $state<{ text: string; lines: number } | null>(null);
+  let dropOver = $state(false);
+
+  const [watch, watchDecoder] = [new ActivityWatch(), new TextDecoder()];
 
   const hl = new Highlighter();
   const decoder = new TextDecoder();
   // svelte-ignore state_referenced_locally
   const conn = new Connection(tab, (data, done) => {
+    if (!active) sessions.markActivity(tab.id);
+    if (watch.hidden)
+      tell(tab, watch.feed(watchDecoder.decode(data, { stream: true }), Date.now()));
     if (!engine) return done();
     if (!terminalPrefs.highlight) return engine.term.write(data, done);
     engine.term.write(hl.feed(decoder.decode(data, { stream: true })), done);
@@ -86,6 +97,7 @@
   }
 
   function onKey(e: KeyboardEvent): boolean {
+    if (e.ctrlKey && e.code === 'Backquote') return false; // ⌃` belongs to the app
     if (e.type !== 'keydown' || !engine) return true;
     const chord = isApple ? e.metaKey && !e.ctrlKey : e.ctrlKey && e.shiftKey;
     if (!chord || e.altKey) return true;
@@ -123,7 +135,8 @@
 
   /** On Windows / Linux plain Ctrl+key belongs to the remote shell, not to app shortcuts. */
   function keepCtrlForShell(e: KeyboardEvent) {
-    if (!isApple && e.ctrlKey && !e.shiftKey && !e.altKey && e.key !== 'Tab') e.stopPropagation();
+    const app = /^(Tab|Backquote)$/.test(e.code);
+    if (!isApple && e.ctrlKey && !e.shiftKey && !e.altKey && !app) e.stopPropagation();
   }
 
   function onInput(data: string) {
@@ -153,6 +166,16 @@
       if (d?.tabId === tab.id) requestPaste(d.text);
     };
     window.addEventListener('ibc:paste', onExternalPaste);
+    const offDrop = listenDrop(tab, {
+      el: () => xt?.parentElement ?? null,
+      active: () => active,
+      ready: () => conn.phase === 'connected',
+      over: (on) => (dropOver = on),
+      paste: (text) => {
+        engine?.term.paste(text);
+        focusTerm();
+      }
+    });
     const unregister = registerTerminal(tab.id, {
       send: (text) => conn.write(utf8(text)),
       phase: () => conn.phase,
@@ -186,6 +209,7 @@
       eng.term.onResize(({ cols, rows }) => conn.resize(cols, rows));
       eng.term.onSelectionChange(() => (hasSelection = eng.term.hasSelection()));
       eng.term.onTitleChange((t) => (title = sanitizeTitle(t)));
+      trackFolder(eng.term, tab.id);
       ro = new ResizeObserver(() => {
         clearTimeout(timer);
         timer = setTimeout(refit, 50);
@@ -202,6 +226,8 @@
       mo.disconnect();
       clearTimeout(timer);
       window.removeEventListener('ibc:paste', onExternalPaste);
+      void offDrop.then((f) => f());
+      filesLink.release(tab.id);
       unregister();
       conn.close();
       engine?.dispose();
@@ -228,6 +254,17 @@
   });
 
   $effect(() => sessions.setPhase(tab.id, conn.phase));
+  // Not looking = another tab or app; a (re)connect restarts the clock (login prompt ≠ done).
+  $effect(() => {
+    void conn.phase;
+    watch.setHidden(active && windowFocus.focused ? null : Date.now());
+  });
+  $effect(() => {
+    // The local terminal is always there: when its shell exits, a new one starts.
+    if (!tab.local || conn.phase !== 'disconnected' || !conn.canReconnect) return;
+    engine?.term.write('\r\n');
+    void conn.reconnect();
+  });
   $effect(() => sessions.setSessionId(tab.id, conn.phase === 'connected' ? conn.id : null));
 
   $effect(() => {
@@ -290,19 +327,29 @@
     onfind={() => (searchOpen = true)}
     onclear={() => engine?.term.clear()}
     onanother={() => tab.hostId && connectAnother(tab.hostId)}
+    onfiles={filesLink.cwd[tab.id] ? () => filesLink.openInFiles(tab) : undefined}
     onclosed={() => !searchOpen && focusTerm()}
   >
     <div
       bind:this={xt}
       class="xt"
-      class:hidden={conn.phase === 'connecting' || conn.phase === 'failed'}
+      class:hidden={!tab.local && (conn.phase === 'connecting' || conn.phase === 'failed')}
       inert={modalOpen}
     ></div>
   </TermMenu>
   {#if searchOpen && engine}
     <SearchBar search={engine.search} onclose={closeSearch} />
   {/if}
-  <StatusLayer {conn} name={tab.label} onclosetab={closeTab} />
+  {#if dropOver}
+    <DropOverlay
+      text={tab.local
+        ? m.term_drop_paste()
+        : m.term_drop_here({ dir: filesLink.cwd[tab.id] ?? '~' })}
+    />
+  {/if}
+  {#if !tab.local || conn.phase === 'failed'}
+    <StatusLayer {conn} name={tab.label} onclosetab={closeTab} />
+  {/if}
   <Prompts {conn} {link} {paste} onlink={answerLink} onpaste={answerPaste} onclosetab={closeTab} />
 </div>
 

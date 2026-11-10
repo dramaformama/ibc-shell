@@ -11,6 +11,11 @@ ignore = [
   # Unmaintained proc-macros pulled by specta (build time only, no runtime code).
   { id = "RUSTSEC-2024-0436", reason = "paste: build-time proc macro via specta" },
   { id = "RUSTSEC-2024-0370", reason = "proc-macro-error: build-time proc macro" },
+  # zbus helpers (Linux D-Bus, via tauri-plugin-notification → notify-rust; ADR-017). Unmaintained
+  # notices only, no known vulnerability; only used to post a notification on the session bus.
+  { id = "RUSTSEC-2026-0370", reason = "zvariant: Linux notification D-Bus only" },
+  { id = "RUSTSEC-2026-0371", reason = "zbus_names: Linux notification D-Bus only" },
+  { id = "RUSTSEC-2026-0372", reason = "zvariant_derive: Linux notification D-Bus only" },
 ]
 
 [licenses]

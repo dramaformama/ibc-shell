@@ -38,11 +38,11 @@ async fn speaks_ssh(stream: &mut TcpStream) -> bool {
 
 async fn probe(hostname: &str, port: u16) -> HostReachability {
     let start = Instant::now();
-    let reachable = match timeout(Duration::from_secs(3), TcpStream::connect((hostname, port))).await
-    {
-        Ok(Ok(mut stream)) => speaks_ssh(&mut stream).await,
-        _ => false,
-    };
+    let reachable =
+        match timeout(Duration::from_secs(3), TcpStream::connect((hostname, port))).await {
+            Ok(Ok(mut stream)) => speaks_ssh(&mut stream).await,
+            _ => false,
+        };
     HostReachability {
         reachable,
         latency_ms: reachable

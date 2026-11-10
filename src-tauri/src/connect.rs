@@ -133,6 +133,7 @@ pub fn build_chain(store: &Store, vault: &Vault, target: &SessionTarget) -> ApiR
     }
     match target {
         SessionTarget::Adhoc(q) => Ok(vec![adhoc_hop(q)?]),
+        SessionTarget::Local => Err(ApiError::Validation("local shell has no SSH chain".into())),
         SessionTarget::Host(id) => {
             let rh = store.host_resolve(*id)?;
             let mut chain = Vec::with_capacity(rh.jump_chain.len() + 1);

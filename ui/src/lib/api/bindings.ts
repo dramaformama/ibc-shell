@@ -109,6 +109,12 @@ export const commands = {
 	sessionOpen: (hostId: HostId, cols: number, rows: number, onData: Channel<ArrayBuffer>, onEvent: Channel<SessionEvent>) => typedError<SessionId, ApiError>(__TAURI_INVOKE("session_open", { hostId, cols, rows, onData, onEvent })),
 	/**  Quick connect without a stored host (`user@host:port`). */
 	sessionOpenAdhoc: (target: QuickConnect, cols: number, rows: number, onData: Channel<ArrayBuffer>, onEvent: Channel<SessionEvent>) => typedError<SessionId, ApiError>(__TAURI_INVOKE("session_open_adhoc", { target, cols, rows, onData, onEvent })),
+	/**
+	 *  Opens the user's own login shell on this computer (desktop only, ADR-017). Same data path
+	 *  as SSH sessions: `shell_write` / `shell_ack` / `shell_resize` / `session_close` /
+	 *  `session_reconnect` (restarts the shell after it exited).
+	 */
+	sessionOpenLocal: (cols: number, rows: number, onData: Channel<ArrayBuffer>, onEvent: Channel<SessionEvent>) => typedError<SessionId, ApiError>(__TAURI_INVOKE("session_open_local", { cols, rows, onData, onEvent })),
 	/**  Returns credit for `bytes` written to xterm (called from `write(data, callback)`). */
 	shellAck: (sessionId: SessionId, bytes: number) => typedError<null, ApiError>(__TAURI_INVOKE("shell_ack", { sessionId, bytes })),
 	/**  PTY window change. */
@@ -205,6 +211,11 @@ export const commands = {
 	appInfo: () => typedError<AppInfo, ApiError>(__TAURI_INVOKE("app_info")),
 	/**  Opens an http/https URL in the system browser (validated). */
 	openExternal: (url: string) => typedError<null, ApiError>(__TAURI_INVOKE("open_external", { url })),
+	/**
+	 *  Shows a system notification (a command in a background terminal finished, ADR-017).
+	 *  The backend shows it, so the webview needs no notification permission.
+	 */
+	appNotify: (title: string, body: string) => typedError<null, ApiError>(__TAURI_INVOKE("app_notify", { title, body })),
 };
 
 /** Events */

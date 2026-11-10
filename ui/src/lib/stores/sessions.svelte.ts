@@ -22,6 +22,8 @@ export interface Tab {
   instance?: number;
   /** Opened for monitoring (startup, group connect): live, but not shown in the tab bar until the user opens it. */
   background?: boolean;
+  /** The local terminal (this computer's shell): lives in the sidebar, never in the tab bar. */
+  local?: boolean;
 }
 
 /** One server in the tab bar / sidebar: its terminal and files views share a group. */
@@ -45,13 +47,17 @@ class SessionsStore {
   phases = $state<Record<string, TabPhase>>({});
   /** Backend session id per terminal tab, once connected (stats use it). */
   sessionIds = $state<Record<string, string>>({});
+  /** Terminal tabs with output the user has not looked at yet (dot on the tab / sidebar). */
+  activity = $state<Record<string, true>>({});
   /** Last active tab per group, so switching servers returns to the same view. */
   #last = new Map<string, string>();
   #seq = 0;
 
+  /** Servers (the local terminal is not one: it has its own sidebar row). */
   get groups(): TabGroup[] {
     const out = new Map<string, Tab[]>();
     for (const t of this.tabs) {
+      if (t.local) continue;
       const k = groupKey(t);
       out.set(k, [...(out.get(k) ?? []), t]);
     }
@@ -71,7 +77,59 @@ class SessionsStore {
   }
 
   get activeGroup(): string | null {
-    return this.active ? groupKey(this.active) : null;
+    return this.active && !this.active.local ? groupKey(this.active) : null;
+  }
+
+  /** The always-running local terminal, once started. */
+  get localTab(): Tab | null {
+    return this.tabs.find((t) => t.local) ?? null;
+  }
+
+  /** Starts the local terminal in the background (idempotent); it is never closed. */
+  ensureLocal(label: string): Tab {
+    return (
+      this.localTab ??
+      this.open(
+        { kind: 'terminal', hostId: null, label, flag: null, adhoc: null, local: true },
+        false
+      )
+    );
+  }
+
+  /** Shows the local terminal (starting it if needed). */
+  openLocal(label: string): void {
+    this.select(this.ensureLocal(label).id);
+  }
+
+  /** New output in a tab the user is not looking at. */
+  markActivity(id: string): void {
+    if (id !== this.activeId && !this.activity[id]) this.activity[id] = true;
+  }
+
+  /** True when any view of the group has unseen output. */
+  groupActivity(g: TabGroup): boolean {
+    return g.tabs.some((t) => this.activity[t.id]);
+  }
+
+  /**
+   * Drag-and-drop in the tab bar: moves server `key` to position `to` among the shown servers.
+   * Background servers and the local terminal keep their place after them.
+   */
+  moveGroup(key: string, to: number): void {
+    const keys = this.visibleGroups.map((g) => g.key);
+    const from = keys.indexOf(key);
+    if (from === -1) return;
+    const target = Math.max(0, Math.min(keys.length - 1, to));
+    if (target === from) return;
+    keys.splice(from, 1);
+    keys.splice(target, 0, key);
+    const rank = new Map(keys.map((k, i) => [k, i]));
+    const order = (t: Tab) => (t.local ? keys.length + 1 : (rank.get(groupKey(t)) ?? keys.length));
+    // Stable sort keeps each server's views (and the hidden servers) in their old order.
+    this.tabs = this.tabs
+      .map((t, i) => ({ t, i }))
+      .sort((a, b) => order(a.t) - order(b.t) || a.i - b.i)
+      .map((x) => x.t);
   }
 
   /** One dot for a server: connected wins, then connecting, then the current view's state. */
@@ -98,11 +156,12 @@ class SessionsStore {
       this.tabs = this.tabs.map((x) => (x.id === id ? { ...x, background: false } : x));
     this.#last.set(groupKey(t), id);
     this.activeId = id;
+    if (this.activity[id]) delete this.activity[id];
   }
 
   /** Closes every view of a server (disconnect). */
   closeGroup(key: string): void {
-    for (const t of this.tabs.filter((x) => groupKey(x) === key)) this.close(t.id);
+    for (const t of this.tabs.filter((x) => !x.local && groupKey(x) === key)) this.close(t.id);
   }
 
   /**
@@ -110,7 +169,7 @@ class SessionsStore {
    * connection of its own) is closed; terminal and files stay alive behind the overview.
    */
   hideGroup(key: string): void {
-    const mine = this.tabs.filter((t) => groupKey(t) === key);
+    const mine = this.tabs.filter((t) => !t.local && groupKey(t) === key);
     if (!mine.length) return;
     for (const t of mine.filter((x) => x.kind === 'status')) {
       delete this.phases[t.id];
@@ -186,9 +245,10 @@ class SessionsStore {
     this.tabs = this.tabs.filter((t) => t.id !== id);
     delete this.phases[id];
     delete this.sessionIds[id];
+    delete this.activity[id];
     if (this.activeId === id) {
       // Prefer the other view of the same server, then the neighbour.
-      const shown = this.tabs.filter((t) => !t.background);
+      const shown = this.tabs.filter((t) => !t.background && !t.local);
       const sibling = shown.find((t) => groupKey(t) === groupKey(closing));
       const near = shown.length ? shown[Math.min(i, shown.length - 1)] : undefined;
       this.activeId = sibling?.id ?? near?.id ?? null;
@@ -212,6 +272,7 @@ class SessionsStore {
     this.tabs = [];
     this.phases = {};
     this.sessionIds = {};
+    this.activity = {};
     this.#last.clear();
     this.activeId = null;
   }

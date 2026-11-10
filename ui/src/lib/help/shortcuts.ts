@@ -39,7 +39,9 @@ export function shortcutGroups(): ShortcutGroup[] {
         { label: m.menu_connect_another(), keys: term('T') },
         { label: m.keys_close_tab(), keys: app('W') },
         { label: m.keys_switch_server(), keys: [...app('1'), '–', '9'] },
-        { label: m.keys_next_tab(), keys: ['Ctrl', 'Tab'] }
+        { label: m.keys_next_tab(), keys: ['Ctrl', 'Tab'] },
+        { label: m.keys_move_tab(), keys: [isApple ? '⌥' : 'Alt', '←', '→'] },
+        { label: m.keys_local_terminal(), keys: ['Ctrl', '`'] }
       ]
     },
     {

@@ -13,6 +13,7 @@
     onfind,
     onclear,
     onanother,
+    onfiles,
     onclosed,
     children
   }: {
@@ -24,6 +25,8 @@
     onfind: () => void;
     onclear: () => void;
     onanother: () => void;
+    /** Opens the shell's current folder in Files; absent when the folder is unknown. */
+    onfiles?: () => void;
     onclosed: () => void;
     children: Snippet;
   } = $props();
@@ -51,6 +54,7 @@
       {@render item(m.term_menu_clear(), onclear)}
       {#if hasHost}
         <div class="menu-sep"></div>
+        {@render item(m.term_menu_open_files(), () => onfiles?.(), !onfiles)}
         {@render item(m.menu_connect_another(), onanother)}
       {/if}
     </ContextMenu.Content>

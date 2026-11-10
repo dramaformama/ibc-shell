@@ -98,6 +98,7 @@ pub enum ApiError {
 |---|---|---|
 | `session_open` | `host_id, cols: u16, rows: u16, on_data: Channel<ArrayBuffer>, on_event: Channel<SessionEvent>` | `SessionId` |
 | `session_open_adhoc` | `target: QuickConnect {user?, hostname, port?}, cols, rows, on_data, on_event` | `SessionId` |
+| `session_open_local` | `cols, rows, on_data, on_event` (desktop only: the user's login shell in a local PTY, ADR-017; `Connected` → output; shell exit → `ExitStatus` + `Disconnected{shell_exited, can_reconnect: true}`; `session_reconnect` restarts it) | `SessionId` |
 | `shell_write` | RAW: body = bytes (`InvokeBody::Raw`), header `x-session-id` (TS: `api.shellWrite(sessionId, Uint8Array)`) | `null` |
 | `shell_ack` | `session_id, bytes: u32` | `null` |
 | `shell_resize` | `session_id, cols: u16, rows: u16` | `null` |
@@ -192,6 +193,7 @@ pub enum ApiError {
 | `tray_set` | `menu: TrayMenu\|null` | `null` — shows/updates the menu-bar icon (`TrayMenu { tooltip, items: TrayItem[] (≤ 24), open_label, quit_label }`, `TrayItem { host_id: HostId\|null, text }`); `null` removes it. Strings are rendered as native menu text, control chars stripped, ≤ 120 chars. Vault lock drops the server lines on the backend side. Passive. ADR-013. |
 | `app_info` | — | `AppInfo { version, platform, arch }` |
 | `open_external` | `url: string` (http/https only, validated) | `null` |
+| `app_notify` | `title: string, body: string` (desktop: system notification shown by the backend; control chars dropped, ≤ 120 / 300 chars; ADR-017) | `null` (`Unsupported` on mobile or when the OS refuses) |
 
 ## Global events (`app.emit`, typed via tauri-specta `Event`)
 | event name | Rust type | payload | TS (`apiEvents.listen(...)`) |

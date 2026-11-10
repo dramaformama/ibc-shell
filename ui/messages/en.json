@@ -712,5 +712,18 @@
   "known_confirm": "Delete the key of {host}?",
   "term_hkc_open": "Open known servers",
   "menu_connect_another": "Open another window",
-  "term_menu_clear": "Clear screen"
+  "term_menu_clear": "Clear screen",
+  "local_terminal": "Local terminal",
+  "tab_unseen": "New output",
+  "term_menu_open_files": "Open this folder in Files",
+  "term_drop_paste": "Drop to insert the paths",
+  "term_drop_here": "Drop to upload to {dir}",
+  "term_drop_started": "Uploading to {dir}, files: {count}. Progress is in Files",
+  "notify_done": "Command finished",
+  "notify_bell": "Terminal bell",
+  "settings_notify": "Tell me when a background command finishes",
+  "settings_notify_note": "When you are in another tab or app and the terminal shows its prompt again (or rings the bell), you get a notification. It is guessed from the output, so it can occasionally miss.",
+  "sftp_open_dir_failed": "Couldn't open folder {dir}",
+  "keys_local_terminal": "Local terminal and back",
+  "keys_move_tab": "Move tab left / right"
 }

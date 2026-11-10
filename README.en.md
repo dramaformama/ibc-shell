@@ -12,7 +12,7 @@
 A light SSH and SFTP client for people who run many servers.
 Nested folders, country flags, a terminal that stays out of your way, and secrets that never leave your machine.
 
-> **Status: early development.** The core (SSH, SFTP engine, encrypted vault, terminal and file UI) is built and tested.
+> **Version 1.0.** SSH, SFTP, the encrypted vault, server monitoring and the local terminal are ready for macOS, Windows and Linux. iOS and Android are planned.
 > Installers are built automatically from a tag, see [Download](#download).
 
 ## Download
@@ -35,7 +35,7 @@ The builds are not signed with a paid certificate, so the system warns on first 
 - **Windows.** In the SmartScreen window click More info, then Run anyway.
 - **Linux.** `chmod +x` the AppImage and run it, or `sudo apt install ./file.deb`.
 
-A release is made by a tag: `git tag v0.1.6 && git push origin v0.1.6`. The [workflow](.github/workflows/release.yml) builds the installers for every system and publishes the release at once, so the links above start working.
+A release is made by a tag: `git tag v1.0.0 && git push origin v1.0.0`. The [workflow](.github/workflows/release.yml) builds the installers for every system and publishes the release at once, so the links above start working.
 
 ## Why
 
@@ -87,6 +87,13 @@ SSL certificate expiry for the domains on every server.
 Demo mode: sample servers and metrics.
 
 ## What's new
+
+**Version 1.0.0:**
+
+- **Local terminal.** Its own "Local terminal" row in the sidebar (<kbd>⌃`</kbd> there and back). It is your usual shell on this computer, starts with the app and keeps running, so there is nothing to reopen. Typing `exit` starts a fresh one.
+- **Drag tabs to reorder.** Grab a server tab and drop it where you want it; the connection stays up. Keyboard: <kbd>⌥←</kbd> / <kbd>⌥→</kbd> on the focused tab.
+- **Terminal and Files together.** Right-click in a terminal → "Open this folder in Files" opens Files where the shell is. Drop a file from Finder onto a server terminal and it is uploaded into the current folder (nothing is overwritten: a copy gets " (1)"). On the local terminal a drop types the paths.
+- **Marks and notifications.** A blue dot on a tab that printed something while you were elsewhere. When a long command finishes in the background (the prompt is back, or the bell rang) you are told: a toast in the app, a system notification when you are in another app. Can be turned off in Settings → Terminal.
 
 - **A connection you can read.** Every step is shown: address lookup, connecting (to which IP), secure channel, sign-in, terminal, and how long each took. When it fails you see which step stopped and what that usually means (address not found, port closed, server dropped the connection, sign-in refused). There is a Copy report button. A dropped session is explained too.
 - **Server configuration.** Cores, processor, memory and disk (NVMe, SSD or HDD) on the cards and in Status, like a hosting plan.

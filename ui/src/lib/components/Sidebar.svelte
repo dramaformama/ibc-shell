@@ -10,6 +10,7 @@
     CircleArrowUp,
     Settings,
     ShieldCheck,
+    SquareTerminal,
     Zap
   } from '@lucide/svelte';
   import { connectedServers } from '$lib/fleetpages/connected.svelte';
@@ -119,6 +120,19 @@
         {#if pg.count}<span class="nav-count tnum" class:alert={pg.alert}>{pg.count}</span>{/if}
       </button>
     {/each}
+    {#if sessions.localTab}
+      {@const local = sessions.localTab}
+      <button
+        class="nav-item"
+        aria-current={sessions.activeId === local.id ? 'page' : undefined}
+        title={m.local_terminal() + ' (⌃`)'}
+        onclick={() => sessions.select(local.id)}
+      >
+        <SquareTerminal size={17} /><span>{m.local_terminal()}</span>
+        {#if sessions.activity[local.id]}<span class="nav-unseen" title={m.tab_unseen()}
+          ></span>{/if}
+      </button>
+    {/if}
   </nav>
   <div class="section-heading">
     <h2 class="sect">{m.sidebar_hosts_section()}</h2>
@@ -255,6 +269,14 @@
     margin-left: auto;
     font-size: 11px;
     color: var(--muted);
+  }
+  .nav-unseen {
+    width: 7px;
+    height: 7px;
+    margin-left: auto;
+    margin-right: 4px;
+    border-radius: 50%;
+    background: var(--accent);
   }
   .nav-count.alert {
     min-width: 18px;

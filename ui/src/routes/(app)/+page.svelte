@@ -36,7 +36,7 @@
       {#key tab.id}<StatusView {tab} />{/key}
     {/if}
   </div>
-  {#if tab?.kind === 'terminal' && group && ui.inspectorOpen}
+  {#if tab?.kind === 'terminal' && !tab.local && group && ui.inspectorOpen}
     <SidePanel {group} />
   {/if}
 </div>

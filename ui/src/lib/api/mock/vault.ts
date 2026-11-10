@@ -127,3 +127,10 @@ export const openExternal: Commands['openExternal'] = async (url) => {
   window.open(url, '_blank', 'noopener,noreferrer');
   return ok(null);
 };
+
+/** The browser preview logs notifications instead of showing them (Notification needs a prompt). */
+export const appNotify: Commands['appNotify'] = async (title, body) => {
+  console.info(`[notify] ${title}: ${body}`);
+  (globalThis as { __ibcNotices?: string[] }).__ibcNotices?.push(`${title}: ${body}`);
+  return ok(null);
+};

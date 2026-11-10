@@ -43,7 +43,7 @@ impl Store {
         let mut writer = Connection::open(path)?;
         configure(&writer)?;
         writer.execute_batch("PRAGMA journal_mode=WAL;")?;
-        schema::migrations().to_latest(&mut writer)?;
+        schema::migrate(&mut writer)?;
         #[cfg(unix)]
         restrict_permissions(path)?;
         let mut readers = Vec::with_capacity(READERS);
@@ -68,7 +68,7 @@ impl Store {
     pub fn open_in_memory() -> Result<Self> {
         let mut writer = Connection::open_in_memory()?;
         configure(&writer)?;
-        schema::migrations().to_latest(&mut writer)?;
+        schema::migrate(&mut writer)?;
         Ok(Self {
             writer: Mutex::new(writer),
             readers: Vec::new(),

@@ -164,6 +164,8 @@ pub enum SessionTarget {
     Host(HostId),
     /// Quick connect.
     Adhoc(QuickConnect),
+    /// The user's own shell on this computer (ADR-017).
+    Local,
 }
 
 /// Immutable session parameters.

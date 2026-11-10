@@ -102,11 +102,13 @@ export class Connection {
       if (gen === this.#generation) this.#event(e);
     });
     const t = this.#tab;
-    const r = t.hostId
-      ? await api.sessionOpen(t.hostId, cols, rows, onData, onEvent)
-      : t.adhoc
-        ? await api.sessionOpenAdhoc(t.adhoc, cols, rows, onData, onEvent)
-        : null;
+    const r = t.local
+      ? await api.sessionOpenLocal(cols, rows, onData, onEvent)
+      : t.hostId
+        ? await api.sessionOpen(t.hostId, cols, rows, onData, onEvent)
+        : t.adhoc
+          ? await api.sessionOpenAdhoc(t.adhoc, cols, rows, onData, onEvent)
+          : null;
     if (this.#closed) {
       if (r?.status === 'ok') void api.sessionClose(r.data);
       return;

@@ -30,6 +30,19 @@ pub fn spawn_session(state: &AppState, handle: &Arc<SessionHandle>, cols: u16, r
         live.size = (cols, rows);
     }
     let (state, handle) = (state.clone(), handle.clone());
+    if matches!(handle.spec.target, SessionTarget::Local) {
+        #[cfg(desktop)]
+        tauri::async_runtime::spawn(crate::local_shell::run(handle, rx, closed));
+        #[cfg(not(desktop))]
+        let _ = (
+            rx,
+            closed,
+            handle.spec.on_event.send(SessionEvent::Failed {
+                error: ApiError::Validation("local shell is desktop-only".into()),
+            }),
+        );
+        return;
+    }
     tauri::async_runtime::spawn(run_session(state, handle, rx, closed));
 }
 

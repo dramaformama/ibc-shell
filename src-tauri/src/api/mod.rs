@@ -87,6 +87,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             vault::vault_import,
             session::session_open,
             session::session_open_adhoc,
+            session::session_open_local,
             session::shell_ack,
             session::shell_resize,
             session::session_close,
@@ -130,6 +131,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             app::tray_set,
             app::app_info,
             app::open_external,
+            app::app_notify,
         ])
         .events(collect_events![
             events::VaultLocked,

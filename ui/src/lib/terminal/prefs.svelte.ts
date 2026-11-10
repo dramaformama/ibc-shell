@@ -15,6 +15,8 @@ class TerminalPrefs {
   scrollback = $state(10_000);
   /** Colour IPs, URLs, errors… in plain server output (highlight.ts). */
   highlight = $state(true);
+  /** Notify when a command in a background terminal finishes or rings the bell. */
+  notify = $state(true);
   /** App-wide terminal theme; `null` follows the light / dark appearance. */
   theme = $state<string | null>(null);
   #loaded: Promise<void> | null = null;
@@ -22,12 +24,14 @@ class TerminalPrefs {
   /** Read persisted values once. */
   load(): Promise<void> {
     this.#loaded ??= (async () => {
-      const [f, s, h, t] = await Promise.all([
+      const [f, s, h, t, n] = await Promise.all([
         api.settingsGet('term.font_size'),
         api.settingsGet('term.scrollback'),
         api.settingsGet('term.highlight'),
-        api.settingsGet('term.theme')
+        api.settingsGet('term.theme'),
+        api.settingsGet('term.notify')
       ]);
+      if (n.status === 'ok' && n.data === false) this.notify = false;
       if (t.status === 'ok' && typeof t.data === 'string') this.theme = t.data;
       if (h.status === 'ok' && h.data === false) this.highlight = false;
       if (f.status === 'ok' && typeof f.data === 'number') this.fontSize = clamp(f.data);
@@ -40,6 +44,11 @@ class TerminalPrefs {
   setHighlight(on: boolean): void {
     this.highlight = on;
     void api.settingsSet('term.highlight', on);
+  }
+
+  setNotify(on: boolean): void {
+    this.notify = on;
+    void api.settingsSet('term.notify', on);
   }
 
   setTheme(id: string | null): void {

@@ -3,6 +3,7 @@
 Name: iBC Shell (crates ibc-shell-*, id app.ibcshell). Phases 1-2 DONE; UI redesign (Apple style, server-grouped tabs, simple login/password, output highlighting, resizable SFTP columns, update check) DONE.
 DONE: Linux server metrics: stats_sample, Overview cards and terminal inspector (persisted visibility), shared polling, nullable samples. Mock UI checked in light/dark; real Linux acceptance remains. See docs/HANDOFF.md.
 DONE: Server-first Overview includes saved hosts, independent TCP reachability (4 concurrent), search/filter, virtualized grid. Shared Apple-style controls, grouped settings, persistent SFTP views + SSH reuse; ADR-010.
+DONE 1.0.0 (ADR-017): local terminal in sidebar, tab drag-reorder, terminal folder → Files + drop upload, activity marks + background-command notifications, rusqlite 0.41.
 Open security findings: #6-#9, #11-#14 in docs/security-review.md (#5, #10 closed).
 Contracts: FROZEN v1.1 (ADR-010)
 

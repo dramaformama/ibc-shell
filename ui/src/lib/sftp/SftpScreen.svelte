@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { sessions } from '$lib/stores/sessions.svelte';
+  import { groupKey, sessions } from '$lib/stores/sessions.svelte';
+  import { expandHome } from '$lib/terminal/cwd';
+  import { filesLink } from '$lib/terminal/files-link.svelte';
   import { drag, sftpLayout } from './layout.svelte';
   import { Channel } from '@tauri-apps/api/core';
   import { onMount } from 'svelte';
@@ -93,7 +95,8 @@
     }
     sftpId = id;
     status = 'ready';
-    await Promise.all([attach('left', 'local'), attach('right', 'remote')]);
+    attaching = Promise.all([attach('left', 'local'), attach('right', 'remote')]);
+    await attaching;
   }
 
   /** Try again after a failure: drop the half-open SFTP session, then connect afresh. */
@@ -117,6 +120,30 @@
       void offOs.then((f) => f());
     };
   });
+
+  // "Open in Files" from this server's terminal: show its folder in the remote pane.
+  $effect(() => {
+    if (status !== 'ready' || filesLink.request[groupKey(tab)] === undefined) return;
+    const path = filesLink.take(groupKey(tab));
+    if (path) void showRemote(path);
+  });
+
+  /** The first listing of both panes (a folder asked for meanwhile must land after it). */
+  let attaching: Promise<unknown> = Promise.resolve();
+
+  async function showRemote(path: string) {
+    await attaching;
+    let side: Side = panes.left.endpoint.kind === 'remote' ? 'left' : 'right';
+    if (panes[side].endpoint.kind !== 'remote') await attach((side = 'right'), 'remote');
+    let dir = path;
+    if (path.startsWith('~') && sftpId) {
+      const home = await api.sftpRealpath(sftpId, '.');
+      if (home.status !== 'ok') return;
+      dir = expandHome(path, home.data);
+    }
+    active = side;
+    if (!(await panes[side].load(dir))) ui.toast(m.sftp_open_dir_failed({ dir }), 'error');
+  }
 
   // Refresh both listings whenever a transfer finishes.
   let seenTick = 0;

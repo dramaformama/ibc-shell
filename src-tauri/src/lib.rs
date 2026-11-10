@@ -10,6 +10,8 @@ pub mod api;
 pub mod autolock;
 pub mod commands;
 pub mod connect;
+#[cfg(desktop)]
+pub mod local_shell;
 pub mod prompts;
 pub mod session_task;
 pub mod state;
@@ -57,6 +59,7 @@ pub fn run() {
         Box::new(tauri::generate_handler![commands::session::shell_write]);
     let result = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .invoke_handler(move |invoke| {
             let cmd = invoke.message.command();
             // Backend auto-lock (ADR-007): user-driven commands count as activity; output

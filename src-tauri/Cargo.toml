@@ -31,6 +31,12 @@ zeroize.workspace = true
 # Prompt timeouts + oneshot/mpsc in the session pump (rt is provided by Tauri).
 tokio = { workspace = true, features = ["time", "sync", "macros", "net"] }
 tauri-plugin-dialog = "2"
+# System notifications when a background command finishes (ADR-017); shown by the backend.
+tauri-plugin-notification = "2"
+
+# Local terminal (ADR-017): login shell in a PTY; MIT, the PTY layer of WezTerm.
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+portable-pty = "0.9"
 
 [lints]
 workspace = true
