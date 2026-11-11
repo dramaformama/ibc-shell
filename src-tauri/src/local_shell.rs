@@ -224,13 +224,12 @@ async fn pump(
     user_closed
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests {
     use super::*;
     use crate::state::ShellTx;
 
     // POSIX shell syntax; Windows starts cmd.exe (and the app's tests do not run there in CI).
-    #[cfg(unix)]
     #[tokio::test]
     async fn runs_a_command_in_the_login_shell() {
         let mut pty = spawn_pty(80, 24).unwrap();
