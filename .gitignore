@@ -9,3 +9,12 @@ tests/fixtures/keys/
 ui/.svelte-kit/
 ui/build/
 ui/src/lib/paraglide/
+
+# Файлы для ИИ-ассистентов (только локально)
+.claude/
+CLAUDE.md
+AGENTS.md
+KICKOFF.md
+docs/HANDOFF.md
+docs/STATUS.md
+ui/PRODUCT.md
