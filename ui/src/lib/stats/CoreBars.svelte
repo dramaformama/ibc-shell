@@ -68,31 +68,32 @@
     height: 8px;
     overflow: hidden;
     border-radius: 999px;
-    background: var(--surface-2);
+    background: var(--fill-2);
   }
   .bar span {
     height: 100%;
-    transition: width 400ms var(--ease);
   }
   .bar .calm,
   .bar .user {
     background: var(--c-cyan);
   }
   .bar .warm {
-    background: var(--c-yellow);
+    background: var(--load-warm);
   }
-  .bar .hot,
+  .bar .hot {
+    background: var(--load-hot);
+  }
   .bar .system {
-    background: var(--danger);
+    background: var(--c-orange);
   }
   .bar .nice {
-    background: var(--c-green);
+    background: var(--c-yellow);
   }
   .bar .iowait {
     background: var(--c-purple);
   }
   .bar .steal {
-    background: var(--c-orange);
+    background: var(--c-pink);
   }
   .v {
     width: 36px;

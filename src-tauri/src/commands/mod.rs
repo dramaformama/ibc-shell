@@ -5,6 +5,7 @@ pub mod catalog;
 pub mod document;
 pub mod host_window;
 pub mod identity;
+pub mod keys;
 pub mod probe;
 pub mod services;
 pub mod session;

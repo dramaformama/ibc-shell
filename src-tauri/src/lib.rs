@@ -10,11 +10,14 @@ pub mod api;
 pub mod autolock;
 pub mod commands;
 pub mod connect;
+pub mod forwards;
 #[cfg(desktop)]
 pub mod local_shell;
 pub mod prompts;
 mod session_output;
 pub mod session_task;
+pub mod ssh_import;
+pub mod ssh_import_apply;
 pub mod state;
 pub mod transfers;
 #[cfg(desktop)]

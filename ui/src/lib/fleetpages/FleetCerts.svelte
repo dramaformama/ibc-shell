@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { scrollEdge } from '$lib/util/scroll-edge.svelte';
   import EmptyState from '$lib/components/EmptyState.svelte';
   import { ui } from '$lib/stores/ui.svelte';
   import { sessions } from '$lib/stores/sessions.svelte';
@@ -33,7 +34,7 @@
     });
 </script>
 
-<section class="fpage" aria-label={m.fleet_domains()}>
+<section class="fpage" aria-label={m.fleet_domains()} use:scrollEdge>
   <header>
     <h1>{m.fleet_domains()}</h1>
     <p class="subtitle tnum">{m.fleet_ssl_counts({ total: rows.length, soon })}</p>
@@ -139,19 +140,15 @@
   }
   .badge {
     justify-self: end;
-    padding: 2px 8px;
-    border-radius: 999px;
-    background: color-mix(in oklab, var(--ok) 14%, transparent);
-    color: var(--ok);
-    font-size: 11.5px;
+    color: var(--muted);
+    font-size: var(--fs-sm);
     font-weight: 600;
+    font-variant-numeric: tabular-nums;
   }
   [data-tone='warn'] .badge {
-    background: color-mix(in oklab, var(--warn) 16%, transparent);
-    color: color-mix(in oklab, var(--warn) 70%, var(--text));
+    color: var(--warn);
   }
   [data-tone='bad'] .badge {
-    background: color-mix(in oklab, var(--danger) 14%, transparent);
     color: var(--danger);
   }
   @media (max-width: 900px) {

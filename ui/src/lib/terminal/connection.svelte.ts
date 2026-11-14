@@ -16,8 +16,11 @@ import {
 import type { Tab } from '$lib/stores/sessions.svelte';
 import { SvelteSet } from 'svelte/reactivity';
 import { ConnectLog } from './connectlog.svelte';
+import { forwards } from '$lib/forwards/forwards.svelte';
 import { claimTerminal, releasedTabs } from '$lib/stores/window-transfer';
 import { concat } from './text';
+import { AutoReconnect, retriableFailure, retriableReason } from './autoreconnect.svelte';
+import { terminalPrefs } from './prefs.svelte';
 
 export type Phase = 'connecting' | 'connected' | 'disconnected' | 'failed';
 
@@ -81,6 +84,8 @@ export class Connection {
   /** Reason shown in the banner (disconnect reason or localized-free failure code). */
   reason = $state<string | null>(null);
   canReconnect = $state(false);
+  /** Retries after a dropped connection (Settings → Terminal). */
+  readonly auto = new AutoReconnect(() => void this.#autoAttempt());
   /** Steps of the current connect, with times and addresses. */
   readonly log = new ConnectLog();
 
@@ -225,22 +230,37 @@ export class Connection {
         this.prompt = { kind: 'passphrase', pendingId: e.pending_id, label: e.identity_label };
         break;
       case 'Connected':
+        this.auto.cancel();
         this.phase = 'connected';
         this.prompt = null;
         this.sendSize(true);
         break;
       case 'Failed':
+        // A retry while the network / server is still away: wait and try again.
+        if (this.auto.attempt > 0 && retriableFailure(e.error.code) && this.auto.schedule()) {
+          this.phase = 'disconnected';
+          this.prompt = null;
+          this.canReconnect = true;
+          break;
+        }
+        this.auto.cancel();
         if (e.error.code === 'HostKeyChanged') {
           this.phase = 'failed';
           this.reason = e.error.code;
           this.prompt = { kind: 'changed', mismatch: e.error.detail };
         } else this.#fail(e.error.code);
         break;
+      case 'ForwardStatus':
+        if (this.#id) forwards.onStatus(this.#id, e.forward_id, e.state, e.error);
+        break;
       case 'Disconnected':
+        if (this.#id) forwards.clear(this.#id);
         this.phase = 'disconnected';
         this.prompt = null;
         this.reason = e.reason;
         this.canReconnect = e.can_reconnect;
+        if (e.can_reconnect && terminalPrefs.autoReconnect && retriableReason(e.reason))
+          this.auto.schedule();
         break;
       default:
         break;
@@ -315,11 +335,25 @@ export class Connection {
   /** Reuse the connection after `Disconnected`. */
   async reconnect(): Promise<void> {
     if (!this.#id || this.phase !== 'disconnected' || !this.canReconnect) return;
+    this.auto.cancel();
     this.phase = 'connecting';
     this.step = null;
     this.reason = null;
     this.log.reset();
     await api.sessionReconnect(this.#id);
+  }
+
+  /** One automatic attempt; a refused request waits for the next one. */
+  async #autoAttempt(): Promise<void> {
+    if (!this.#id || this.#closed) return;
+    this.phase = 'connecting';
+    this.step = null;
+    this.log.reset();
+    const r = await api.sessionReconnect(this.#id);
+    if (r.status === 'error') {
+      this.phase = 'disconnected';
+      this.auto.schedule();
+    }
   }
 
   /** Start over with a fresh session (after a failure). */
@@ -332,6 +366,7 @@ export class Connection {
 
   close(): void {
     openConnections.delete(this);
+    this.auto.cancel();
     this.#closed = true;
     this.#generation++;
     this.log.dispose();

@@ -5,6 +5,8 @@ import { db, delay, err, keyAfter, notFound, now, ok, uuid } from './state';
 import { vaultIsUnlocked } from './vault';
 
 const locked = () => err<never>({ code: 'VaultLocked' });
+/** Mock-only plaintext passwords, so the reveal button works in the browser preview. */
+const passwords = new Map<string, string>();
 
 export const identityList: Commands['identityList'] = async () => {
   await delay();
@@ -31,6 +33,7 @@ export const identityCreate: Commands['identityCreate'] = async (input) => {
     updated_at: t
   };
   db.identities.push(idn);
+  if (input.password) passwords.set(idn.id, input.password);
   return ok(structuredClone(idn));
 };
 
@@ -42,12 +45,62 @@ export const identityUpdate: Commands['identityUpdate'] = async (id, patch) => {
   if (patch.label) idn.label = patch.label;
   if (patch.username) idn.username = patch.username;
   if (patch.clear_username) idn.username = null;
-  if (patch.password) idn.has_password = true;
+  if (patch.password) {
+    idn.has_password = true;
+    passwords.set(id, patch.password);
+  }
   if (patch.passphrase) idn.has_passphrase = true;
-  if (patch.clear_password) idn.has_password = false;
+  if (patch.clear_password) {
+    idn.has_password = false;
+    passwords.delete(id);
+  }
   if (patch.clear_passphrase) idn.has_passphrase = false;
   idn.updated_at = now();
   return ok(structuredClone(idn));
+};
+
+export const identityRevealPassword: Commands['identityRevealPassword'] = async (id) => {
+  await delay();
+  if (!vaultIsUnlocked()) return locked();
+  const idn = db.identities.find((i) => i.id === id);
+  if (!idn) return notFound();
+  return ok(idn.has_password ? (passwords.get(id) ?? 'mock-password') : null);
+};
+
+export const identityGenerate: Commands['identityGenerate'] = async (label, algo) => {
+  await delay();
+  if (!vaultIsUnlocked()) return locked();
+  if (!label.trim()) return err({ code: 'Validation', detail: 'label is required' });
+  const t = now();
+  const ed = algo === 'ed25519';
+  const idn: IdentityDto = {
+    id: uuid(),
+    label: label.trim(),
+    username: null,
+    kind: 'key',
+    key_algo: ed ? 'ssh-ed25519' : 'rsa-sha2-512',
+    key_fingerprint: `SHA256:mock${Math.random().toString(36).slice(2, 12)}`,
+    public_key: ed
+      ? 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMockGeneratedKeyForPreviewOnly'
+      : 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQMockGeneratedKeyForPreviewOnly',
+    has_password: false,
+    has_passphrase: false,
+    created_at: t,
+    updated_at: t
+  };
+  db.identities.push(idn);
+  return ok(structuredClone(idn));
+};
+
+/** Mock: the first install adds the key, a repeat reports it as already there. */
+const installed = new Set<string>();
+export const identityInstall: Commands['identityInstall'] = async (_sessionId, identityId) => {
+  await delay();
+  const idn = db.identities.find((i) => i.id === identityId);
+  if (!idn?.public_key) return err({ code: 'Validation', detail: 'identity has no public key' });
+  if (installed.has(identityId)) return ok(false);
+  installed.add(identityId);
+  return ok(true);
 };
 
 export const identityDelete: Commands['identityDelete'] = async (id) => {

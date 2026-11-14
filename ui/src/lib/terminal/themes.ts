@@ -2,6 +2,7 @@
 import type { ITheme } from '@xterm/xterm';
 import { theme } from './theme-make';
 import { MORE_THEMES } from './themes-more';
+import { appColors } from './app-colors.svelte';
 
 export const TERMINAL_THEMES: Record<string, ITheme> = {
   ...MORE_THEMES,
@@ -118,5 +119,25 @@ export const TERMINAL_THEMES: Record<string, ITheme> = {
 /** Resolve a stored theme id; `null` follows the app appearance. */
 export function resolveTheme(id: string | null | undefined, appDark: boolean): ITheme {
   const found = id ? TERMINAL_THEMES[id] : undefined;
-  return found ?? TERMINAL_THEMES[appDark ? 'ibc-dark' : 'ibc-light']!;
+  const base = found ?? TERMINAL_THEMES[appDark ? 'ibc-dark' : 'ibc-light']!;
+  if (found) return base;
+  // "Match the app": the window's own background, text and accent.
+  const { bg, fg, accent } = appColors;
+  if (!bg || !fg || !accent) return base;
+  return {
+    ...base,
+    background: bg,
+    foreground: fg,
+    cursor: accent,
+    cursorAccent: bg,
+    selectionBackground: alpha(accent, 0.28) ?? base.selectionBackground
+  };
+}
+
+/** `#rrggbb` → `rgba(…, a)`; xterm does not parse `color-mix()`. */
+function alpha(hex: string, a: number): string | undefined {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  if (!m) return undefined;
+  const [r, g, b] = m.slice(1).map((x) => parseInt(x, 16));
+  return `rgba(${r},${g},${b},${a})`;
 }

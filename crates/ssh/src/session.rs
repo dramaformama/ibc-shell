@@ -10,7 +10,7 @@ use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 
 use crate::config::PtyRequest;
 use crate::error::map_russh;
-use crate::forward::{ForwardHandle, ForwardSpec};
+use crate::forward::{ForwardHandle, ForwardSpec, RemoteMap};
 use crate::shell::Shell;
 use crate::verify::{ClientHandler, CloseSlot};
 use crate::SshError;
@@ -26,6 +26,8 @@ pub struct Connection {
     banner: Option<String>,
     /// Close reasons, target hop first.
     closed: Vec<CloseSlot>,
+    /// Remote forwards registered on the target hop.
+    remote: RemoteMap,
 }
 
 impl std::fmt::Debug for Connection {
@@ -42,13 +44,23 @@ impl Connection {
         upstream: Vec<Handle<ClientHandler>>,
         banner: Option<String>,
         closed: Vec<CloseSlot>,
+        remote: RemoteMap,
     ) -> Self {
         Self {
             handle,
             _upstream: upstream,
             banner,
             closed,
+            remote,
         }
+    }
+
+    pub(crate) fn handle(&self) -> &Handle<ClientHandler> {
+        &self.handle
+    }
+
+    pub(crate) fn remote_map(&self) -> &RemoteMap {
+        &self.remote
     }
 
     /// Why the connection ended, once it has: `server:<DisconnectCode>`, `keepalive`,
@@ -152,10 +164,13 @@ impl Connection {
         })
     }
 
-    #[allow(clippy::unused_async, clippy::unused_async_trait_impl)] // async per contract
-    /// Starts a port forward (Phase 3). Stops when the handle is dropped.
-    pub async fn start_forward(&self, _spec: ForwardSpec) -> Result<ForwardHandle, SshError> {
-        Err(SshError::Unimplemented)
+    /// Starts a port forward; it stops when the handle is dropped. Local and dynamic forwards
+    /// listen on this machine, remote ones ask the server to listen.
+    pub async fn start_forward(
+        self: &std::sync::Arc<Self>,
+        spec: ForwardSpec,
+    ) -> Result<ForwardHandle, SshError> {
+        crate::forward::start(self, spec).await
     }
 
     /// Graceful disconnect.

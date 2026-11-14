@@ -89,11 +89,12 @@
     left: 50%;
     width: min(400px, calc(100vw - 32px));
     transform: translate(-50%, -50%);
+    animation: alert-in 340ms var(--spring);
     display: grid;
     gap: 12px;
     padding: 20px;
-    border: 1px solid var(--border);
-    border-radius: var(--r-card);
+    border: 0.5px solid var(--border);
+    border-radius: var(--r-sheet);
     background: var(--surface);
     box-shadow: var(--shadow);
   }

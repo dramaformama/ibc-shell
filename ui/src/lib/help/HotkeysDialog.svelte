@@ -50,8 +50,9 @@
     max-height: calc(100vh - 48px);
     overflow-y: auto;
     transform: translate(-50%, -50%);
+    animation: alert-in 340ms var(--spring);
     padding: 22px 22px 24px;
-    border: 1px solid var(--border);
+    border: 0.5px solid var(--border);
     border-radius: var(--r-sheet);
     background: var(--surface);
     box-shadow: var(--shadow);
@@ -110,7 +111,7 @@
     font-size: 13px;
   }
   li + li {
-    border-top: 1px solid var(--border);
+    border-top: 0.5px solid var(--border);
   }
   .lbl {
     min-width: 0;

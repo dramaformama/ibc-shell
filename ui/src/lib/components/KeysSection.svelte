@@ -4,11 +4,27 @@
   import { tree } from '$lib/stores/tree.svelte';
   import { ui } from '$lib/stores/ui.svelte';
   import { errorText } from '$lib/util/errors';
-  import { Copy, Trash2 } from '@lucide/svelte';
+  import { Copy, KeyRound, Trash2 } from '@lucide/svelte';
 
   let items = $state.raw<IdentityDto[]>([]);
   let loaded = $state(false);
   let asking = $state<string | null>(null);
+  let making = $state(false);
+  let name = $state('');
+  let algo = $state<'ed25519' | 'rsa4096'>('ed25519');
+  let busy = $state(false);
+
+  async function generate(e: SubmitEvent) {
+    e.preventDefault();
+    busy = true;
+    const r = await api.identityGenerate(name.trim() || 'iBC Shell', algo);
+    busy = false;
+    if (r.status !== 'ok') return ui.toast(errorText(r.error), 'error');
+    items = [...items, r.data];
+    making = false;
+    name = '';
+    ui.toast(m.keygen_done());
+  }
 
   void api.identityList().then((r) => {
     if (r.status === 'ok') items = r.data;
@@ -42,7 +58,40 @@
 
 <section>
   <h3>{m.settings_keys()}</h3>
-  <p class="note">{m.settings_keys_note()}</p>
+  <p class="note">{m.settings_keys_note2()}</p>
+  {#if making}
+    <form class="gen" onsubmit={generate}>
+      <div class="fld">
+        <label for="kg-name">{m.keygen_name()}</label>
+        <input id="kg-name" class="input" bind:value={name} placeholder="iBC Shell" />
+      </div>
+      <div class="seg" role="radiogroup" aria-label={m.keygen_new()}>
+        <button
+          type="button"
+          role="radio"
+          aria-checked={algo === 'ed25519'}
+          onclick={() => (algo = 'ed25519')}>Ed25519</button
+        >
+        <button
+          type="button"
+          role="radio"
+          aria-checked={algo === 'rsa4096'}
+          onclick={() => (algo = 'rsa4096')}>RSA 4096</button
+        >
+      </div>
+      {#if algo === 'rsa4096'}<p class="note">{m.keygen_rsa_note()}</p>{/if}
+      <div class="gen-acts">
+        <button type="button" class="btn" onclick={() => (making = false)}
+          >{m.action_cancel()}</button
+        >
+        <button type="submit" class="btn btn-primary" disabled={busy}>{m.action_create()}</button>
+      </div>
+    </form>
+  {:else}
+    <button type="button" class="btn btn-sm new" onclick={() => (making = true)}
+      ><KeyRound size={13} />{m.keygen_new()}</button
+    >
+  {/if}
   {#if loaded && !items.length}
     <p class="note">{m.settings_keys_empty()}</p>
   {/if}
@@ -99,6 +148,18 @@
 </section>
 
 <style>
+  .new {
+    justify-self: start;
+  }
+  .gen {
+    display: grid;
+    gap: 10px;
+  }
+  .gen-acts {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
   .rows {
     display: grid;
     gap: 2px;

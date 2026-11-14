@@ -69,6 +69,8 @@ pub(crate) struct ClientHandler {
     pub banner: std::sync::Arc<std::sync::Mutex<Option<String>>>,
     /// Why the transport ended (see [`close_code`]); read through `Connection::close_reason`.
     pub closed: CloseSlot,
+    /// Remote forwards of this hop; channels for other ports are refused.
+    pub remote: crate::forward::RemoteMap,
 }
 
 /// Shared slot for the reason a connection ended.
@@ -98,6 +100,30 @@ impl Handler for ClientHandler {
     ) -> Result<(), Self::Error> {
         if let Ok(mut b) = self.banner.lock() {
             *b = Some(clean_banner(banner));
+        }
+        Ok(())
+    }
+
+    async fn server_channel_open_forwarded_tcpip(
+        &mut self,
+        channel: russh::Channel<russh::client::Msg>,
+        _connected_address: &str,
+        connected_port: u32,
+        _originator_address: &str,
+        _originator_port: u32,
+        reply: russh::client::ChannelOpenHandle,
+        _session: &mut russh::client::Session,
+    ) -> Result<(), Self::Error> {
+        match crate::forward::remote_target(&self.remote, connected_port) {
+            Some(dest) => {
+                reply.accept().await;
+                crate::forward::carry_remote(&self.remote, connected_port, channel, dest);
+            }
+            None => {
+                reply
+                    .reject(russh::ChannelOpenFailure::AdministrativelyProhibited)
+                    .await;
+            }
         }
         Ok(())
     }

@@ -25,7 +25,8 @@
   {#if busy}
     <span class="tile"><span class="pulse"></span></span>
   {:else if Icon}
-    <span class="tile"><Icon size={22} /></span>
+    <!-- A small stacked illustration: two faint sheets behind the icon. -->
+    <span class="art" aria-hidden="true"><span class="tile"><Icon size={26} /></span></span>
   {/if}
   <h3>{title}</h3>
   {#if hint}<p>{hint}</p>{/if}
@@ -42,18 +43,47 @@
     color: var(--muted);
   }
   .tile {
+    position: relative;
     display: grid;
     place-items: center;
-    width: 48px;
-    height: 48px;
-    margin-bottom: 6px;
-    border-radius: 15px;
-    background: var(--surface-2);
+    width: 60px;
+    height: 60px;
+    border-radius: 18px;
+    background: linear-gradient(160deg, var(--surface), var(--surface-2));
+    box-shadow:
+      0 0 0 0.5px var(--border),
+      0 10px 24px -12px rgb(0 0 0 / 0.25);
     color: var(--muted);
+  }
+  .empty-state > .tile {
+    margin-bottom: 10px;
+  }
+  .art {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 96px;
+    height: 80px;
+    margin-bottom: 8px;
+  }
+  .art::before,
+  .art::after {
+    content: '';
+    position: absolute;
+    width: 56px;
+    height: 56px;
+    border-radius: 17px;
+    background: var(--fill-2);
+  }
+  .art::before {
+    transform: translate(-22px, 6px) rotate(-12deg);
+  }
+  .art::after {
+    transform: translate(22px, 6px) rotate(12deg);
   }
   h3 {
     margin: 0;
-    font-size: 14px;
+    font-size: var(--fs-head);
     font-weight: 600;
     letter-spacing: -0.01em;
     color: var(--text);

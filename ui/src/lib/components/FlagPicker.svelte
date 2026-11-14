@@ -123,7 +123,7 @@
     gap: 8px;
     cursor: pointer;
     text-align: left;
-    height: 34px;
+    height: var(--control-h);
   }
   .fp-val {
     display: flex;

@@ -32,11 +32,13 @@
     align-items: center;
     gap: 8px;
     padding: 8px 8px 8px 14px;
-    border: 1px solid var(--border);
-    border-radius: var(--r-card);
-    background: var(--surface);
+    border: 0.5px solid var(--glass-edge);
+    border-radius: var(--r-panel);
+    background: var(--glass);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
     box-shadow: var(--shadow);
-    animation: rise 150ms var(--ease);
+    animation: rise 380ms var(--spring);
   }
   .toast.error {
     border-color: color-mix(in oklab, var(--danger) 50%, var(--border));

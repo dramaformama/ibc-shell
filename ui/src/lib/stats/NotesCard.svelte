@@ -40,9 +40,9 @@
     align-items: center;
     gap: 7px;
     margin: 0 0 10px;
-    font-size: 13px;
+    font-size: var(--fs-body);
     font-weight: 600;
-    color: var(--muted);
+    color: var(--text);
   }
   textarea {
     width: 100%;

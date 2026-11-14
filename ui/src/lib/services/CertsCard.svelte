@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Skeleton from '$lib/components/Skeleton.svelte';
   import { ShieldCheck } from '@lucide/svelte';
   import { services } from './services.svelte';
   import { getLocale } from '$lib/paraglide/runtime.js';
@@ -22,7 +23,7 @@
 <section class="card ssl" style:--tone="var(--c-green)">
   <h3><ShieldCheck size={15} />{m.ssl_title()}</h3>
   {#if !report}
-    <p class="note">{m.ssl_loading()}</p>
+    <Skeleton rows={3} label={m.ssl_loading()} />
   {:else if report.no_openssl}
     <p class="note">{m.ssl_no_openssl()}</p>
   {:else}
@@ -106,19 +107,15 @@
     gap: 2px;
   }
   .badge {
-    padding: 2px 8px;
-    border-radius: 999px;
-    background: color-mix(in oklab, var(--ok) 14%, transparent);
-    color: var(--ok);
-    font-size: 11.5px;
+    color: var(--muted);
+    font-size: var(--fs-sm);
     font-weight: 600;
+    font-variant-numeric: tabular-nums;
   }
   [data-tone='warn'] .badge {
-    background: color-mix(in oklab, var(--warn) 16%, transparent);
-    color: color-mix(in oklab, var(--warn) 70%, var(--text));
+    color: var(--warn);
   }
   [data-tone='bad'] .badge {
-    background: color-mix(in oklab, var(--danger) 14%, transparent);
     color: var(--danger);
   }
   .sep {

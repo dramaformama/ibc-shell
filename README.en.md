@@ -12,7 +12,7 @@
 A light SSH and SFTP client for people who run many servers.
 Nested folders, country flags, a terminal that stays out of your way, and secrets that never leave your machine.
 
-> **Version 1.0.** SSH, SFTP, the encrypted vault, server monitoring and the local terminal are ready for macOS, Windows and Linux. iOS and Android are planned.
+> **Version 1.2.** SSH, SFTP, the encrypted vault, server monitoring, the local terminal, port forwarding and `~/.ssh/config` import are ready for macOS, Windows and Linux. iOS and Android are planned.
 
 In Files, double-click a document to open its dialog. Remote documents open in the default app as temporary copies. Choose Download to save a file to the selected folder through the transfer queue. Window controls sit in the top toolbar.
 > Installers are built automatically from a tag, see [Download](#download).
@@ -94,6 +94,16 @@ Demo mode: sample servers and metrics.
 
 ## What's new
 
+**Version 2.0.0:**
+
+- **New design.** A calmer macOS look: a floating translucent sidebar, one accent colour, colour only for states. Overview is now a dense server list: status, address, load, ping and actions on one line.
+- **Port forwarding.** A "Port forwarding" card on the server page: local (a database on the server becomes `localhost:5432` here), remote (a port of this computer opens on the server) and a SOCKS5 proxy through the server. Start and stop with one button, start on connect, copy the address. The app warns when a port is open to more than this computer.
+- **Import from `~/.ssh/config`.** Right-click empty space in the host list or use <kbd>⌘K</kbd>: every host of the config with a preview. Address, user, port, key (without passphrase), jump hosts (`ProxyJump`) and forwards (`LocalForward` and others) come along. Hosts you already have are marked and not selected.
+- **Keys instead of passwords.** "Key sign-in" on the server page creates an Ed25519 key, adds it to `~/.ssh/authorized_keys` on the server and switches the host to it, like `ssh-copy-id`. You can also create a key in Settings → "Keys and passwords".
+- **Reconnect after a drop.** The network went away, the laptop slept, the server rebooted: the terminal reconnects by itself, right when the network is back or after a pause of up to 30 seconds. Turn it off in Settings → Terminal.
+- **tmux in one click.** The host editor's "Startup command" now runs, and the "tmux" preset brings you back to the same session after a drop.
+- **Saved password visible.** The eye button in the host editor shows the password you saved.
+
 **Version 1.0.0:**
 
 - **Local terminal.** Its own "Local terminal" row in the sidebar (<kbd>⌃`</kbd> there and back). It is your usual shell on this computer, starts with the app and keeps running, so there is nothing to reopen. Typing `exit` starts a fresh one.
@@ -125,7 +135,8 @@ Demo mode: sample servers and metrics.
 | SFTP engine: queue, resume, pause, conflict policies, remote-to-remote         | done, tested                 |
 | Terminal, files, overview, server status, Docker, SSL, snippets, menu-bar icon | done, working in the app     |
 | Installers for macOS, Windows, Linux                                           | built in CI                  |
-| Port forwarding, `ssh_config` import, key manager, split panes                 | planned (Phase 3)            |
+| Port forwarding, `ssh_config` import, key creation and install, reconnect      | ready, tested on OpenSSH     |
+| Split terminal panes                                                           | planned (Phase 3)            |
 | Mobile                                                                         | planned (Phase 4)            |
 
 Tested on a Mac. Docker and SSL are checked on demo data, not yet on a real server. The Windows and Linux builds have not been run on real machines.

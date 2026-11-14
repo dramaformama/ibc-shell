@@ -54,6 +54,7 @@
 {#if !row}
   {@render item(m.action_new_host(), () => ui.openHostEditor(null))}
   {@render item(m.action_new_folder(), () => ui.openFolderEditor(null))}
+  {@render item(m.imp_action(), () => (ui.sshImportOpen = true))}
 {:else}
   {#if only?.kind === 'host'}
     {@render item(m.menu_connect(), () => connectHost(only.id))}

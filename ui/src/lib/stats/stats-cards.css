@@ -94,16 +94,13 @@
   gap: 8px;
   margin: 0;
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 600;
 }
 .cards h3 svg {
-  width: 28px;
-  height: 28px;
-  padding: 6px;
-  border-radius: 9px;
-  background: color-mix(in oklab, var(--tone) 13%, transparent);
-  color: var(--tone);
+  width: 15px;
+  height: 15px;
+  color: var(--muted);
 }
 .cards .headline {
   display: flex;
@@ -112,8 +109,8 @@
 }
 .cards .big {
   margin: 0;
-  font-size: 32px;
-  font-weight: 700;
+  font-size: 30px;
+  font-weight: 600;
   letter-spacing: -0.03em;
   line-height: 1;
 }
@@ -139,7 +136,7 @@
   font-weight: 600;
 }
 .cards .temp[data-hot='true'] {
-  background: color-mix(in oklab, var(--danger) 14%, transparent);
+  background: transparent;
   color: var(--danger);
 }
 .cards .legend {
@@ -148,7 +145,7 @@
   gap: 4px;
   margin: 0;
   padding-top: 8px;
-  border-top: 1px solid var(--border);
+  border-top: 0.5px solid var(--border);
   font-size: 11px;
 }
 .cards .legend > div {
@@ -181,7 +178,6 @@
 }
 .cards .stack span {
   height: 100%;
-  transition: width 600ms var(--ease);
 }
 .cards .stack span + span {
   box-shadow: inset 1.5px 0 0 var(--surface);
@@ -242,20 +238,20 @@
 .cards .io b {
   color: var(--text);
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
 }
 .cards .io .rx svg {
-  color: var(--c-purple);
+  color: var(--accent);
 }
 .cards .io .tx svg {
-  color: var(--c-cyan);
+  color: var(--c-purple);
 }
 .cards .ifaces {
   display: grid;
   gap: 4px;
   margin: 0;
   padding: 8px 0 0;
-  border-top: 1px solid var(--border);
+  border-top: 0.5px solid var(--border);
   list-style: none;
   font-size: 11px;
   color: var(--muted);
@@ -312,7 +308,7 @@
 }
 .cards .procs td {
   padding: var(--row-pad) 0;
-  border-top: 1px solid var(--border);
+  border-top: 0.5px solid var(--border);
   vertical-align: middle;
 }
 .cards .procs td.num {

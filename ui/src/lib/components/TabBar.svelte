@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { edge } from '$lib/util/scroll-edge.svelte';
   import {
     CopyPlus,
     FolderOpen,
@@ -65,10 +66,15 @@
   }
 </script>
 
-<div class="bar" class:mac data-tauri-drag-region>
+<div
+  class="bar"
+  class:mac
+  class:edge={edge.scrolled || (active && active.kind !== 'status')}
+  data-tauri-drag-region
+>
   {#if !isHostWindow}
     <button
-      class="icon-btn"
+      class="icon-btn side-toggle"
       onclick={() => (ui.sidebarOpen = !ui.sidebarOpen)}
       aria-label={ui.sidebarOpen ? m.sidebar_hide() : m.sidebar_show()}
       aria-pressed={ui.sidebarOpen}
@@ -232,20 +238,20 @@
   }
   .bg-pill {
     flex: none;
-    height: 24px;
-    padding: 0 10px;
+    height: 22px;
+    padding: 0 9px;
     border: 0;
     border-radius: 999px;
-    background: color-mix(in oklab, var(--text) 8%, transparent);
+    background: var(--fill-2);
     color: var(--muted);
     font: inherit;
-    font-size: 11.5px;
+    font-size: var(--fs-cap);
     font-weight: 500;
     cursor: pointer;
     transition: background-color 120ms var(--ease);
   }
   .bg-pill:hover {
-    background: color-mix(in oklab, var(--text) 14%, transparent);
+    background: color-mix(in oklab, var(--text) 12%, transparent);
     color: var(--text);
   }
   .bar {
@@ -254,12 +260,16 @@
     container-type: inline-size;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     height: var(--toolbar-h);
-    padding: 0 8px;
-    border-bottom: 1px solid var(--border);
+    padding: 0 10px 0 8px;
+    border-bottom: 0.5px solid transparent;
     background: var(--bg);
+    transition: border-color 200ms var(--ease);
     flex: none;
+  }
+  .bar.edge {
+    border-bottom-color: var(--sep);
   }
   .bar.mac {
     padding-left: 84px;
@@ -286,9 +296,9 @@
     align-items: center;
     flex: 0 1 auto;
     min-width: 86px;
-    max-width: 220px;
+    max-width: 200px;
     height: var(--control-h);
-    border-radius: var(--r-control);
+    border-radius: 999px;
     color: var(--muted);
     transition:
       background-color 120ms var(--ease),
@@ -323,11 +333,8 @@
     background: var(--accent);
   }
   .tab.active {
-    background: var(--surface);
+    background: var(--fill-2);
     color: var(--text);
-    box-shadow:
-      var(--card-shadow),
-      0 0 0 0.5px var(--border);
   }
   .tab-main {
     display: flex;
@@ -335,7 +342,7 @@
     gap: 7px;
     min-width: 0;
     height: 100%;
-    padding: 0 30px 0 10px;
+    padding: 0 28px 0 11px;
     border: 0;
     border-radius: inherit;
     background: none;
@@ -362,7 +369,7 @@
     width: 20px;
     height: 20px;
     border: 0;
-    border-radius: 7px;
+    border-radius: 999px;
     background: none;
     color: inherit;
     opacity: 0;
@@ -381,15 +388,23 @@
   }
   .sep {
     flex: none;
-    width: 1px;
+    width: 0.5px;
     height: 16px;
-    margin: 0 2px;
+    margin: 0 4px;
     background: var(--border);
   }
   .bar > .overview[aria-pressed='true'],
   .tools .icon-btn[aria-pressed='true'] {
-    background: var(--accent-soft);
-    color: var(--accent);
+    background: var(--sel);
+    color: var(--text);
+  }
+  .side-toggle[aria-pressed='true'] {
+    background: transparent;
+    color: var(--muted);
+  }
+  .side-toggle[aria-pressed='true']:hover {
+    background: var(--hover);
+    color: var(--text);
   }
   .tools {
     display: flex;

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Skeleton from '$lib/components/Skeleton.svelte';
   import { ContextMenu } from 'bits-ui';
   import { ArrowDown, ArrowUp, File, Folder, Link2 } from '@lucide/svelte';
   import type { Entry } from '$lib/api';
@@ -181,12 +182,17 @@
           </div>
         {/snippet}
         {#snippet empty()}
-          <p class="sf-empty">
-            {#if pane.loading}{m.sftp_loading()}
-            {:else if pane.error}{m.sftp_load_error()}
-            {:else if pane.filter}{m.sftp_no_matches()}
-            {:else}{m.sftp_empty_dir()}{/if}
-          </p>
+          {#if pane.loading}
+            <div class="sf-sk">
+              <Skeleton rows={6} two={false} label={m.sftp_loading()} />
+            </div>
+          {:else}
+            <p class="sf-empty">
+              {#if pane.error}{m.sftp_load_error()}
+              {:else if pane.filter}{m.sftp_no_matches()}
+              {:else}{m.sftp_empty_dir()}{/if}
+            </p>
+          {/if}
         {/snippet}
       </VList>
     </ContextMenu.Trigger>

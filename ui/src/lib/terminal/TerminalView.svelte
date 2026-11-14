@@ -377,7 +377,7 @@
      would count padding as free room, adding a row that spills past the bottom edge. */
   .xt {
     position: absolute;
-    inset: 8px;
+    inset: 10px 6px 6px 14px;
   }
   .xt.hidden {
     visibility: hidden;

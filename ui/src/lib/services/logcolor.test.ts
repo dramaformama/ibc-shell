@@ -41,4 +41,37 @@ describe('colorLine', () => {
     expect(shortTime('2026-10-15T12:05:05Z', 'en')).toMatch(/^1[45] Oct \d\d:05:05$/);
     expect(shortTime('2026-10-15T12:05:05Z', 'ru')).toMatch(/^1[45] окт \d\d:05:05$/);
   });
+
+  it('highlights real-world formats', () => {
+    const cls = (l: string) =>
+      colorLine(l)
+        .segs.filter((s) => s.cls)
+        .map((s) => `${s.cls}:${s.text}`);
+    expect(cls('2026-11-14 10:12:01.123 UTC [1] LOG:  database system is ready')).toEqual([
+      'dim:2026-11-14 10:12:01.123 UTC',
+      'info b:LOG',
+      'ok:ready'
+    ]);
+    expect(cls('2026/11/14 10:12:01 [crit] 29#29: upstream http://10.0.0.3:3000/ failed')).toEqual([
+      'dim:2026/11/14 10:12:01',
+      'err b:crit',
+      'url:http://10.0.0.3:3000/',
+      'err b:failed'
+    ]);
+    expect(cls('{"level":"Warning","took":"18ms"}')).toEqual([
+      'key:"level"',
+      'dim::',
+      'warn b:Warning',
+      'key:"took"',
+      'dim::',
+      'num:18ms'
+    ]);
+  });
+
+  it('maps 256 and RGB colours and still highlights default-coloured text', () => {
+    const segs = colorLine(
+      '\x1b[38;5;196mE\x1b[0m GET from 1.2.3.4 \x1b[38;2;80;200;120mok\x1b[0m'
+    ).segs;
+    expect(segs.map((s) => s.cls)).toEqual(['a1', '', 'meth', '', 'ip', '', 'a2']);
+  });
 });

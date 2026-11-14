@@ -61,6 +61,9 @@ pub enum ApiError {
 | `identity_create` | `input: IdentityInput` (secrets accepted ONCE → vault) | `IdentityDto` |
 | `identity_update` | `id: IdentityId, patch: IdentityPatchInput` | `IdentityDto` |
 | `identity_delete` | `id: IdentityId` | `null` |
+| `identity_reveal_password` | `id: IdentityId` (only on an explicit user click, ADR-021) | `string \| null` |
+| `identity_generate` | `label: string, algo: "ed25519" \| "rsa4096"` (OS RNG, private key straight to the vault; ADR-024) | `IdentityDto` |
+| `identity_install` | `session_id, identity_id` (appends the public key to `~/.ssh/authorized_keys` over the session; ADR-024) | `boolean` — `true` added, `false` already there |
 | `identity_import_file` | `passphrase: string \| null` (backend opens the file dialog, ADR-006) | `IdentityDto \| null` (null = cancelled) |
 | `tag_list` | — | `Tag[]` |
 | `tag_create` | `input: TagInput` | `Tag` |
@@ -73,7 +76,12 @@ pub enum ApiError {
 | `forward_list` | `host_id: HostId \| null` | `PortForward[]` |
 | `forward_create` | `input: ForwardInput` | `PortForward` |
 | `forward_update` | `id: ForwardId, patch: ForwardPatch` | `PortForward` |
-| `forward_delete` | `id: ForwardId` | `null` |
+| `forward_delete` | `id: ForwardId` | `null` (stops it in every session first) |
+| `forward_start` | `session_id, forward_id` (rule of the session's saved host; ADR-022) | `number` — bound port; `ForwardStatus` event follows |
+| `forward_stop` | `session_id, forward_id` | `null` (no-op when not running) |
+| `forward_active` | `session_id` | `ActiveForward { forward_id, port }[]` |
+| `ssh_config_preview` | — (backend reads `~/.ssh/config`, ADR-023) | `SshImportPreview { found, entries: SshImportEntry[] }` |
+| `ssh_config_import` | `aliases: string[], folder_name: string` | `SshImportSummary { folder_id, hosts, keys, forwards, skipped_keys }` (+ event `tree://changed`) |
 | `known_host_list` | — | `KnownHostSummary[]` |
 | `known_host_delete` | `id: KnownHostId` | `null` |
 | `settings_get` | `key: string` | JSON value \| `null` |
@@ -221,7 +229,7 @@ pub enum ApiError {
 | `tray://open-host` | `TrayOpenHost` | `{ host_id }` | `trayOpenHost` |
 
 ## Rules
-- No command returns secret material. Ever.
+- No command returns secret material, except `identity_reveal_password` on an explicit user click (ADR-021).
 - Paths from UI are validated: remote paths are POSIX strings; local paths must come from the dialog plugin, `local_home`, or be under a path previously returned by `local_list`.
 - Every command has a mock in `ui/src/lib/api/mock.ts` (key of `mockApi: Api`, type-checked against the bindings); `node scripts/check-mock-coverage.mjs` fails on any command in this file without a mock (run by `just bindings`).
 - `bindings_are_fresh` test in `src-tauri` fails when `bindings.ts` is stale.

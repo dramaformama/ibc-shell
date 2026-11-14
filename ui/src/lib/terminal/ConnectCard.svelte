@@ -181,7 +181,7 @@
   .cx {
     width: min(420px, calc(100% - 32px));
     padding: 18px 18px 16px;
-    border: 1px solid var(--border);
+    border: 0.5px solid var(--border);
     border-radius: var(--r-card);
     background: var(--surface);
     color: var(--text);

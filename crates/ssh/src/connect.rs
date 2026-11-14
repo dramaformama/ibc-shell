@@ -14,6 +14,7 @@ use tokio::sync::mpsc;
 use crate::auth::authenticate;
 use crate::config::{ConnectStep, Hop, Prompter};
 use crate::error::map_russh;
+use crate::forward::RemoteMap;
 use crate::hostkey::KnownHosts;
 use crate::policy::client_config;
 use crate::session::Connection;
@@ -97,12 +98,15 @@ async fn tcp_connect<P: Prompter>(
     Err(last)
 }
 
+/// One authenticated hop: handle, auth banner, close-reason slot, remote forward map.
+type Hopped = (Handle<ClientHandler>, Option<String>, CloseSlot, RemoteMap);
+
 async fn handshake<S, K, P>(
     stream: S,
     hop: &Hop,
     known: &K,
     prompter: &P,
-) -> Result<(Handle<ClientHandler>, Option<String>, CloseSlot), SshError>
+) -> Result<Hopped, SshError>
 where
     S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
     K: KnownHosts,
@@ -111,10 +115,12 @@ where
     let (tx, mut rx) = mpsc::unbounded_channel();
     let banner = Arc::new(Mutex::new(None));
     let closed: CloseSlot = Arc::new(Mutex::new(None));
+    let remote = RemoteMap::default();
     let handler = ClientHandler {
         tx,
         banner: Arc::clone(&banner),
         closed: Arc::clone(&closed),
+        remote: Arc::clone(&remote),
     };
     let mut ctx = VerifyCtx {
         host: &hop.host,
@@ -164,7 +170,7 @@ where
         .await?;
     }
     let banner = banner.lock().ok().and_then(|mut b| b.take());
-    Ok((handle, banner, closed))
+    Ok((handle, banner, closed, remote))
 }
 
 async fn connect_hop<K, P>(
@@ -172,7 +178,7 @@ async fn connect_hop<K, P>(
     previous: Option<&Handle<ClientHandler>>,
     known: &K,
     prompter: &P,
-) -> Result<(Handle<ClientHandler>, Option<String>, CloseSlot), SshError>
+) -> Result<Hopped, SshError>
 where
     K: KnownHosts,
     P: Prompter,
@@ -212,15 +218,17 @@ where
     let mut handles: Vec<Handle<ClientHandler>> = Vec::with_capacity(chain.len());
     let mut banner = None;
     let mut slots = Vec::with_capacity(chain.len());
+    let mut remote = RemoteMap::default();
     for hop in &chain {
-        let (h, b, c) = connect_hop(hop, handles.last(), known, prompter).await?;
+        let (h, b, c, r) = connect_hop(hop, handles.last(), known, prompter).await?;
         banner = b;
+        remote = r;
         handles.push(h);
         slots.push(c);
     }
     let last = handles.pop().ok_or(SshError::InvalidChain)?;
     slots.reverse(); // the target hop first
-    Ok(Connection::new(last, handles, banner, slots))
+    Ok(Connection::new(last, handles, banner, slots, remote))
 }
 
 #[cfg(test)]

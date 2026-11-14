@@ -1,4 +1,6 @@
 <script lang="ts">
+  /** Attach to (or create) the tmux session `main`; runs as typed input, so no `exec`. */
+  const TMUX = 'tmux new -A -s main';
   import { api, type FolderId, type IdentityDto } from '$lib/api';
   import * as m from '$lib/paraglide/messages.js';
   import { tree } from '$lib/stores/tree.svelte';
@@ -156,6 +158,16 @@
       hint={hint('startup_cmd', str)}
       onchange={(v) => (form.startup = v)}
     />
+    {#if form.startup.trim() !== TMUX}
+      <button
+        type="button"
+        class="btn btn-sm tmux"
+        title={m.startup_tmux_note()}
+        onclick={() => (form.startup = TMUX)}>{m.startup_tmux()}</button
+      >
+    {:else}
+      <p class="note">{m.startup_tmux_note()}</p>
+    {/if}
     <InheritField
       label={m.field_keepalive()}
       type="number"
@@ -184,6 +196,9 @@
 {/if}
 
 <style>
+  .tmux {
+    justify-self: start;
+  }
   section,
   .adv {
     display: grid;

@@ -57,6 +57,12 @@
       label: m.action_new_folder(),
       run: () => ui.openFolderEditor(null)
     },
+    {
+      id: 'a:ssh-import',
+      group: 'action',
+      label: m.imp_action(),
+      run: () => (ui.sshImportOpen = true)
+    },
     ...(vault.canLock
       ? [
           {
@@ -257,17 +263,19 @@
     left: 50%;
     width: min(560px, calc(100vw - 24px));
     transform: translateX(-50%);
-    border: 1px solid var(--border);
-    border-radius: var(--r-card);
-    background: var(--surface);
+    border: 0.5px solid var(--glass-edge);
+    border-radius: var(--r-panel);
+    background: var(--glass);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
     box-shadow: var(--shadow);
     overflow: hidden;
-    animation: pop 120ms var(--ease);
+    animation: pop 360ms var(--spring);
   }
   @keyframes pop {
     from {
       opacity: 0;
-      transform: translateX(-50%) translateY(-4px);
+      transform: translateX(-50%) scale(0.98);
     }
   }
   :global(.sr) {
@@ -282,8 +290,8 @@
     align-items: center;
     gap: 10px;
     padding: 0 16px;
-    height: 48px;
-    border-bottom: 1px solid var(--border);
+    height: 50px;
+    border-bottom: 0.5px solid var(--sep);
     color: var(--muted);
   }
   .field input {
@@ -293,7 +301,7 @@
     background: none;
     color: var(--text);
     font: inherit;
-    font-size: 15px;
+    font-size: 17px;
     outline: none;
   }
   .list {
@@ -302,13 +310,20 @@
     padding: 4px;
   }
   .grp {
-    padding: 8px 8px 4px;
+    padding: 8px 8px 3px;
     color: var(--muted);
-    font-size: 12px;
+    font-size: var(--fs-cap);
+    font-weight: 600;
   }
   .menu-item {
-    height: 32px;
+    height: 30px;
+    border-radius: var(--r-inner);
     cursor: pointer;
+  }
+  .menu-item[data-highlighted] .hint,
+  .menu-item[data-highlighted] .ic {
+    color: inherit;
+    opacity: 0.8;
   }
   .ic {
     display: grid;
@@ -327,7 +342,7 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     color: var(--muted);
-    font-size: 12px;
+    font-size: var(--fs-sm);
     min-width: 0;
   }
   .none {
@@ -338,9 +353,9 @@
   footer {
     display: flex;
     gap: 16px;
-    padding: 8px 16px;
-    border-top: 1px solid var(--border);
+    padding: 7px 16px;
+    border-top: 0.5px solid var(--sep);
     color: var(--muted);
-    font-size: 12px;
+    font-size: var(--fs-cap);
   }
 </style>

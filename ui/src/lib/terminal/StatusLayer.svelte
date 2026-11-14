@@ -50,7 +50,11 @@
       <span class="dot" aria-hidden="true"></span>
       {endReason ? `${m.term_disconnected()} · ${endReason}` : m.term_disconnected()}
     </span>
-    {#if conn.canReconnect}
+    {#if conn.auto.waiting}
+      <span class="hint" aria-live="polite">{m.term_auto_in({ s: conn.auto.seconds })}</span>
+      <button class="btn btn-primary" onclick={() => conn.auto.now()}>{m.term_auto_now()}</button>
+      <button class="btn" onclick={() => conn.auto.cancel()}>{m.term_auto_cancel()}</button>
+    {:else if conn.canReconnect}
       <button class="btn btn-primary" onclick={() => void conn.reconnect()}
         >{m.term_reconnect()}</button
       >
@@ -83,7 +87,7 @@
     gap: 8px 12px;
     max-width: calc(100% - 32px);
     padding: 8px 8px 8px 14px;
-    border: 1px solid var(--border);
+    border: 0.5px solid var(--border);
     border-radius: var(--r-card);
     background: var(--surface);
     color: var(--text);

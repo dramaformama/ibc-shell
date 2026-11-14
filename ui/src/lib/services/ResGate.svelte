@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Skeleton from '$lib/components/Skeleton.svelte';
   import type { Snippet } from 'svelte';
   import type { DockerAccess } from '$lib/api';
   import * as m from '$lib/paraglide/messages.js';
@@ -18,7 +19,7 @@
 </script>
 
 {#if access === null}
-  <p class="note">{m.dk_res_loading()}</p>
+  <Skeleton rows={3} label={m.dk_res_loading()} />
 {:else if access === 'Missing'}
   <p class="note">{m.dk_missing()}</p>
 {:else if access === 'Denied'}

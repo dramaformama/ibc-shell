@@ -104,7 +104,7 @@
   }
   .bk + .bk {
     padding-top: 14px;
-    border-top: 1px solid var(--border);
+    border-top: 0.5px solid var(--border);
   }
   .sub {
     font-size: 12px;

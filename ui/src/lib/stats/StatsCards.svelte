@@ -27,6 +27,7 @@
   const share = (v: number) => `${((v / total) * 100).toFixed(2)}%`;
   const topCpu = $derived(Math.max(1, ...d.procs.map((p) => p.cpu ?? 0)));
   const diskPct = $derived(d.disk_total ? (d.disk_used / d.disk_total) * 100 : 0);
+  import Roll from './Roll.svelte';
 </script>
 
 <div class:cq={wide}>
@@ -34,7 +35,7 @@
     <section class="card cpu-card" style:--tone="var(--c-cyan)">
       <h3><Cpu size={15} />{m.stat_cpu_usage()}</h3>
       <div class="headline">
-        <p class="big tnum">{pct(d.cpu_pct)}<small>%</small></p>
+        <p class="big tnum"><Roll value={pct(d.cpu_pct)} /><small>%</small></p>
         {#if d.temp_c != null}<span class="temp tnum" data-hot={d.temp_c >= 75}
             >{Math.round(d.temp_c)}°C</span
           >{/if}
@@ -55,7 +56,7 @@
         />
       {/if}
       <dl class="legend tnum">
-        {#each [[m.stat_user(), d.cpu_user, 'var(--c-cyan)'], [m.stat_system(), d.cpu_system, 'var(--danger)'], [m.stat_nice(), d.cpu_nice, 'var(--c-green)'], [m.stat_iowait(), d.cpu_iowait, 'var(--c-purple)'], [m.stat_steal(), d.cpu_steal, 'var(--c-orange)']] as [label, v, color] (label)}
+        {#each [[m.stat_user(), d.cpu_user, 'var(--c-cyan)'], [m.stat_system(), d.cpu_system, 'var(--c-orange)'], [m.stat_nice(), d.cpu_nice, 'var(--c-yellow)'], [m.stat_iowait(), d.cpu_iowait, 'var(--c-purple)'], [m.stat_steal(), d.cpu_steal, 'var(--c-pink)']] as [label, v, color] (label)}
           <div>
             <dt><i style:background={color as string}></i>{label}</dt>
             <dd>{pct(v as number | null)}%</dd>
@@ -67,7 +68,7 @@
     <section class="card mem-card" style:--tone="var(--c-green)">
       <h3><MemoryStick size={15} />{m.stat_memory()}</h3>
       <p class="big tnum">
-        {pct(d.mem_total ? (d.mem_used / d.mem_total) * 100 : null)}<small>%</small>
+        <Roll value={pct(d.mem_total ? (d.mem_used / d.mem_total) * 100 : null)} /><small>%</small>
         <span class="of">{bytes(d.mem_used)} / {bytes(d.mem_total)}</span>
       </p>
       <div class="stack" role="img" aria-label={m.stat_memory()}>
@@ -106,14 +107,16 @@
       <Spark
         series={[
           { values: s.load15, color: 'var(--c-yellow)' },
-          { values: s.load5, color: 'var(--c-cyan)' },
-          { values: s.load1, color: 'var(--danger)', fill: true }
+          { values: s.load5, color: 'var(--c-purple)' },
+          { values: s.load1, color: 'var(--accent)', fill: true }
         ]}
         height={wide ? 72 : 56}
       />
       <div class="loads tnum">
-        <span><i style:background="var(--danger)"></i>1 {m.unit_m()}<b>{decimal(d.load1)}</b></span>
-        <span><i style:background="var(--c-cyan)"></i>5 {m.unit_m()}<b>{decimal(d.load5)}</b></span>
+        <span><i style:background="var(--accent)"></i>1 {m.unit_m()}<b>{decimal(d.load1)}</b></span>
+        <span
+          ><i style:background="var(--c-purple)"></i>5 {m.unit_m()}<b>{decimal(d.load5)}</b></span
+        >
         <span
           ><i style:background="var(--c-yellow)"></i>15 {m.unit_m()}<b>{decimal(d.load15)}</b></span
         >
@@ -124,8 +127,8 @@
       <h3><Network size={15} />{m.stat_network()}</h3>
       <Spark
         series={[
-          { values: s.rx, color: 'var(--c-purple)', fill: true },
-          { values: s.tx, color: 'var(--c-cyan)' }
+          { values: s.rx, color: 'var(--accent)', fill: true },
+          { values: s.tx, color: 'var(--c-purple)' }
         ]}
         height={wide ? 72 : 48}
       />
@@ -153,7 +156,7 @@
     <section class="card disk-card" style:--tone="var(--c-orange)">
       <h3><HardDrive size={15} />{m.stat_disk()}</h3>
       <p class="big tnum">
-        {pct(d.disk_total ? diskPct : null)}<small>%</small>
+        <Roll value={pct(d.disk_total ? diskPct : null)} /><small>%</small>
         <span class="of">{bytes(d.disk_used)} / {bytes(d.disk_total)}</span>
       </p>
       <div class="meter" aria-hidden="true" style:--fill={loadColor(diskPct)}>
@@ -163,8 +166,8 @@
         {#if wide}
           <Spark
             series={[
-              { values: s.dr, color: 'var(--c-orange)', fill: true },
-              { values: s.dw, color: 'var(--c-pink)' }
+              { values: s.dr, color: 'var(--accent)', fill: true },
+              { values: s.dw, color: 'var(--c-purple)' }
             ]}
             height={48}
           />

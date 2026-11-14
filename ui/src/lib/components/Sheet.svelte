@@ -51,11 +51,11 @@
     border-radius: var(--r-sheet);
     background: var(--bg);
     box-shadow: var(--shadow);
-    animation: slide 150ms var(--ease);
+    animation: slide 420ms var(--spring);
   }
   @keyframes slide {
     from {
-      transform: translateX(24px);
+      transform: translateX(16px) scale(0.99);
       opacity: 0;
     }
   }
@@ -63,20 +63,20 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    min-height: 64px;
-    padding: 16px 18px 16px 24px;
-    border-bottom: 1px solid var(--border);
+    min-height: 56px;
+    padding: 12px 14px 12px 22px;
+    border-bottom: 0.5px solid var(--sep);
   }
   header :global([data-dialog-title]) {
     margin: 0;
-    font-size: 17px;
-    font-weight: 700;
+    font-size: var(--fs-head);
+    font-weight: 600;
     letter-spacing: -0.01em;
   }
   .body {
     flex: 1;
     overflow: auto;
-    padding: 24px;
+    padding: 20px 22px 24px;
     display: grid;
     gap: 14px;
     align-content: start;
@@ -85,8 +85,8 @@
     display: flex;
     justify-content: flex-end;
     gap: 8px;
-    padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
-    border-top: 1px solid var(--border);
+    padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+    border-top: 0.5px solid var(--sep);
   }
   /* Destructive action sits alone at the start; Cancel / Save stay at the end. */
   footer :global(.btn-delete) {

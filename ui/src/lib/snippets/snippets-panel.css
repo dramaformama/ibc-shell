@@ -32,8 +32,8 @@
   font: inherit;
 }
 .snips .add {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--accent-fill);
+  color: var(--on-accent);
 }
 .snips .frequent {
   display: grid;
@@ -60,10 +60,10 @@
   padding: 0 11px;
   border: 0;
   border-radius: 999px;
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--fill-2);
+  color: var(--text);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   cursor: pointer;
   overflow: hidden;

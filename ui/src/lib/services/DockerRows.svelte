@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Skeleton from '$lib/components/Skeleton.svelte';
   import { Dialog } from 'bits-ui';
   import { Play, RotateCw, ScrollText, Square } from '@lucide/svelte';
   import { api, type Container, type DockerAction, type DockerReport } from '$lib/api';
@@ -38,7 +39,7 @@
 </script>
 
 {#if !report}
-  <p class="note">{m.dk_loading()}</p>
+  <Skeleton rows={4} label={m.dk_loading()} />
 {:else if report.access === 'Missing'}
   <p class="note">{m.dk_missing()}</p>
 {:else if report.access === 'Denied'}
@@ -210,8 +211,8 @@
   .chip {
     padding: 2px 7px;
     border-radius: 999px;
-    background: color-mix(in oklab, var(--tone) 14%, transparent);
-    color: color-mix(in oklab, var(--tone) 75%, var(--text));
+    background: var(--fill-2);
+    color: var(--text);
     font-size: 11px;
     font-weight: 600;
     font-variant-numeric: tabular-nums;

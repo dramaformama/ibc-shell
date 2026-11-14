@@ -10,6 +10,7 @@
   import { ui } from '$lib/stores/ui.svelte';
   import { vault } from '$lib/stores/vault.svelte';
   import { isApple, isMac, shortcutKey } from '$lib/util/platform';
+  import { edge } from '$lib/util/scroll-edge.svelte';
   import CloseServerDialog from './CloseServerDialog.svelte';
   import { isHostWindow } from './host-window';
   import HotkeysDialog from '$lib/help/HotkeysDialog.svelte';
@@ -19,6 +20,7 @@
   import FolderEditor from './FolderEditor.svelte';
   import HostEditor from './HostEditor.svelte';
   import SettingsDialog from './SettingsDialog.svelte';
+  import SshImportDialog from './SshImportDialog.svelte';
   import Sidebar from './Sidebar.svelte';
   import TabBar from './TabBar.svelte';
   import Toasts from './Toasts.svelte';
@@ -179,7 +181,7 @@
   {/if}
   <div class="main">
     <TabBar mac={mac && (isHostWindow || !ui.sidebarOpen || narrow)} {windowControls} />
-    <main class="content">{@render children()}</main>
+    <main class="content" class:fade={edge.scrolled && edge.fade}>{@render children()}</main>
   </div>
 </div>
 
@@ -190,6 +192,7 @@
 {/if}
 <CommandPalette />
 <SettingsDialog />
+{#if ui.sshImportOpen}<SshImportDialog />{/if}
 <ConfirmDelete />
 <HostKeyDialog />
 <CloseServerDialog />
@@ -242,6 +245,21 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
+  }
+  /* Scroll edge: content dissolves under the toolbar instead of being cut off. */
+  .content::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: 22px;
+    z-index: 3;
+    background: linear-gradient(var(--bg), transparent);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms var(--ease);
+  }
+  .content.fade::before {
+    opacity: 1;
   }
   .narrow {
     grid-template-columns: minmax(0, 1fr);

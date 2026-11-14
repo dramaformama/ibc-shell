@@ -31,6 +31,8 @@
   let auth = $state<'password' | 'key'>('password');
   let password = $state('');
   let showPw = $state(false);
+  /** Saved password loaded on the first eye click; unchanged → not written to the vault again. */
+  let savedPw = $state<string | null>(null);
   let passphrase = $state('');
   let identity = $state.raw<IdentityDto | null>(null);
   let keyIdentity = $state.raw<IdentityDto | null>(null);
@@ -54,6 +56,16 @@
     return null;
   }
 
+  async function togglePw() {
+    if (!showPw && passwordSaved && !password && identity) {
+      const r = await api.identityRevealPassword(identity.id);
+      if (r.status === 'error') return ui.toast(errorText(r.error), 'error');
+      savedPw = r.data;
+      password = r.data ?? '';
+    }
+    showPw = !showPw;
+  }
+
   async function chooseKey() {
     const r = await api.identityImportFile(passphrase || null);
     passphrase = '';
@@ -65,7 +77,8 @@
   async function signIn(name: string): Promise<string | null | false> {
     const login = defaults.username.trim() || null;
     if (auth === 'key') return keyIdentity?.id ?? null;
-    if (!password) return identity?.kind === 'password' ? identity.id : null;
+    if (!password || password === savedPw)
+      return identity?.kind === 'password' ? identity.id : null;
     const r =
       identity?.kind === 'password'
         ? await api.identityUpdate(identity.id, {
@@ -209,11 +222,11 @@
               class="icon-btn"
               aria-label={m.field_password()}
               aria-pressed={showPw}
-              onclick={() => (showPw = !showPw)}
+              onclick={togglePw}
               >{#if showPw}<EyeOff size={15} />{:else}<Eye size={15} />{/if}</button
             >
           </div>
-          {#if passwordSaved}<p class="note">{m.password_saved()}</p>{/if}
+          {#if passwordSaved && savedPw === null}<p class="note">{m.password_saved()}</p>{/if}
         </div>
       {:else}
         {#if keyIdentity}
@@ -309,7 +322,7 @@
     gap: 10px;
     align-items: flex-start;
     padding: 10px 12px;
-    border: 1px solid var(--border);
+    border: 0.5px solid var(--border);
     border-radius: var(--r-control);
     background: var(--surface-2);
     color: var(--accent);

@@ -46,6 +46,28 @@ export const commands = {
 	/**  Deletes an identity and its secrets. */
 	identityDelete: (id: IdentityId) => typedError<null, ApiError>(__TAURI_INVOKE("identity_delete", { id })),
 	/**
+	 *  Returns the stored password of an identity, only on an explicit user request to show it
+	 *  (ADR-021). `None` when the identity has no password. Never logged.
+	 */
+	identityRevealPassword: (id: IdentityId) => typedError<string | null, ApiError>(__TAURI_INVOKE("identity_reveal_password", { id })),
+	/**  Generates a key pair with the OS RNG and stores the private half in the vault. */
+	identityGenerate: (label: string, algo: KeyAlgo) => typedError<IdentityDto, ApiError>(__TAURI_INVOKE("identity_generate", { label, algo })),
+	/**
+	 *  Adds a key identity's public key to the server's `~/.ssh/authorized_keys` through the
+	 *  session's connection. `true` = added, `false` = it was already there.
+	 */
+	identityInstall: (sessionId: SessionId, identityId: IdentityId) => typedError<boolean, ApiError>(__TAURI_INVOKE("identity_install", { sessionId, identityId })),
+	/**  Starts a forward rule of the session's host; returns the bound port. */
+	forwardStart: (sessionId: SessionId, forwardId: ForwardId) => typedError<number, ApiError>(__TAURI_INVOKE("forward_start", { sessionId, forwardId })),
+	/**  Stops a running forward of the session (no-op when it is not running). */
+	forwardStop: (sessionId: SessionId, forwardId: ForwardId) => typedError<null, ApiError>(__TAURI_INVOKE("forward_stop", { sessionId, forwardId })),
+	/**  Running forwards of the session with their bound ports. */
+	forwardActive: (sessionId: SessionId) => typedError<ActiveForward[], ApiError>(__TAURI_INVOKE("forward_active", { sessionId })),
+	/**  Hosts of `~/.ssh/config` with key state and duplicates, for the import dialog. */
+	sshConfigPreview: () => typedError<SshImportPreview, ApiError>(__TAURI_INVOKE("ssh_config_preview")),
+	/**  Imports the chosen aliases into a new folder; emits `tree://changed`. */
+	sshConfigImport: (aliases: string[], folderName: string) => typedError<SshImportSummary, ApiError>(__TAURI_INVOKE("ssh_config_import", { aliases, folderName })),
+	/**
 	 *  Shows the native "open file" dialog (backend side) and imports the chosen private key.
 	 *  The webview cannot name a path: it can only trigger the picker. `null` = user cancelled.
 	 */
@@ -70,9 +92,12 @@ export const commands = {
 	forwardList: (hostId: HostId | null) => typedError<PortForward[], ApiError>(__TAURI_INVOKE("forward_list", { hostId })),
 	/**  Creates a forward rule. */
 	forwardCreate: (input: ForwardInput) => typedError<PortForward, ApiError>(__TAURI_INVOKE("forward_create", { input })),
-	/**  Updates a forward rule. */
+	/**
+	 *  Updates a forward rule.
+	 *  A running forward keeps its old settings until it is restarted.
+	 */
 	forwardUpdate: (id: ForwardId, patch: ForwardPatch) => typedError<PortForward, ApiError>(__TAURI_INVOKE("forward_update", { id, patch })),
-	/**  Deletes a forward rule. */
+	/**  Deletes a forward rule, stopping it in every session first. */
 	forwardDelete: (id: ForwardId) => typedError<null, ApiError>(__TAURI_INVOKE("forward_delete", { id })),
 	/**  Known hosts for the management screen (no key blobs). */
 	knownHostList: () => typedError<KnownHostSummary[], ApiError>(__TAURI_INVOKE("known_host_list")),
@@ -236,6 +261,14 @@ export const events = {
 };
 
 /* Types */
+/**  A running forward: rule id + the port actually bound. */
+export type ActiveForward = {
+	/**  Rule. */
+	forward_id: ForwardId,
+	/**  Bound port (differs from the rule when it asked for 0). */
+	port: number,
+};
+
 /**  IPC error. TS: `{ code: "...", detail?: ... }`. Messages must never contain secrets. */
 export type ApiError = 
 /**  Vault must be unlocked first. */
@@ -1106,6 +1139,13 @@ export type KbdPrompt = {
 	echo: boolean,
 };
 
+/**  Algorithm for `identity_generate`. */
+export type KeyAlgo = 
+/**  Ed25519 (default). */
+"ed25519" | 
+/**  RSA 4096, for old servers. */
+"rsa4096";
+
 /**  Known-host entry id. */
 export type KnownHostId = string;
 
@@ -1392,6 +1432,65 @@ export type Source =
  *  the value came from the identity.
  */
 { kind: "default" };
+
+/**  One host the config defines. */
+export type SshImportEntry = {
+	/**  `Host` alias (becomes the label). */
+	alias: string,
+	/**  Address. */
+	hostname: string,
+	/**  Port. */
+	port: number | null,
+	/**  User. */
+	user: string | null,
+	/**  Key file for display, `~/` shortened. */
+	key_path: string | null,
+	/**  Key state. */
+	key: SshKeyStatus,
+	/**  `ProxyJump` as written. */
+	proxy_jump: string | null,
+	/**  Forward lines that will become rules. */
+	forwards: number,
+	/**  Settings that are not imported (e.g. `ProxyCommand`). */
+	unsupported: string[],
+	/**  A saved host with the same address, port and user exists. */
+	duplicate: boolean,
+};
+
+/**  `ssh_config_preview` result. */
+export type SshImportPreview = {
+	/**  `~/.ssh/config` exists. */
+	found: boolean,
+	/**  Hosts in file order. */
+	entries: SshImportEntry[],
+};
+
+/**  `ssh_config_import` result. */
+export type SshImportSummary = {
+	/**  Folder the hosts went into. */
+	folder_id: FolderId | null,
+	/**  Hosts created (jump hosts named only in `ProxyJump` included). */
+	hosts: number,
+	/**  Keys added to the vault (already saved keys are reused, not counted). */
+	keys: number,
+	/**  Forward rules created. */
+	forwards: number,
+	/**  Keys left out: passphrase-protected, missing or unreadable. */
+	skipped_keys: number,
+};
+
+/**  State of a host's key file. */
+export type SshKeyStatus = 
+/**  No key named and no default key found. */
+"none" | 
+/**  Readable, unencrypted: will be imported. */
+"ok" | 
+/**  Protected by a passphrase: not imported (the host is, and can use ssh-agent). */
+"encrypted" | 
+/**  Named in the config but not on disk. */
+"missing" | 
+/**  Not a private key we understand. */
+"invalid";
 
 /**  A tag. */
 export type Tag = {

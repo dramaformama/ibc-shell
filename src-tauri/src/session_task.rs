@@ -116,10 +116,20 @@ async fn run_session(
         .conn = Some(conn.clone());
     if let SessionTarget::Host(id) = &handle.spec.target {
         let _ = state.store.host_touch_connected(*id);
+        // Startup command (host or inherited from a folder), typed into the fresh shell.
+        if let Some(cmd) = startup_command(&state, *id) {
+            let _ = shell.write(cmd.as_bytes()).await;
+        }
     }
     let _ = events.send(SessionEvent::Connected {
         server_banner: label,
     });
+    {
+        let (state, handle) = (state.clone(), handle.clone());
+        tauri::async_runtime::spawn(async move {
+            crate::forwards::auto_start(&state, &handle).await;
+        });
+    }
 
     let user_closed = pump(shell, &mut rx, &closed, &handle).await;
     let reason = if user_closed {
@@ -132,11 +142,20 @@ async fn run_session(
         .lock()
         .unwrap_or_else(PoisonError::into_inner)
         .conn = None;
+    crate::forwards::stop_all(&handle);
     conn.disconnect().await;
     let _ = events.send(SessionEvent::Disconnected {
         reason,
         can_reconnect: !user_closed,
     });
+}
+
+/// The resolved startup command as one input line; `None` when unset or blank.
+fn startup_command(state: &AppState, id: ibc_shell_store::HostId) -> Option<String> {
+    let cmd = state.store.host_resolve(id).ok()?.startup_cmd.value?;
+    let cmd = cmd.trim();
+    // One line only: a pasted multi-line value must not run several commands.
+    (!cmd.is_empty() && !cmd.contains(['\n', '\r'])).then(|| format!("{cmd}\n"))
 }
 
 /// Why the shell ended without the user closing it: the connection's own reason when the

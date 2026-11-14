@@ -116,7 +116,7 @@
           sessions.activeId = null;
         }}
       >
-        <pg.icon size={17} /><span>{pg.label}</span>
+        <pg.icon size={16} /><span>{pg.label}</span>
         {#if pg.count}<span class="nav-count tnum" class:alert={pg.alert}>{pg.count}</span>{/if}
       </button>
     {/each}
@@ -128,7 +128,7 @@
         title={m.local_terminal() + ' (⌃`)'}
         onclick={() => sessions.select(local.id)}
       >
-        <SquareTerminal size={17} /><span>{m.local_terminal()}</span>
+        <SquareTerminal size={16} /><span>{m.local_terminal()}</span>
         {#if sessions.activity[local.id]}<span class="nav-unseen" title={m.tab_unseen()}
           ></span>{/if}
       </button>
@@ -158,10 +158,7 @@
       title={m.update_open()}
       onclick={() => void api.openExternal(u.url)}
     >
-      <CircleArrowUp size={16} />
-      <span
-        ><b>{m.update_available({ version: u.version })}</b><small>{m.update_open()}</small></span
-      >
+      <CircleArrowUp size={14} /><span>{m.update_available({ version: u.version })}</span>
     </button>
   {/if}
   <footer>
@@ -191,43 +188,51 @@
 </aside>
 
 <style>
+  /* Floating source-list panel (macOS 26): inset from the window edge, glass material. */
   .side {
-    height: 100%;
+    height: calc(100% - 16px);
+    margin: 8px 0 8px 8px;
     display: flex;
     flex-direction: column;
     min-width: 0;
-    border-right: 1px solid var(--border);
+    border-radius: var(--r-panel);
     background: var(--sidebar);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+    box-shadow:
+      0 0 0 0.5px var(--sidebar-edge),
+      0 8px 24px -12px rgb(0 0 0 / 0.14);
+    overflow: hidden;
   }
   .top {
     display: flex;
     align-items: center;
-    height: var(--toolbar-h);
+    height: calc(var(--toolbar-h) - 8px);
     padding: 0 8px;
     flex: none;
   }
   .top.mac {
-    padding-left: 84px;
+    padding-left: 76px;
   }
   .search {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     flex: 1;
     min-width: 0;
     height: var(--control-h);
-    padding: 0 6px 0 10px;
-    border: 1px solid transparent;
+    padding: 0 5px 0 8px;
+    border: 0;
     border-radius: var(--r-control);
-    background: var(--hover);
+    background: var(--fill-2);
     color: var(--muted);
     font: inherit;
     white-space: nowrap;
     cursor: pointer;
-    transition: border-color 120ms var(--ease);
+    transition: background-color 120ms var(--ease);
   }
   .search:hover {
-    border-color: color-mix(in oklab, var(--muted) 50%, var(--border));
+    background: color-mix(in oklab, var(--text) 10%, transparent);
   }
   .search span:first-of-type {
     flex: 1;
@@ -237,38 +242,41 @@
     text-align: left;
   }
   nav {
-    padding: 12px 10px 16px;
+    display: grid;
+    gap: 1px;
+    padding: 6px 8px 14px;
   }
   .nav-item {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     width: 100%;
-    height: 34px;
-    padding: 0 10px;
+    height: 28px;
+    padding: 0 8px;
     border: 0;
-    border-radius: var(--r-control);
+    border-radius: var(--r-inner);
     background: transparent;
     color: var(--text);
     font: inherit;
-    font-weight: 500;
     text-align: left;
     cursor: pointer;
   }
   .nav-item > :global(svg) {
     color: var(--accent);
+    stroke-width: 1.75;
   }
   .nav-item:hover {
     background: var(--hover);
   }
   .nav-item[aria-current='page'] {
-    background: var(--accent-soft);
-    color: var(--accent);
+    background: var(--sel);
+    font-weight: 600;
   }
   .nav-count {
     margin-left: auto;
-    font-size: 11px;
+    font-size: var(--fs-cap);
     color: var(--muted);
+    font-weight: 400;
   }
   .nav-unseen {
     width: 7px;
@@ -279,73 +287,77 @@
     background: var(--accent);
   }
   .nav-count.alert {
-    min-width: 18px;
-    padding: 1px 6px;
-    border-radius: 999px;
-    background: color-mix(in oklab, var(--warn) 18%, transparent);
-    color: color-mix(in oklab, var(--warn) 70%, var(--text));
+    color: var(--warn);
     font-weight: 600;
-    text-align: center;
   }
-  nav {
-    display: grid;
-    gap: 2px;
+  .nav-count.alert::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-right: 5px;
+    border-radius: 50%;
+    background: var(--warn);
+    vertical-align: 1px;
   }
   .section-heading {
     display: flex;
     align-items: center;
-    gap: 0;
-    padding: 0 12px 6px 18px;
+    padding: 0 8px 4px 16px;
   }
   .section-heading .icon-btn {
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
+    opacity: 0;
+    transition: opacity 120ms var(--ease);
+  }
+  .side:hover .section-heading .icon-btn,
+  .section-heading .icon-btn:focus-visible {
+    opacity: 1;
   }
   .sect {
     margin: 0;
     padding: 0;
     flex: 1;
-    font-size: 11px;
+    font-size: var(--fs-cap);
     font-weight: 600;
     color: var(--muted);
   }
   .update {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin: 0 8px 8px;
-    padding: 8px 10px;
+    gap: 7px;
+    margin: 0 8px 2px;
+    padding: 6px 8px;
     border: 0;
-    border-radius: var(--r-field);
-    background: color-mix(in oklab, var(--accent) 12%, transparent);
+    border-radius: var(--r-inner);
+    background: transparent;
     color: var(--accent);
     font: inherit;
+    font-size: var(--fs-sm);
+    font-weight: 500;
     text-align: left;
     cursor: pointer;
-    transition: background 140ms var(--ease);
   }
   .update:hover {
-    background: color-mix(in oklab, var(--accent) 20%, transparent);
+    background: var(--hover);
   }
   .update span {
-    display: grid;
     min-width: 0;
-    line-height: 1.3;
-  }
-  .update b {
-    font-size: 12.5px;
-    font-weight: 600;
-  }
-  .update small {
-    color: color-mix(in oklab, var(--accent) 70%, var(--muted));
-    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   footer {
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: 0;
     padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
-    border-top: 1px solid var(--border);
+    border-top: 0.5px solid var(--sep);
+  }
+  footer .icon-btn {
+    width: 26px;
+    height: 26px;
   }
   .sp {
     flex: 1;
@@ -353,12 +365,11 @@
   .brand {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
     padding-left: 4px;
     color: var(--muted);
-    font-size: 12px;
+    font-size: var(--fs-sm);
     font-weight: 600;
-    letter-spacing: -0.005em;
     user-select: none;
   }
 </style>

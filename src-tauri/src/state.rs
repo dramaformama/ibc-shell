@@ -8,8 +8,8 @@ use std::sync::{Arc, Mutex, PoisonError};
 
 use crate::session_output::Relay;
 use ibc_shell_sftp::Sftp;
-use ibc_shell_ssh::Connection;
-use ibc_shell_store::{HostId, Store};
+use ibc_shell_ssh::{Connection, ForwardHandle};
+use ibc_shell_store::{ForwardId, HostId, Store};
 use ibc_shell_vault::Vault;
 use tokio::sync::{mpsc, Notify};
 
@@ -29,6 +29,15 @@ impl<K, V> Default for Registry<K, V> {
 }
 
 impl<K: Eq + Hash + Copy, V: Clone> Registry<K, V> {
+    /// Snapshot of every value.
+    pub fn values(&self) -> Vec<V> {
+        self.0
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .values()
+            .cloned()
+            .collect()
+    }
     /// Inserts / replaces.
     pub fn insert(&self, k: K, v: V) {
         self.0
@@ -204,6 +213,8 @@ pub struct Live {
     pub conn: Option<Arc<Connection>>,
     /// Last known PTY size.
     pub size: (u16, u16),
+    /// Running port forwards; dropped (stopped) with the connection.
+    pub forwards: HashMap<ForwardId, ForwardHandle>,
 }
 
 /// One terminal session.

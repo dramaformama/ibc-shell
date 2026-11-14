@@ -204,7 +204,7 @@
   .info,
   .a6,
   .a14 {
-    color: var(--c-cyan);
+    color: var(--hl-cyan);
   }
   .ok,
   .a2,
@@ -217,20 +217,24 @@
     color: var(--muted);
   }
   .a4,
-  .a12 {
-    color: var(--accent);
+  .a12,
+  .url {
+    color: var(--hl-blue);
   }
   .ip,
   .a5,
   .a13 {
-    color: var(--c-purple);
+    color: var(--hl-magenta);
+  }
+  .num {
+    color: var(--hl-orange);
   }
   .meth {
-    color: var(--c-orange);
+    color: var(--hl-orange);
     font-weight: 600;
   }
   .key {
-    color: color-mix(in oklab, var(--c-cyan) 70%, var(--muted));
+    color: color-mix(in oklab, var(--hl-cyan) 70%, var(--muted));
   }
   .msg {
     margin: 0;

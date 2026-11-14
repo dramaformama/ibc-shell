@@ -26,7 +26,7 @@
 
 <section bind:this={el}>
   <h3>{m.settings_terminal()}</h3>
-  <div class="fld">
+  <div class="fld wide">
     <span class="lbl">{m.field_term_theme()}</span>
     <div class="themes" role="radiogroup" aria-label={m.field_term_theme()}>
       <button
@@ -117,6 +117,17 @@
     />
   </label>
   <p class="note">{m.settings_notify_note()}</p>
+
+  <label class="row">
+    <span class="lbl">{m.settings_auto_reconnect()}</span>
+    <input
+      type="checkbox"
+      role="switch"
+      checked={terminalPrefs.autoReconnect}
+      onchange={(e) => terminalPrefs.setAutoReconnect(e.currentTarget.checked)}
+    />
+  </label>
+  <p class="note">{m.settings_auto_reconnect_note()}</p>
 </section>
 
 <style>

@@ -62,12 +62,16 @@ store_cmd!(
 );
 store_cmd!(
     /// Updates a forward rule.
+    /// A running forward keeps its old settings until it is restarted.
     forward_update(id: ForwardId, patch: ForwardPatch) -> PortForward => forward_update(id, patch)
 );
-store_cmd!(
-    /// Deletes a forward rule.
-    forward_delete(id: ForwardId) -> () => forward_delete(id)
-);
+/// Deletes a forward rule, stopping it in every session first.
+#[tauri::command]
+#[specta::specta]
+pub async fn forward_delete(state: State<'_, AppState>, id: ForwardId) -> ApiResult<()> {
+    crate::forwards::stop_everywhere(&state, id);
+    Ok(state.store.forward_delete(id)?)
+}
 store_cmd!(
     /// Known hosts for the management screen (no key blobs).
     known_host_list() -> Vec<KnownHostSummary> => known_host_list()

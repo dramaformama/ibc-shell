@@ -87,7 +87,7 @@
     display: grid;
     gap: 14px;
     padding: 20px;
-    border: 1px solid var(--border);
+    border: 0.5px solid var(--border);
     border-radius: var(--r-card);
     background: var(--surface);
     color: var(--text);

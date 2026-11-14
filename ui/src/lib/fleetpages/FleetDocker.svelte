@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { scrollEdge } from '$lib/util/scroll-edge.svelte';
   import EmptyState from '$lib/components/EmptyState.svelte';
   import { ui } from '$lib/stores/ui.svelte';
   import { sessions } from '$lib/stores/sessions.svelte';
@@ -26,7 +27,7 @@
   const without = $derived(live.filter((s) => services.docker[s.sid]?.access === 'Missing'));
 </script>
 
-<section class="fpage" aria-label={m.dk_title()}>
+<section class="fpage" aria-label={m.dk_title()} use:scrollEdge>
   <header>
     <h1>{m.dk_title()}</h1>
     <p class="subtitle tnum">

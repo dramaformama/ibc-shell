@@ -7,6 +7,7 @@
  * Vault: starts Locked, password `ibc-shell` (`?vault=new` → onboarding). Terminal: echo shell.
  */
 import * as catalog from './mock/catalog';
+import * as forwards from './mock/forwards';
 import * as geo from './mock/geo';
 import * as services from './mock/services';
 import * as sftp from './mock/sftp';
@@ -51,6 +52,9 @@ export const mockApi: Api = {
   identityList: catalog.identityList,
   identityCreate: catalog.identityCreate,
   identityUpdate: catalog.identityUpdate,
+  identityRevealPassword: catalog.identityRevealPassword,
+  identityGenerate: catalog.identityGenerate,
+  identityInstall: catalog.identityInstall,
   identityDelete: catalog.identityDelete,
   identityImportFile: catalog.identityImportFile,
   tagList: catalog.tagList,
@@ -65,6 +69,11 @@ export const mockApi: Api = {
   forwardCreate: catalog.forwardCreate,
   forwardUpdate: catalog.forwardUpdate,
   forwardDelete: catalog.forwardDelete,
+  forwardStart: forwards.forwardStart,
+  forwardStop: forwards.forwardStop,
+  forwardActive: forwards.forwardActive,
+  sshConfigPreview: forwards.sshConfigPreview,
+  sshConfigImport: forwards.sshConfigImport,
   knownHostList: catalog.knownHostList,
   knownHostDelete: catalog.knownHostDelete,
   settingsGet: catalog.settingsGet,

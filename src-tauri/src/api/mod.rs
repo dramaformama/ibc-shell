@@ -40,6 +40,7 @@ pub const PASSIVE_COMMANDS: &[&str] = &[
 
 /// The tauri-specta builder with every typed command and event of `docs/contracts/ipc.md`.
 #[must_use]
+#[allow(clippy::too_many_lines)] // one line per command
 pub fn builder() -> Builder<tauri::Wry> {
     configure(Builder::<tauri::Wry>::new()).commands(collect_commands![
         host_window::host_window_open,
@@ -62,6 +63,14 @@ pub fn builder() -> Builder<tauri::Wry> {
         identity::identity_create,
         identity::identity_update,
         identity::identity_delete,
+        identity::identity_reveal_password,
+        crate::commands::keys::identity_generate,
+        crate::commands::keys::identity_install,
+        crate::forwards::forward_start,
+        crate::forwards::forward_stop,
+        crate::forwards::forward_active,
+        crate::ssh_import_apply::ssh_config_preview,
+        crate::ssh_import_apply::ssh_config_import,
         identity::identity_import_file,
         catalog::tag_list,
         catalog::tag_create,

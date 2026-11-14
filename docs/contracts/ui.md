@@ -1,5 +1,5 @@
 # Contract: UI
-Status: `FROZEN v1.1` (2026-11-07). Changes only via ADR, bump to `v1.x`. Flags: ADR-005. Server overview and current visual tokens: ADR-010 (supersedes original tokens/layout below).
+Status: `FROZEN v1.2` (2026-11-14). Changes only via ADR, bump to `v1.x`. Flags: ADR-005. Server overview: ADR-010, superseded for visuals and the overview list by ADR-026 (macOS glass).
 
 ## API access
 UI code imports only `$lib/api` (`api: Api`, `apiEvents: ApiEvents`, all DTO types). `VITE_API=real` → Rust bridge
@@ -13,7 +13,7 @@ Minimal, quiet chrome, content first. One accent color. No gradients, no heavy s
 
 ## Tokens (Tailwind v4 `@theme`, CSS variables)
 - Font UI: system stack (`-apple-system, "Segoe UI Variable", "Segoe UI", Inter, sans-serif`). Mono: bundled **JetBrains Mono** (OFL, woff2 subset Latin+Cyrillic, ~90 KB) — user can choose any installed font.
-- Current (ADR-010): 13 px base, system typography, 4-pt spacing. Controls 32 px regular / 28 px compact / 36 px prominent; radius 8 controls, 12 grouped fields, 16 cards, 20 sheets. Light is the default; accent selection retained. Shared definitions: `app.css`, `lib/controls.css`, `lib/forms.css`. The following original palettes are superseded by these token files.
+- Current (ADR-026): 13 px base, SF system type, scale 11/12/13/15/22/26. Neutral greys + one selectable accent (AA-safe); colour only for state. Controls 28 px (26 compact); radius 6 field, 8 control, 12 group, 14 panel, 18 sheet/dialog; 0.5 px hairlines. Groups are fills without shadows (no nested cards). Glass material only for chrome over content (floating sidebar, menus, palette, toasts, sticky list header). Light is the default. Shared definitions: `app.css`, `lib/controls.css`, `lib/forms.css`. The original palettes below are superseded.
 - Original dark: bg `#0E0F12`, surface `#16181D`, surface-2 `#1D2026`, border `#262A31`, text `#E6E8EB`, muted `#8B929C`, accent `#5B8CFF`, ok `#3CCB7F`, warn `#F5B547`, danger `#F06161`.
 - Light: bg `#FAFAFB`, surface `#FFFFFF`, surface-2 `#F2F3F5`, border `#E3E5E8`, text `#16181D`, muted `#6B7280`, same accents slightly darker.
 - Terminal themes shipped: iBC Shell Dark, iBC Shell Light, Solarized Dark/Light, Dracula-like "Night" (own palette, no trademark), Nord-like "Frost" (own palette). Theme = 16 ANSI + fg/bg/cursor/selection.

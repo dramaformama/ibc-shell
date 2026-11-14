@@ -13,6 +13,10 @@ const RULES: [RegExp, number][] = [
   [/\b(?:ok|success|successful|succeeded|active|enabled|passed|done)\b/i, 32],
   [/\b\d+(?:[.,]\d+)?\s?(?:%|[KMGT]i?B|[KMGT]B?\/s)(?![\w])/, 35]
 ];
+/** `user@host:~/dir$ ` (Debian/Ubuntu) or `[user@host dir]# ` (RHEL), at a line start. */
+const PROMPT =
+  // eslint-disable-next-line no-control-regex -- the path stops at the next escape
+  /(?<=^|[\r\n])(?:(?<who>[a-z_][\w.-]*@[\w.-]+):(?<path>[~/][^\s\x1b]*)?(?<sign>[#$%] )|\[(?<who2>[a-z_][\w.-]*@[\w.-]+) (?<path2>[^\]\s]+)\](?<sign2>[#$%] ))/g;
 const ALL = new RegExp(RULES.map(([r]) => `(${r.source})`).join('|'), 'gi');
 // eslint-disable-next-line no-control-regex -- matching terminal escape sequences is the point
 const CSI = /^\x1b\[([0-9;?]*)([ -/]*)([@-~])/;
@@ -74,6 +78,22 @@ export class Highlighter {
 
   #text(t: string): string {
     if (!this.#plain || this.#alt) return t;
+    // A plain shell prompt gets the colours of a default Ubuntu one: green user@host, blue path.
+    let out = '';
+    let last = 0;
+    for (const mt of t.matchAll(PROMPT)) {
+      out += this.#words(t.slice(last, mt.index));
+      const g = mt.groups ?? {};
+      out += g.who
+        ? `\x1b[1;32m${g.who}\x1b[22;39m:\x1b[1;34m${g.path ?? ''}\x1b[22;39m${g.sign}`
+        : `[\x1b[1;32m${g.who2}\x1b[22;39m \x1b[1;34m${g.path2}\x1b[22;39m]${g.sign2}`;
+      last = mt.index + mt[0].length;
+    }
+    return out + this.#words(t.slice(last));
+  }
+
+  #words(t: string): string {
+    if (!t) return t;
     return t.replace(ALL, (match, ...groups: unknown[]) => {
       const idx = groups.findIndex((g, k) => k < RULES.length && g !== undefined);
       const color = RULES[idx]?.[1];

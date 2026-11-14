@@ -297,7 +297,7 @@
   .preview-placeholder {
     flex: 1;
     min-height: 100px;
-    border: 1px solid var(--border);
+    border: 0.5px solid var(--border);
     border-radius: var(--r-control);
     background: var(--surface);
   }

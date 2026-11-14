@@ -1,155 +1,213 @@
 @import 'tailwindcss';
 @import './lib/controls.css';
 
-/* Tokens: docs/contracts/ui.md. Light is the default (owner brief); dark follows. */
+/*
+ * Tokens: docs/contracts/ui.md, ADR-026 (macOS glass).
+ * Neutral greys and one accent. Colour carries state (dots, alerts), never decoration.
+ * Glass is a material for chrome that floats over content: sidebar, menus, sheets, toolbars.
+ */
 :root {
-  /* Apple system palette (grouped background, white cards, hairlines). */
-  --bg: #f5f5f7;
+  /* Surfaces. The window is plain; groups are quiet fills, not shadowed cards. */
+  --bg: #ffffff;
   --surface: #ffffff;
-  --surface-2: #f2f2f7;
-  --sidebar: #ededf0;
-  --hover: rgb(60 60 67 / 0.07);
-  --border: rgb(60 60 67 / 0.14);
-  --text: #1c1c1e;
-  --muted: #626267;
-  --accent: #007aff;
-  /* Solid accent surfaces and the text on them. */
+  --surface-2: #f5f5f7;
+  --fill: rgb(0 0 0 / 0.035);
+  --fill-2: rgb(0 0 0 / 0.06);
+  --hover: rgb(0 0 0 / 0.05);
+  --sel: rgb(0 0 0 / 0.075);
+  --border: rgb(0 0 0 / 0.1);
+  --sep: rgb(0 0 0 / 0.07);
+  --text: #1d1d1f;
+  --muted: #6e6e73;
+  /* Floating sidebar panel. */
+  --sidebar: rgb(244 244 246 / 0.86);
+  --sidebar-edge: rgb(0 0 0 / 0.07);
+  /* Glass: menus, palette, sheets, sticky bars. */
+  --glass: rgb(252 252 253 / 0.74);
+  --glass-strong: rgb(252 252 253 / 0.9);
+  --glass-edge: rgb(0 0 0 / 0.09);
+  --glass-blur: blur(28px) saturate(1.9);
+
+  --accent: #0a6cdc;
   --accent-fill: var(--accent);
   --on-accent: #fff;
-  --accent-soft: color-mix(in oklab, var(--accent) 13%, transparent);
-  --ok: #1e8539;
-  --warn: #a86400;
-  --danger: #d42a21;
-  /* Chart / section colours (SwiftServer-style cards). */
-  --c-cyan: #12a5c7;
-  --c-yellow: #e0a100;
-  /* Load (CPU, rows, disks, processes) reads the same everywhere: calm → busy → hot. */
-  --row-tile: 68px;
-  --row-tree: 30px;
-  --row-pad: 5px;
-  --tile-gap: 10px;
-  --card-pad: 16px;
-  --card-gap: 14px;
-  --grid-gap: 14px;
-  --page-px: 32px;
-  --page-pt: 30px;
-  --load-calm: var(--c-cyan);
-  --load-warm: var(--c-yellow);
+  --accent-soft: color-mix(in oklab, var(--accent) 12%, transparent);
+  --ok: #1d7f38;
+  --warn: #a35c00;
+  --danger: #c9291f;
+  /* Syntax colours for logs and code: real hues, AA on the window. */
+  --hl-cyan: #0b7285;
+  --hl-magenta: #a3329a;
+  --hl-orange: #b2500a;
+  --hl-blue: #1f5fd0;
+
+  /* Data series: the accent leads, the rest are tints of it and of the ink. */
+  --c-cyan: var(--accent);
+  --c-green: var(--accent);
+  --c-yellow: color-mix(in oklab, var(--accent) 38%, var(--bg));
+  --c-purple: color-mix(in oklab, var(--text) 42%, var(--bg));
+  --c-orange: color-mix(in oklab, var(--accent) 55%, var(--text));
+  --c-pink: color-mix(in oklab, var(--text) 25%, var(--bg));
+  --load-calm: var(--accent);
+  --load-warm: var(--warn);
   --load-hot: var(--danger);
-  --c-pink: #e8336d;
-  --c-purple: #8e5bd8;
-  --c-green: #2fb350;
-  --c-orange: #f2870b;
-  --shadow: 0 12px 32px -10px rgb(0 0 0 / 0.16), 0 2px 8px -2px rgb(0 0 0 / 0.06);
-  --card-shadow: 0 1px 3px rgb(0 0 0 / 0.025), 0 0 0 0.5px rgb(0 0 0 / 0.06);
+
+  /* Type scale (SF Pro, macOS sizes). */
+  --fs-cap: 11px;
+  --fs-sm: 12px;
+  --fs-body: 13px;
+  --fs-head: 15px;
+  --fs-title: 22px;
+  --fs-large: 26px;
   --font-ui:
     -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable', 'Segoe UI', Inter,
     sans-serif;
   --font-mono: 'SF Mono', ui-monospace, 'JetBrains Mono', Menlo, Consolas, monospace;
-  /* One radius family: controls (buttons = fields = selects), grouped fields, cards, sheets. */
-  --r-control: 10px;
-  --r-inner: 8px;
-  --r-field: 16px;
-  --r-card: 20px;
-  --r-sheet: 26px;
-  --lift: 0 1px 2px rgb(0 0 0 / 0.04);
-  --control-h: 32px;
+
+  /* Geometry. Concentric radii: control 8 → group 12 → panel 14 → sheet 18. */
+  --r-control: 8px;
+  --r-inner: 6px;
+  --r-field: 12px;
+  --r-card: 12px;
+  --r-panel: 14px;
+  --r-sheet: 18px;
+  --control-h: 28px;
   --toolbar-h: 52px;
+  --row-tile: 40px;
+  --row-tree: 28px;
+  --row-pad: 4px;
+  --tile-gap: 0px;
+  --card-pad: 16px;
+  --card-gap: 12px;
+  --grid-gap: 12px;
+  --page-px: 32px;
+  --page-pt: 28px;
+
+  --shadow: 0 18px 50px -12px rgb(0 0 0 / 0.22), 0 4px 12px -4px rgb(0 0 0 / 0.08);
+  --card-shadow: 0 0 0 0.5px var(--border);
+  --lift: 0 0.5px 1px rgb(0 0 0 / 0.08);
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Spring (critically under-damped, ~380 ms): a small overshoot that settles. */
+  --spring: linear(
+    0,
+    0.009,
+    0.035 2.1%,
+    0.141 4.4%,
+    0.723 12.9%,
+    0.938 16.7%,
+    1.017 19.4%,
+    1.067,
+    1.086 25.4%,
+    1.079 28.6%,
+    1.036 37.3%,
+    1.006 46.2%,
+    0.997 56%,
+    1
+  );
   color-scheme: light;
 }
 :root[data-theme='dark'] {
-  --bg: #1b1b1d;
-  --surface: #252527;
-  --surface-2: #303033;
-  --sidebar: #222224;
-  --hover: rgb(235 235 245 / 0.08);
-  --border: rgb(235 235 245 / 0.12);
-  --text: #f2f2f7;
-  --muted: #98989f;
-  --accent: #0a84ff;
-  --accent-fill: #0a6fdc;
-  --ok: #32d74b;
+  --bg: #1e1e20;
+  --surface: #2a2a2d;
+  --surface-2: #2f2f32;
+  --fill: rgb(255 255 255 / 0.045);
+  --fill-2: rgb(255 255 255 / 0.08);
+  --hover: rgb(255 255 255 / 0.06);
+  --sel: rgb(255 255 255 / 0.1);
+  --border: rgb(255 255 255 / 0.11);
+  --sep: rgb(255 255 255 / 0.075);
+  --text: #f5f5f7;
+  --muted: #98989d;
+  --sidebar: rgb(40 40 43 / 0.86);
+  --sidebar-edge: rgb(255 255 255 / 0.07);
+  --glass: rgb(44 44 48 / 0.72);
+  --glass-strong: rgb(44 44 48 / 0.9);
+  --glass-edge: rgb(255 255 255 / 0.1);
+  --accent: #4aa3ff;
+  --accent-fill: #0a6cdc;
+  --ok: #4cd964;
   --warn: #ffb340;
-  --danger: #ff5a52;
-  --c-cyan: #4fd2f2;
-  --c-yellow: #ffd426;
-  --c-pink: #ff5c8a;
-  --c-purple: #bf8cff;
-  --c-green: #32d74b;
-  --c-orange: #ffa53d;
-  --shadow: 0 14px 36px -10px rgb(0 0 0 / 0.6), 0 2px 8px -2px rgb(0 0 0 / 0.4);
-  --card-shadow: 0 0 0 1px rgb(235 235 245 / 0.06);
-  --lift: 0 1px 2px rgb(0 0 0 / 0.3);
+  --danger: #ff6961;
+  --hl-cyan: #5fd0e3;
+  --hl-magenta: #e08ade;
+  --hl-orange: #ffa45c;
+  --hl-blue: #82b6ff;
+  --shadow: 0 22px 60px -12px rgb(0 0 0 / 0.65), 0 4px 14px -4px rgb(0 0 0 / 0.4);
+  --lift: 0 0.5px 1px rgb(0 0 0 / 0.4);
   color-scheme: dark;
 }
-/* Accent colour picked in Settings (Apple system colours, light / dark variants). */
+/* Accent picked in Settings. Light values are AA on white (text and white-on-fill). */
 :root[data-accent='purple'] {
-  --accent: #8e44d6;
+  --accent: #8944c8;
 }
 :root[data-accent='pink'] {
-  --accent: #e4306b;
+  --accent: #d0245e;
 }
 :root[data-accent='red'] {
-  --accent: #e5352b;
+  --accent: #d1302a;
 }
 :root[data-accent='orange'] {
-  --accent: #e07400;
+  --accent: #b85c00;
 }
 :root[data-accent='green'] {
-  --accent: #219a3e;
+  --accent: #1d7f38;
 }
 :root[data-accent='teal'] {
-  --accent: #0e8fa8;
+  --accent: #0b7a91;
 }
 :root[data-accent='indigo'] {
-  --accent: #5352d6;
+  --accent: #4b4acf;
 }
 :root[data-accent='graphite'] {
-  --accent: #636366;
+  --accent: #5f5f64;
 }
 :root[data-theme='dark'][data-accent='purple'] {
-  --accent-fill: color-mix(in oklab, var(--accent) 80%, black);
-  --accent: #bf5af2;
+  --accent: #c387f5;
+  --accent-fill: #8944c8;
 }
 :root[data-theme='dark'][data-accent='pink'] {
-  --accent-fill: color-mix(in oklab, var(--accent) 80%, black);
-  --accent: #ff375f;
+  --accent: #ff6b8b;
+  --accent-fill: #d0245e;
 }
 :root[data-theme='dark'][data-accent='red'] {
-  --accent-fill: color-mix(in oklab, var(--accent) 80%, black);
-  --accent: #ff453a;
+  --accent: #ff6961;
+  --accent-fill: #d1302a;
 }
 :root[data-theme='dark'][data-accent='orange'] {
-  --accent-fill: var(--accent);
-  --on-accent: #1c1c1e;
-  --accent: #ff9f0a;
+  --accent: #ffb340;
+  --accent-fill: #ffb340;
+  --on-accent: #1d1d1f;
 }
 :root[data-theme='dark'][data-accent='green'] {
-  --accent-fill: var(--accent);
-  --on-accent: #1c1c1e;
-  --accent: #30d158;
+  --accent: #4cd964;
+  --accent-fill: #4cd964;
+  --on-accent: #1d1d1f;
 }
 :root[data-theme='dark'][data-accent='teal'] {
-  --accent-fill: var(--accent);
-  --on-accent: #1c1c1e;
-  --accent: #40c8e0;
+  --accent: #5ad2ea;
+  --accent-fill: #5ad2ea;
+  --on-accent: #1d1d1f;
 }
 :root[data-theme='dark'][data-accent='indigo'] {
-  --accent-fill: color-mix(in oklab, var(--accent) 80%, black);
-  --accent: #5e5ce6;
+  --accent: #8e8cf2;
+  --accent-fill: #4b4acf;
 }
 :root[data-theme='dark'][data-accent='graphite'] {
-  --accent-fill: var(--accent);
-  --on-accent: #1c1c1e;
-  --accent: #98989d;
+  --accent: #a8a8ad;
+  --accent-fill: #a8a8ad;
+  --on-accent: #1d1d1f;
 }
 
-/* Reusable SwiftServer-style card. */
+/* A quiet group: fill, no shadow, no border. Never nest one in another. */
 .card {
   border-radius: var(--r-card);
-  background: var(--surface);
-  box-shadow: var(--card-shadow);
+  background: var(--fill);
+}
+/* Glass material for chrome floating over content. */
+.glass {
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
 }
 
 @theme inline {
@@ -173,24 +231,34 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 13px/1.45 var(--font-ui);
+  font: var(--fs-body) / 1.45 var(--font-ui);
+  letter-spacing: -0.003em;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior: none;
 }
 * {
   box-sizing: border-box;
 }
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
 ::selection {
-  background: color-mix(in oklab, var(--accent) 28%, transparent);
+  background: color-mix(in oklab, var(--accent) 26%, transparent);
 }
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 3px solid color-mix(in oklab, var(--accent) 55%, transparent);
   outline-offset: 1px;
 }
 input,
 select,
 textarea {
   caret-color: var(--accent);
+}
+::placeholder {
+  color: var(--muted);
+  opacity: 1;
 }
 .tnum,
 .count {
@@ -201,23 +269,29 @@ textarea {
   scrollbar-color: color-mix(in oklab, var(--muted) 40%, transparent) transparent;
 }
 
-/* Connection state dot (tabs, sidebar). */
+/* Icons follow the weight of the text next to them. */
+svg.lucide {
+  stroke-width: 1.6;
+}
+
+/* Connection state dot (tabs, sidebar, lists). Colour is state, nothing else. */
 .dot {
   flex: none;
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--muted);
+  background: color-mix(in oklab, var(--muted) 55%, transparent);
 }
-.dot[data-phase='connected'] {
+.dot[data-phase='connected'],
+.dot[data-phase='online'] {
   background: var(--ok);
-  box-shadow: 0 0 0 2px color-mix(in oklab, var(--ok) 18%, transparent);
 }
 .dot[data-phase='connecting'] {
   background: var(--warn);
   animation: dot-pulse 1.2s ease-in-out infinite;
 }
-.dot[data-phase='failed'] {
+.dot[data-phase='failed'],
+.dot[data-phase='offline'] {
   background: var(--danger);
 }
 @keyframes dot-pulse {
@@ -226,77 +300,108 @@ textarea {
   }
 }
 .kbd {
-  font: 11px var(--font-ui);
+  font: var(--fs-cap) var(--font-ui);
   color: var(--muted);
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   border-radius: 4px;
   padding: 0 4px;
   line-height: 16px;
+  background: var(--fill);
 }
+
+/* Menus: macOS glass, accent-filled highlight. */
 .menu {
   min-width: 200px;
   max-height: 60vh;
   overflow: auto;
   padding: 5px;
-  border: 0.5px solid var(--border);
-  border-radius: 14px;
-  background: var(--surface);
+  border: 0.5px solid var(--glass-edge);
+  border-radius: 11px;
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow);
   z-index: 60;
+  animation: menu-in 260ms var(--spring);
+  transform-origin: var(--bits-floating-transform-origin, top left);
+}
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
 }
 .menu-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 28px;
-  padding: 0 9px;
-  border-radius: var(--r-inner);
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 5px;
   cursor: default;
   user-select: none;
   outline: none;
 }
+.menu-item :global(svg),
+.menu-item svg {
+  color: var(--muted);
+}
 .menu-item[data-disabled] {
-  opacity: 0.45;
-  cursor: default;
+  opacity: 0.4;
 }
 .menu-item[data-highlighted] {
-  background: var(--accent-soft);
-  color: var(--text);
+  background: var(--accent-fill);
+  color: var(--on-accent);
+}
+.menu-item[data-highlighted] svg {
+  color: inherit;
 }
 .menu-item.danger {
   color: var(--danger);
 }
+.menu-item.danger[data-highlighted] {
+  background: var(--danger);
+  color: #fff;
+}
 .menu-sep {
-  height: 1px;
-  margin: 4px 2px;
+  height: 0.5px;
+  margin: 5px 8px;
   background: var(--border);
 }
 .overlay {
   position: fixed;
   inset: 0;
   z-index: 50;
-  background: color-mix(in oklab, var(--text) 18%, transparent);
-  animation: fade 120ms var(--ease);
+  background: rgb(0 0 0 / 0.16);
+  animation: fade 160ms var(--ease);
+}
+:root[data-theme='dark'] .overlay {
+  background: rgb(0 0 0 / 0.38);
+}
+/* Centered dialogs grow out of the middle with a spring. */
+@keyframes alert-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.92);
+  }
 }
 @keyframes fade {
   from {
     opacity: 0;
   }
 }
-/* List density (Settings → Appearance): server rows, folder tree, process rows. */
+
+/* List density (Settings → Appearance). */
 :root[data-density='compact'] {
-  --row-tile: 46px;
-  --row-tree: 26px;
+  --row-tile: 32px;
+  --row-tree: 24px;
   --row-pad: 2px;
-  --tile-gap: 6px;
-  --card-pad: 10px;
+  --card-pad: 12px;
   --card-gap: 8px;
   --grid-gap: 8px;
   --page-px: 20px;
   --page-pt: 16px;
-  --control-h: 28px;
-  --r-card: 16px;
-  --r-field: 13px;
+  --control-h: 26px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -305,5 +410,11 @@ textarea {
   *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --glass: var(--glass-strong);
+    --glass-blur: none;
   }
 }

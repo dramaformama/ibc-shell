@@ -20,6 +20,7 @@ interface Session {
   cwd: string;
   /** The local terminal: no connect steps, no host. */
   local?: boolean;
+  hostId?: string;
 }
 
 const sessions = new Map<string, Session>();
@@ -31,6 +32,11 @@ function out(s: Session, text: string): void {
   if (s.open) s.onData.onmessage(enc.encode(text).buffer as ArrayBuffer);
 }
 const event = (s: Session, e: SessionEvent) => s.onEvent.onmessage(e);
+/** For the forwards mock: a session's host and a way to emit its events. */
+export function sessionLink(id: string) {
+  const s = sessions.get(id);
+  return s && { hostId: s.hostId, open: s.open, emit: (e: SessionEvent) => event(s, e) };
+}
 const home = (s: Session) => (s.user === 'root' ? '/root' : `/home/${s.user}`);
 const shortCwd = (s: Session) =>
   s.cwd.startsWith(home(s)) ? '~' + s.cwd.slice(home(s).length) : s.cwd;
@@ -261,6 +267,7 @@ export const sessionOpen: Commands['sessionOpen'] = async (
   if (!h) return notFound();
   const s: Session = {
     id: uuid(),
+    hostId,
     label: h.label,
     user: h.username ?? 'root',
     hostname: h.hostname,

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { scrollEdge } from '$lib/util/scroll-edge.svelte';
   import { Eye, FolderOpen, SquareTerminal, Zap } from '@lucide/svelte';
   import { lastSeen } from '$lib/stores/lastseen.svelte';
   import Flag from '$lib/flags/Flag.svelte';
@@ -10,6 +11,8 @@
   import ServicesPane from '$lib/services/ServicesPane.svelte';
   import MetricsPane from './MetricsPane.svelte';
   import NotesCard from './NotesCard.svelte';
+  import ForwardsCard from '$lib/forwards/ForwardsCard.svelte';
+  import KeyLoginCard from '$lib/keys/KeyLoginCard.svelte';
 
   /** A server's own page: identity, quick actions and every metric as a card grid. */
   let { tab }: { tab: Tab } = $props();
@@ -20,9 +23,9 @@
 </script>
 
 {#if group}
-  <section class="status" aria-label={m.tab_status()}>
+  <section class="status" aria-label={m.tab_status()} use:scrollEdge>
     <header>
-      <span class="badge"><Flag code={group.flag} size={30} /></span>
+      <span class="badge"><Flag code={group.flag} size={40} /></span>
       <div class="id">
         <h1>{group.label}</h1>
         <p>
@@ -60,6 +63,8 @@
     </header>
     <MetricsPane {group} wide />
     {#if sid}<ServicesPane {sid} />{/if}
+    {#if host}<KeyLoginCard hostId={host.id} {sid} />{/if}
+    {#if host}<ForwardsCard hostId={host.id} {sid} />{/if}
     {#if host}<NotesCard hostId={host.id} />{/if}
   </section>
 {/if}
@@ -70,7 +75,7 @@
     position: absolute;
     inset: 0;
     overflow-y: auto;
-    padding: 28px 32px 40px;
+    padding: var(--page-pt) var(--page-px) 40px;
   }
   header {
     display: flex;
@@ -82,11 +87,8 @@
     display: grid;
     place-items: center;
     flex: none;
-    width: 54px;
-    height: 54px;
-    border-radius: 17px;
-    background: var(--surface);
-    box-shadow: var(--card-shadow);
+    width: 40px;
+    height: 40px;
   }
   .id {
     flex: 1;
@@ -97,7 +99,7 @@
     align-items: center;
     gap: 10px;
     margin: 0 0 3px;
-    font-size: 26px;
+    font-size: var(--fs-large);
     font-weight: 700;
     letter-spacing: -0.025em;
     overflow: hidden;
@@ -113,8 +115,6 @@
     font-size: 13px;
   }
   .acts .btn[aria-pressed='true'] {
-    border-color: color-mix(in oklab, var(--accent) 40%, transparent);
-    background: color-mix(in oklab, var(--accent) 12%, var(--surface));
     color: var(--accent);
   }
   .acts {

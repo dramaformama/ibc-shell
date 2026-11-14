@@ -116,8 +116,8 @@
     align-items: center;
     gap: 2px;
     padding: 4px 4px 4px 10px;
-    border: 1px solid var(--border);
-    border-radius: var(--r-card);
+    border: 0.5px solid var(--border);
+    border-radius: var(--r-panel);
     background: var(--surface);
     box-shadow: var(--shadow);
     animation: drop 140ms var(--ease);

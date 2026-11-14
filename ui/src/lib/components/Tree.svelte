@@ -348,6 +348,9 @@
           <button class="btn btn-primary btn-sm" onclick={() => ui.openHostEditor(null)}
             >{m.action_new_host()}</button
           >
+          <button class="btn btn-sm" onclick={() => (ui.sshImportOpen = true)}
+            >{m.imp_action()}</button
+          >
         </EmptyState>
       {/if}
     </div>

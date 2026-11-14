@@ -29,4 +29,12 @@ describe('Highlighter', () => {
     expect(h.feed('\x1b]0;title')).toBe('');
     expect(h.feed('\x07ok')).toBe(`\x1b]0;title\x07${C(32, 'ok')}`);
   });
+
+  it('colours a plain shell prompt like a default Ubuntu one', () => {
+    const out = new Highlighter().feed('\x1b]0;t\x07root@vps:~/app# ls\r\n[deploy@web1 www]$ ');
+    expect(out).toContain('\x1b[1;32mroot@vps\x1b[22;39m:\x1b[1;34m~/app\x1b[22;39m# ls');
+    expect(out).toContain('[\x1b[1;32mdeploy@web1\x1b[22;39m \x1b[1;34mwww\x1b[22;39m]$ ');
+    // An address in the middle of a line is not a prompt.
+    expect(new Highlighter().feed('mail to a@b.c:/x$ now')).not.toContain('1;32m');
+  });
 });

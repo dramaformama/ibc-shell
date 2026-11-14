@@ -16,6 +16,8 @@ mod hostkey;
 pub mod policy;
 mod session;
 mod shell;
+mod socks;
+mod ssh_config;
 mod stats;
 mod stats_net;
 mod stats_parse;
@@ -35,12 +37,13 @@ pub use docker_more_types::{
     ComposeProject, ComposeService, DockerCompose, DockerEvent, DockerEvents, DockerImage,
     DockerImages, DockerNetwork, DockerNetworks, DockerVolume, DockerVolumes,
 };
-pub use forward::{ForwardHandle, ForwardSpec, ForwardState};
+pub use forward::{ForwardHandle, ForwardSpec, ForwardState, MAX_CONNECTIONS};
 pub use hostkey::{
     host_pattern, HostKeyDecision, HostKeyInfo, HostKeyMismatch, KnownHosts, KnownKey,
 };
 pub use session::{Connection, ExecOutput, SubsystemStream, CREDIT_WINDOW};
 pub use shell::{Shell, ShellOutput};
+pub use ssh_config::{parse_ssh_config, ConfigEntry};
 pub use stats::{sample_stats, CoreSplit, HostStats, NetIface, ProcRow};
 pub use stats_net::{Listener, PeerFlow};
 

@@ -51,7 +51,7 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
-    border-left: 1px solid var(--border);
+    border-left: 0.5px solid var(--border);
     background: var(--bg);
   }
   .top {

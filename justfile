@@ -28,7 +28,11 @@ bindings:
 e2e:
     tests/docker/gen-fixtures.sh
     docker compose -f tests/docker/compose.yml up -d --build --wait
-    trap 'docker compose -f tests/docker/compose.yml down -v' EXIT; TL_E2E=1 cargo test -p ibc-shell-ssh -p ibc-shell-sftp --test '*'
+    trap 'docker compose -f tests/docker/compose.yml down -v' EXIT; \
+    TL_E2E=1 TL_SSH_HOST=127.0.0.1 TL_SSH_USER=tester TL_SSH_PASSWORD=test-pw-123 \
+    TL_SSH_PORT=2201 TL_SSH_KEY_PORT=2202 TL_SSH_KBD_PORT=2203 TL_SSH_BASTION_PORT=2204 \
+    TL_SSH_INTERNAL_HOST=internal TL_SSH_KEY_FILE="$PWD/tests/fixtures/keys/id_ed25519" \
+    cargo test -p ibc-shell-ssh -p ibc-shell-sftp --test '*' -- --include-ignored
 
 # Rename the project (placeholder)
 rename name:

@@ -5,12 +5,13 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  animation: alert-in 340ms var(--spring);
   width: min(380px, calc(100vw - 32px));
   display: grid;
   gap: 12px;
   padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--r-card);
+  border: 0.5px solid var(--border);
+  border-radius: var(--r-sheet);
   background: var(--surface);
   box-shadow: var(--shadow);
 }
@@ -52,7 +53,7 @@
 }
 .sf-compare > div {
   padding: 8px 10px;
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   border-radius: var(--r-control);
 }
 .sf-compare h3 {

@@ -1,4 +1,5 @@
-//! Identity commands. Secrets are accepted once, sealed into the vault, never returned.
+//! Identity commands. Secrets are accepted once and sealed into the vault. The only way back
+//! out is `identity_reveal_password`, called when the user explicitly asks to see a password (ADR-021).
 
 use ibc_shell_store::{
     Identity, IdentityId, IdentityKind, IdentityMetaInput, IdentityMetaPatch, SecretId,
@@ -60,7 +61,7 @@ impl Drop for Created<'_> {
     }
 }
 
-fn create(state: &AppState, input: IdentityInput) -> ApiResult<IdentityDto> {
+pub(crate) fn create(state: &AppState, input: IdentityInput) -> ApiResult<IdentityDto> {
     let mut made = Created(&state.vault, Vec::new());
     let mut info: Option<KeyInfo> = None;
     let mut key_id = None;
@@ -147,6 +148,24 @@ pub async fn identity_update(
     let ident = state.store.identity_update(id, p)?;
     made.commit();
     Ok(dto(ident))
+}
+
+/// Returns the stored password of an identity, only on an explicit user request to show it
+/// (ADR-021). `None` when the identity has no password. Never logged.
+#[tauri::command]
+#[specta::specta]
+pub async fn identity_reveal_password(
+    state: State<'_, AppState>,
+    id: IdentityId,
+) -> ApiResult<Option<String>> {
+    let Some(sid) = state.store.identity_get(id)?.password_secret_id else {
+        return Ok(None);
+    };
+    let text = state
+        .vault
+        .with_secret(sid, |b| std::str::from_utf8(b).map(str::to_owned))?
+        .map_err(|_| ApiError::Internal("stored secret is not valid text".into()))?;
+    Ok(Some(text))
 }
 
 /// Deletes an identity and its secrets.

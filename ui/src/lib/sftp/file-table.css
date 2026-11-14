@@ -17,7 +17,7 @@
 .sf-head {
   position: relative;
   height: 30px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 0.5px solid var(--border);
 }
 /* Column border grips live in the head grid's gaps (one per fixed column). */
 .sf-grip {
@@ -159,7 +159,7 @@
   position: fixed;
   top: -100px;
   padding: 4px 10px;
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   border-radius: var(--r-control);
   background: var(--surface);
   color: var(--text);
@@ -175,4 +175,7 @@
   .sf-row .c-mode {
     display: none;
   }
+}
+.sf-sk {
+  padding: 4px 12px;
 }
