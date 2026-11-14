@@ -4,6 +4,7 @@
 //! `crates/ssh` only.
 
 mod copy;
+mod document;
 mod engine;
 mod job;
 pub mod local;

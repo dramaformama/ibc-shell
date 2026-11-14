@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 
 use ibc_shell_store::HostId;
 use tauri::ipc::{Channel, InvokeBody, Request};
-use tauri::State;
+use tauri::{Manager, State, WebviewWindow};
 use uuid::Uuid;
 
 use crate::api::dto::{PendingId, QuickConnect, SecretInput, SessionEvent, SessionId};
@@ -19,25 +19,33 @@ pub(crate) fn session_of(state: &AppState, id: SessionId) -> ApiResult<Arc<Sessi
 
 fn open(
     state: &AppState,
+    window: &WebviewWindow,
     target: SessionTarget,
     cols: u16,
     rows: u16,
     on_data: Channel<RawBytes>,
     on_event: Channel<SessionEvent>,
-) -> SessionId {
+) -> ApiResult<SessionId> {
     let id = SessionId(Uuid::now_v7());
     let handle = Arc::new(SessionHandle {
         id,
+        owner: Mutex::new(window.label().into()),
         spec: SessionSpec {
             target,
-            on_data,
-            on_event,
+            on_data: crate::session_output::Relay::new(on_data),
+            on_event: crate::session_output::Relay::new(on_event),
         },
         live: Mutex::new(Live::default()),
     });
     state.sessions.insert(id, handle.clone());
     spawn_session(state, &handle, cols, rows);
-    id
+    if window.get_webview_window(window.label()).is_none() {
+        state.sessions.remove(&id);
+        state.pending.cancel_owner(id.0);
+        handle.send(ShellCmd::Close);
+        return Err(ApiError::Cancelled);
+    }
+    Ok(id)
 }
 
 /// Starts connecting to a stored host. Resolves as soon as the session task is spawned;
@@ -45,6 +53,7 @@ fn open(
 #[tauri::command]
 #[specta::specta]
 pub async fn session_open(
+    window: WebviewWindow,
     state: State<'_, AppState>,
     host_id: HostId,
     cols: u16,
@@ -53,20 +62,22 @@ pub async fn session_open(
     on_event: Channel<SessionEvent>,
 ) -> ApiResult<SessionId> {
     state.store.host_resolve(host_id)?; // fail fast with NotFound
-    Ok(open(
+    open(
         &state,
+        &window,
         SessionTarget::Host(host_id),
         cols,
         rows,
         on_data,
         on_event,
-    ))
+    )
 }
 
 /// Quick connect without a stored host (`user@host:port`).
 #[tauri::command]
 #[specta::specta]
 pub async fn session_open_adhoc(
+    window: WebviewWindow,
     state: State<'_, AppState>,
     target: QuickConnect,
     cols: u16,
@@ -74,14 +85,15 @@ pub async fn session_open_adhoc(
     on_data: Channel<RawBytes>,
     on_event: Channel<SessionEvent>,
 ) -> ApiResult<SessionId> {
-    Ok(open(
+    open(
         &state,
+        &window,
         SessionTarget::Adhoc(target),
         cols,
         rows,
         on_data,
         on_event,
-    ))
+    )
 }
 
 /// Opens the user's own login shell on this computer (desktop only, ADR-017). Same data path
@@ -90,20 +102,22 @@ pub async fn session_open_adhoc(
 #[tauri::command]
 #[specta::specta]
 pub async fn session_open_local(
+    window: WebviewWindow,
     state: State<'_, AppState>,
     cols: u16,
     rows: u16,
     on_data: Channel<RawBytes>,
     on_event: Channel<SessionEvent>,
 ) -> ApiResult<SessionId> {
-    Ok(open(
+    open(
         &state,
+        &window,
         SessionTarget::Local,
         cols,
         rows,
         on_data,
         on_event,
-    ))
+    )
 }
 
 /// Keystrokes. RAW command (not in generated bindings): body = raw bytes
@@ -158,10 +172,21 @@ pub async fn shell_resize(
 /// Closes the session (also cancels any pending prompt of it).
 #[tauri::command]
 #[specta::specta]
-pub async fn session_close(state: State<'_, AppState>, session_id: SessionId) -> ApiResult<()> {
+pub async fn session_close(
+    window: WebviewWindow,
+    state: State<'_, AppState>,
+    session_id: SessionId,
+) -> ApiResult<()> {
     let handle = state
         .sessions
-        .remove(&session_id)
+        .remove_if(&session_id, |handle| {
+            handle
+                .owner
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .as_str()
+                == window.label()
+        })
         .ok_or(ApiError::NotFound)?;
     state.pending.cancel_owner(session_id.0);
     handle.send(ShellCmd::Close);

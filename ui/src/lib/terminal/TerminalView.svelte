@@ -49,14 +49,21 @@
   const hl = new Highlighter();
   const decoder = new TextDecoder();
   // svelte-ignore state_referenced_locally
-  const conn = new Connection(tab, (data, done) => {
-    if (!active) sessions.markActivity(tab.id);
-    if (watch.hidden)
-      tell(tab, watch.feed(watchDecoder.decode(data, { stream: true }), Date.now()));
-    if (!engine) return done();
-    if (!terminalPrefs.highlight) return engine.term.write(data, done);
-    engine.term.write(hl.feed(decoder.decode(data, { stream: true })), done);
-  });
+  const conn = new Connection(
+    tab,
+    (data, done) => {
+      if (!active) sessions.markActivity(tab.id);
+      if (watch.hidden)
+        tell(tab, watch.feed(watchDecoder.decode(data, { stream: true }), Date.now()));
+      if (!engine) return done();
+      if (!terminalPrefs.highlight) return engine.term.write(data, done);
+      engine.term.write(hl.feed(decoder.decode(data, { stream: true })), done);
+    },
+    (screen, cwd) => {
+      if (cwd) filesLink.set(tab.id, cwd);
+      engine?.term.write(screen);
+    }
+  );
   const theme = $derived(resolveTheme(themeId ?? terminalPrefs.theme, appDark));
   const modalOpen = $derived(!!conn.prompt || !!link || !!paste);
 
@@ -179,7 +186,8 @@
     const unregister = registerTerminal(tab.id, {
       send: (text) => conn.write(utf8(text)),
       phase: () => conn.phase,
-      focus: focusTerm
+      focus: focusTerm,
+      snapshot: () => engine?.snapshot() ?? Promise.resolve('')
     });
 
     void (async () => {

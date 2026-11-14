@@ -93,7 +93,12 @@ export const mockApi: Api = {
   // sftp / local / transfers
   sftpOpen: sftp.sftpOpen,
   sftpClose: sftp.sftpClose,
+  hostWindowOpen: vault.hostWindowOpen,
+  hostWindowTake: vault.hostWindowTake,
+  hostWindowTransferred: vault.hostWindowTransferred,
+  hostWindowPause: vault.hostWindowPause,
   sftpList: sftp.sftpList,
+  fileOpen: sftp.fileOpen,
   sftpStat: sftp.sftpStat,
   sftpMkdir: sftp.sftpMkdir,
   sftpRename: sftp.sftpRename,

@@ -2,6 +2,10 @@
   import '../app.css';
   import '$lib/forms.css';
   import { onMount } from 'svelte';
+  import { transfers } from '$lib/sftp/transfers.svelte';
+  import { receiveWindowTransfer } from '$lib/stores/window-transfer';
+  import { ui } from '$lib/stores/ui.svelte';
+  import { hostWindowTarget, isHostWindow } from '$lib/components/host-window';
   import Shell from '$lib/components/Shell.svelte';
   import VaultScreen from '$lib/components/VaultScreen.svelte';
   import { tree } from '$lib/stores/tree.svelte';
@@ -27,6 +31,7 @@
 
   onMount(() => {
     void vault.refresh();
+    if (isHostWindow) return;
     const off = onTrayOpen((id) => {
       if (vault.state === 'Unlocked') connectHost(id, 'status');
     });
@@ -35,7 +40,7 @@
 
   // Menu-bar icon: keep open servers sampled and send their lines (ADR-013).
   $effect(() => {
-    if (vault.state !== 'Unlocked' || !settings.tray) return;
+    if (isHostWindow || vault.state !== 'Unlocked' || !settings.tray) return;
     const stops = sessions.groups
       .map((g) => sessions.groupSession(g))
       .filter((sid): sid is string => !!sid)
@@ -43,7 +48,7 @@
     return () => stops.forEach((stop) => stop());
   });
   $effect(() => {
-    if (vault.state === 'Loading') return;
+    if (isHostWindow || vault.state === 'Loading') return;
     if (!settings.tray) return pushTray(null);
     if (vault.state !== 'Unlocked') return pushTray(buildMenu([], true));
     const entries: TrayEntry[] = [];
@@ -70,7 +75,28 @@
   $effect(() => {
     if (vault.state === 'Unlocked') {
       void settings.load().then(() => settings.checkUpdate());
-      void Promise.all([tree.load(), lastSeen.load()]).then(() => {
+      void Promise.all([tree.load(), lastSeen.load()]).then(async () => {
+        if (isHostWindow) {
+          const target = hostWindowTarget();
+          if (!target) return;
+          const received = await receiveWindowTransfer();
+          if (received.status !== 'ok') {
+            ui.toast(m.err_generic(), 'error');
+            return;
+          }
+          const payload = received.data;
+          if (payload) {
+            transfers.restore(payload.active_transfers);
+            void transfers.start();
+            ui.inspectorOpen = payload.panel;
+            ui.panelTab = payload.panel_tab === 'snippets' ? 'snippets' : 'metrics';
+            if (payload.terminal && target.kind !== 'terminal')
+              connectHost(target.hostId, 'terminal');
+            if (payload.files && target.kind !== 'sftp') connectHost(target.hostId, 'sftp');
+          }
+          connectHost(target.hostId, target.kind);
+          return;
+        }
         for (const id of lastSeen.watched) if (tree.host(id)) connectInBackground(id);
       });
       void recent.load();

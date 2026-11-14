@@ -13,7 +13,11 @@ A light SSH and SFTP client for people who run many servers.
 Nested folders, country flags, a terminal that stays out of your way, and secrets that never leave your machine.
 
 > **Version 1.0.** SSH, SFTP, the encrypted vault, server monitoring and the local terminal are ready for macOS, Windows and Linux. iOS and Android are planned.
+
+In Files, double-click a document to open its dialog. Remote documents open in the default app as temporary copies. Choose Download to save a file to the selected folder through the transfer queue. Window controls sit in the top toolbar.
 > Installers are built automatically from a tag, see [Download](#download).
+
+Open a saved host in a separate window from the tab or sidebar context menu. Drag a tab outside the tab strip to detach it. Detaching an open tab preserves its connection, terminal history, and SFTP directories.
 
 ## Download
 

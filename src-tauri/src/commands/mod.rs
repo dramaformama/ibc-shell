@@ -2,6 +2,8 @@
 
 pub mod app;
 pub mod catalog;
+pub mod document;
+pub mod host_window;
 pub mod identity;
 pub mod probe;
 pub mod services;

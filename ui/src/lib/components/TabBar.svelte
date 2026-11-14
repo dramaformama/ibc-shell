@@ -17,10 +17,13 @@
   import { sessions } from '$lib/stores/sessions.svelte';
   import { ui } from '$lib/stores/ui.svelte';
   import { mod } from '$lib/util/platform';
+  import WindowControls from './WindowControls.svelte';
+  import { canOpenHostWindow, detachGroup, isHostWindow } from './host-window';
   import TabMenu from './TabMenu.svelte';
   import { TabDrag } from './tab-drag.svelte';
 
-  let { mac = false }: { mac?: boolean } = $props();
+  let { mac = false, windowControls = false }: { mac?: boolean; windowControls?: boolean } =
+    $props();
 
   const active = $derived(sessions.active);
   /** Servers connected for monitoring that have no tab. */
@@ -29,7 +32,14 @@
   let tabsEl: HTMLDivElement;
   const drag = new TabDrag(
     () => [...tabsEl.querySelectorAll<HTMLElement>('[data-tab-key]')],
-    (key, to) => sessions.moveGroup(key, to)
+    (key, to) => sessions.moveGroup(key, to),
+    () => tabsEl.getBoundingClientRect(),
+    (key) => {
+      if (!canOpenHostWindow || !sessions.groups.find((g) => g.key === key)?.current.hostId)
+        return false;
+      void detachGroup(key);
+      return true;
+    }
   );
 
   function onKey(e: KeyboardEvent, i: number) {
@@ -55,25 +65,40 @@
   }
 </script>
 
-<div class="bar" class:mac={mac && !ui.sidebarOpen} data-tauri-drag-region>
-  <button
-    class="icon-btn"
-    onclick={() => (ui.sidebarOpen = !ui.sidebarOpen)}
-    aria-label={ui.sidebarOpen ? m.sidebar_hide() : m.sidebar_show()}
-    aria-pressed={ui.sidebarOpen}
-    title="{ui.sidebarOpen ? m.sidebar_hide() : m.sidebar_show()} ({mod('B')})"
-    >{#if ui.sidebarOpen}<PanelLeftClose size={16} />{:else}<PanelLeftOpen size={16} />{/if}</button
-  >
-  {#if !ui.sidebarOpen}
+<div class="bar" class:mac data-tauri-drag-region>
+  {#if !isHostWindow}
     <button
-      class="icon-btn overview"
-      onclick={() => (sessions.activeId = null)}
+      class="icon-btn"
+      onclick={() => (ui.sidebarOpen = !ui.sidebarOpen)}
+      aria-label={ui.sidebarOpen ? m.sidebar_hide() : m.sidebar_show()}
+      aria-pressed={ui.sidebarOpen}
+      title="{ui.sidebarOpen ? m.sidebar_hide() : m.sidebar_show()} ({mod('B')})"
+      >{#if ui.sidebarOpen}<PanelLeftClose size={16} />{:else}<PanelLeftOpen
+          size={16}
+        />{/if}</button
+    >
+    {#if !ui.sidebarOpen}
+      <button
+        class="icon-btn overview"
+        onclick={() => (sessions.activeId = null)}
+        aria-label={m.dash_title()}
+        aria-pressed={sessions.activeId === null}
+        title={m.dash_title()}><LayoutGrid size={16} /></button
+      >
+    {/if}
+    <span class="sep" aria-hidden="true"></span>
+  {/if}
+  {#if isHostWindow}
+    <button
+      class="icon-btn"
       aria-label={m.dash_title()}
-      aria-pressed={sessions.activeId === null}
-      title={m.dash_title()}><LayoutGrid size={16} /></button
+      title={m.dash_title()}
+      onclick={() => {
+        ui.page = 'overview';
+        sessions.activeId = null;
+      }}><LayoutGrid size={16} /></button
     >
   {/if}
-  <span class="sep" aria-hidden="true"></span>
   <div
     class="tabs"
     class:dragging={drag.key !== null}
@@ -88,7 +113,7 @@
       <TabMenu group={g}>
         {#snippet children(props)}
           <div
-            {...props}
+            {...!isHostWindow ? props : {}}
             class="tab"
             class:active={on}
             class:lifted={drag.key === g.key}
@@ -99,10 +124,11 @@
             <button
               id={'tab-' + g.key}
               class="tab-main"
+              class:host-window-tab={isHostWindow}
               role="tab"
               aria-selected={on}
               tabindex={on ? 0 : -1}
-              onpointerdown={(e) => drag.down(e, g.key)}
+              onpointerdown={(e) => !isHostWindow && drag.down(e, g.key)}
               onclick={(e) => {
                 if (drag.swallowClick()) e.preventDefault();
                 else sessions.select(g.current.id);
@@ -116,12 +142,14 @@
                 <span class="unseen" title={m.tab_unseen()}></span>
               {/if}
             </button>
-            <button
-              class="close"
-              aria-label={m.tab_disconnect()}
-              title={m.tab_disconnect()}
-              onclick={() => closeServer(g.key)}><X size={12} /></button
-            >
+            {#if !isHostWindow}
+              <button
+                class="close"
+                aria-label={m.tab_disconnect()}
+                title={m.tab_disconnect()}
+                onclick={() => closeServer(g.key)}><X size={12} /></button
+              >
+            {/if}
           </div>
         {/snippet}
       </TabMenu>
@@ -136,12 +164,14 @@
         title={m.tabs_background_hint()}>{m.tabs_background({ count: hidden })}</button
       >
     {/if}
-    <button
-      class="icon-btn new"
-      onclick={() => (ui.paletteOpen = true)}
-      aria-label={m.tab_new()}
-      title="{m.tab_new()} ({mod('T')})"><Plus size={16} /></button
-    >
+    {#if !isHostWindow}
+      <button
+        class="icon-btn new"
+        onclick={() => (ui.paletteOpen = true)}
+        aria-label={m.tab_new()}
+        title="{m.tab_new()} ({mod('T')})"><Plus size={16} /></button
+      >
+    {/if}
   </div>
 
   {#if active}
@@ -168,7 +198,7 @@
           >
         </div>
       {/if}
-      {#if active.hostId}
+      {#if active.hostId && !isHostWindow}
         {@const id = active.hostId}
         <button
           class="icon-btn"
@@ -189,9 +219,17 @@
       {/if}
     </div>
   {/if}
+  {#if windowControls}
+    <div class="window-drag" data-tauri-drag-region></div>
+    <WindowControls />
+  {/if}
 </div>
 
 <style>
+  .window-drag {
+    align-self: stretch;
+    flex: 0 0 12px;
+  }
   .bg-pill {
     flex: none;
     height: 24px;
@@ -304,6 +342,9 @@
     color: inherit;
     font: inherit;
     cursor: pointer;
+  }
+  .host-window-tab {
+    padding-right: 10px;
   }
   .tab.active .tab-main {
     font-weight: 500;

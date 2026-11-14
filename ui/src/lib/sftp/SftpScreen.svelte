@@ -4,8 +4,9 @@
   import { filesLink } from '$lib/terminal/files-link.svelte';
   import { drag, sftpLayout } from './layout.svelte';
   import { Channel } from '@tauri-apps/api/core';
+  import { claimFiles, fileViews, releasedTabs } from '$lib/stores/window-transfer';
   import { onMount } from 'svelte';
-  import { api, type Endpoint, type SessionEvent, type SftpId } from '$lib/api';
+  import { api, type Endpoint, type Entry, type SessionEvent, type SftpId } from '$lib/api';
   import * as m from '$lib/paraglide/messages.js';
   import type { Tab } from '$lib/stores/sessions.svelte';
   import { ui } from '$lib/stores/ui.svelte';
@@ -14,14 +15,15 @@
   import { ConnectLog } from '$lib/terminal/connectlog.svelte';
   import ConflictDialog from './ConflictDialog.svelte';
   import DeleteDialog from './DeleteDialog.svelte';
+  import { listenOsDrop } from './os-drop';
   import NameDialog from './NameDialog.svelte';
+  import OpenFileDialog from './OpenFileDialog.svelte';
   import { Pane as PaneModel } from './paneState.svelte';
   import PaneView from './Pane.svelte';
   import PermsDialog from './PermsDialog.svelte';
   import TransferDrawer from './TransferDrawer.svelte';
   import { transfers } from './transfers.svelte';
   import type { Actions, Source } from './model';
-  import type { Entry } from '$lib/api';
   import './sftp.css';
 
   let { tab }: { tab: Tab } = $props();
@@ -43,12 +45,12 @@
   ]);
   const other = (s: Side): Side => (s === 'left' ? 'right' : 'left');
 
-  async function attach(side: Side, value: string) {
+  async function attach(side: Side, value: string, path?: string | null) {
     const src = sources.find((s) => s.value === value);
     if (!src) return;
     sel[side] = value;
     panes[side].filter = '';
-    await panes[side].attach(src.ep);
+    await panes[side].attach(src.ep, path);
     if (panes[side].error) ui.toast(errorText(panes[side].error!), 'error');
   }
 
@@ -99,7 +101,6 @@
     await attaching;
   }
 
-  /** Try again after a failure: drop the half-open SFTP session, then connect afresh. */
   function retry() {
     if (id) void api.sftpClose(id);
     id = null;
@@ -110,25 +111,45 @@
   onMount(() => {
     closed = false;
     void transfers.start();
-    void connect();
-    const offOs = listenOsDrop();
+    const inherited = claimFiles();
+    if (inherited) {
+      id = sftpId = inherited.files;
+      status = 'ready';
+      attaching = Promise.all([
+        attach('left', 'local', inherited.left),
+        attach('right', 'remote', inherited.right)
+      ]);
+    } else void connect();
+    fileViews.set(tab.id, () => ({
+      id,
+      left: panes.left.path,
+      right: panes.right.path,
+      ready: status !== 'connecting'
+    }));
+    const offOs = listenOsDrop(
+      (side) => (osOver = side),
+      (side) => panes[side].endpoint.kind === 'remote',
+      (side, paths) =>
+        void run(
+          transfers.enqueue({ kind: 'local' }, panes[side].endpoint, paths, panes[side].path)
+        )
+    );
     return () => {
       closed = true;
       log.dispose();
-      if (id) void api.sftpClose(id);
+      fileViews.delete(tab.id);
+      if (id && !releasedTabs.delete(tab.id)) void api.sftpClose(id);
       sessions.setPhase(tab.id, 'disconnected');
       void offOs.then((f) => f());
     };
   });
 
-  // "Open in Files" from this server's terminal: show its folder in the remote pane.
   $effect(() => {
     if (status !== 'ready' || filesLink.request[groupKey(tab)] === undefined) return;
     const path = filesLink.take(groupKey(tab));
     if (path) void showRemote(path);
   });
 
-  /** The first listing of both panes (a folder asked for meanwhile must land after it). */
   let attaching: Promise<unknown> = Promise.resolve();
 
   async function showRemote(path: string) {
@@ -145,7 +166,6 @@
     if (!(await panes[side].load(dir))) ui.toast(m.sftp_open_dir_failed({ dir }), 'error');
   }
 
-  // Refresh both listings whenever a transfer finishes.
   let seenTick = 0;
   $effect(() => {
     const t = transfers.doneTick;
@@ -155,39 +175,6 @@
       void panes.right.refresh();
     }
   });
-
-  /** OS → pane drops (Tauri gives local paths and a physical-pixel position). */
-  async function listenOsDrop(): Promise<() => void> {
-    try {
-      const { getCurrentWebview } = await import('@tauri-apps/api/webview');
-      return await getCurrentWebview().onDragDropEvent((ev) => {
-        const p = ev.payload;
-        if (p.type === 'leave') {
-          osOver = null;
-          return;
-        }
-        if (p.type === 'enter' || p.type === 'over' || p.type === 'drop') {
-          const dpr = window.devicePixelRatio || 1;
-          const el = document.elementFromPoint(p.position.x / dpr, p.position.y / dpr);
-          const side = el?.closest<HTMLElement>('[data-side]')?.dataset.side as Side | undefined;
-          const target = side && panes[side].endpoint.kind === 'remote' ? side : null;
-          osOver = p.type === 'drop' ? null : target;
-          if (p.type === 'drop' && target && p.paths.length) {
-            void run(
-              transfers.enqueue(
-                { kind: 'local' },
-                panes[target].endpoint,
-                p.paths,
-                panes[target].path
-              )
-            );
-          }
-        }
-      });
-    } catch {
-      return () => {};
-    }
-  }
 
   async function run(p: Promise<boolean>) {
     if (!(await p)) ui.toast(m.sftp_enqueue_failed(), 'error');
@@ -199,7 +186,23 @@
     void run(transfers.enqueue(src.endpoint, dst.endpoint, names.map(src.pathOf), dstDir));
   }
 
-  // ---- dialogs ----
+  let opening = $state.raw<{ side: Side; entry: Entry; path: string; endpoint: Endpoint } | null>(
+    null
+  );
+
+  async function openEntry(side: Side, entry: Entry) {
+    const pane = panes[side];
+    const path = pane.pathOf(entry.name);
+    const endpoint = pane.endpoint;
+    if (entry.kind === 'dir') {
+      if (!(await pane.load(path)) && pane.error) ui.toast(errorText(pane.error), 'error');
+      return;
+    }
+    if (entry.kind === 'symlink' && (await pane.load(path, true, false))) return;
+    if (pane.endpoint !== endpoint || pane.pathOf(entry.name) !== path) return;
+    opening = { side, entry, path, endpoint };
+  }
+
   let nameFor = $state<{ side: Side; entry: Entry | null } | null>(null);
   let nameOpen = $state(false);
   let deleting = $state<{ side: Side; names: string[]; folders: number } | null>(null);
@@ -216,7 +219,7 @@
     const here = pane.endpoint.kind;
     const there = to.endpoint.kind;
     return {
-      open: (e) => (e.kind === 'dir' ? void pane.open(e) : send(side, [e.name], to.path)),
+      open: (e) => void openEntry(side, e),
       rename: (e) => {
         nameFor = { side, entry: e };
         nameOpen = true;
@@ -371,4 +374,19 @@
     if (p) void report(panes[p.side].chmod(p.name, mode));
   }}
 />
+{#if opening && sessions.activeId === tab.id}
+  {@const file = opening}
+  {@const target = panes[other(file.side)]}
+  <OpenFileDialog
+    entry={file.entry}
+    path={file.path}
+    endpoint={file.endpoint}
+    transferLabel={target.path && !target.loading ? acts[file.side].transferLabel : null}
+    close={() => (opening = null)}
+    transfer={() => {
+      void run(transfers.enqueue(file.endpoint, target.endpoint, [file.path], target.path));
+      opening = null;
+    }}
+  />
+{/if}
 <ConflictDialog />

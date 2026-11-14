@@ -10,6 +10,7 @@ export interface Engine {
   /** Current renderer; becomes `dom` after a lost WebGL context. */
   renderer: () => 'webgl' | 'dom';
   dispose: () => void;
+  snapshot: () => Promise<string>;
 }
 
 export interface EngineOptions {
@@ -92,6 +93,17 @@ export async function createEngine(el: HTMLElement, o: EngineOptions): Promise<E
     fit,
     search,
     renderer: () => mode,
-    dispose: () => term.dispose()
+    dispose: () => term.dispose(),
+    snapshot: async () => {
+      const { SerializeAddon } = await import('@xterm/addon-serialize');
+      const serializer = new SerializeAddon();
+      term.loadAddon(serializer);
+      try {
+        await new Promise<void>((resolve) => term.write('', resolve));
+        return serializer.serialize();
+      } finally {
+        serializer.dispose();
+      }
+    }
   };
 }

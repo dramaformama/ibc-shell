@@ -8,7 +8,7 @@ use ibc_shell_sftp::{
     TransferEvent, TransferId, TransferJob,
 };
 use tauri::ipc::Channel;
-use tauri::State;
+use tauri::{Manager, State, WebviewWindow};
 use uuid::Uuid;
 
 use crate::api::dto::{Endpoint, SessionEvent, SftpId, SftpTarget, TransferIds, TransferRequest};
@@ -18,7 +18,7 @@ use crate::connect::{build_chain, StoreKnownHosts};
 use crate::prompts::EventPrompter;
 use crate::state::{AppState, SessionTarget, SftpHandle};
 
-fn sftp_of(state: &AppState, id: SftpId) -> ApiResult<Arc<Sftp>> {
+pub(super) fn sftp_of(state: &AppState, id: SftpId) -> ApiResult<Arc<Sftp>> {
     state
         .sftps
         .get(&id)
@@ -30,32 +30,40 @@ fn sftp_of(state: &AppState, id: SftpId) -> ApiResult<Arc<Sftp>> {
 #[tauri::command]
 #[specta::specta]
 pub async fn sftp_open(
+    window: WebviewWindow,
     state: State<'_, AppState>,
     target: SftpTarget,
     on_event: Channel<SessionEvent>,
 ) -> ApiResult<SftpId> {
     let id = SftpId(Uuid::now_v7());
-    let conn = match target {
+    let (conn, host) = match target {
         SftpTarget::Session { session_id } => {
             let h = session_of(&state, session_id)?;
             let live = h
                 .live
                 .lock()
                 .map_err(|_| ApiError::Internal("state poisoned".into()))?;
-            live.conn
-                .clone()
-                .ok_or(ApiError::Network("session not connected".into()))?
+            let host = match h.spec.target {
+                SessionTarget::Host(id) => Some(id),
+                _ => None,
+            };
+            (
+                live.conn
+                    .clone()
+                    .ok_or(ApiError::Network("session not connected".into()))?,
+                host,
+            )
         }
         SftpTarget::Host { host_id } => {
             let chain = build_chain(&state.store, &state.vault, &SessionTarget::Host(host_id))?;
             let prompter = EventPrompter {
                 owner: id.0,
-                events: on_event.clone(),
+                events: crate::session_output::Relay::new(on_event.clone()),
                 pending: state.pending.clone(),
             };
             let known = StoreKnownHosts(state.store.clone());
             match ibc_shell_ssh::connect(chain, &known, &prompter).await {
-                Ok(c) => Arc::new(c),
+                Ok(c) => (Arc::new(c), Some(host_id)),
                 Err(e) => {
                     let err = ApiError::from(e);
                     let _ = on_event.send(SessionEvent::Failed { error: err.clone() });
@@ -75,10 +83,18 @@ pub async fn sftp_open(
     state.sftps.insert(
         id,
         Arc::new(SftpHandle {
+            owner: std::sync::Mutex::new(window.label().into()),
+            host,
             sftp,
             conn: conn.clone(),
         }),
     );
+    if window.get_webview_window(window.label()).is_none() {
+        if let Some(handle) = state.sftps.remove(&id) {
+            handle.sftp.close().await;
+        }
+        return Err(ApiError::Cancelled);
+    }
     let _ = on_event.send(SessionEvent::Connected {
         server_banner: conn.server_banner().map(str::to_owned),
     });
@@ -88,8 +104,22 @@ pub async fn sftp_open(
 /// Closes an SFTP session (transfers using it fail with `Cancelled`).
 #[tauri::command]
 #[specta::specta]
-pub async fn sftp_close(state: State<'_, AppState>, sftp_id: SftpId) -> ApiResult<()> {
-    let h = state.sftps.remove(&sftp_id).ok_or(ApiError::NotFound)?;
+pub async fn sftp_close(
+    window: WebviewWindow,
+    state: State<'_, AppState>,
+    sftp_id: SftpId,
+) -> ApiResult<()> {
+    let h = state
+        .sftps
+        .remove_if(&sftp_id, |handle| {
+            handle
+                .owner
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .as_str()
+                == window.label()
+        })
+        .ok_or(ApiError::NotFound)?;
     state.pending.cancel_owner(sftp_id.0);
     h.sftp.close().await;
     Ok(())
@@ -293,7 +323,12 @@ pub async fn transfer_enqueue(
             .collect::<ApiResult<_>>()?;
     }
     if request.dst == Endpoint::Local {
-        dst_dir = local_leaf(&state, &dst_dir)?.to_string_lossy().into_owned();
+        // A listed directory is itself a root (including a volume root or the user's home).
+        // Validate the directory, not its parent, and disallow unlisted ancestors.
+        if !state.roots.allows(Path::new(&dst_dir), false) {
+            return Err(ApiError::Validation("local path not allowed".into()));
+        }
+        dst_dir = local_dir(&state, &dst_dir)?.to_string_lossy().into_owned();
     }
     let job = TransferJob {
         src,
@@ -352,9 +387,14 @@ pub async fn transfer_conflict_reply(
 #[tauri::command]
 #[specta::specta]
 pub async fn transfers_subscribe(
+    window: WebviewWindow,
     state: State<'_, AppState>,
     on_event: Channel<TransferEvent>,
 ) -> ApiResult<()> {
-    state.transfers.set_subscriber(on_event);
+    state.transfers.set_subscriber(window.label(), on_event);
+    if window.get_webview_window(window.label()).is_none() {
+        state.transfers.remove_subscriber(window.label());
+        return Err(ApiError::Cancelled);
+    }
     Ok(())
 }

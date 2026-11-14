@@ -16,6 +16,7 @@ import {
 import type { Tab } from '$lib/stores/sessions.svelte';
 import { SvelteSet } from 'svelte/reactivity';
 import { ConnectLog } from './connectlog.svelte';
+import { claimTerminal, releasedTabs } from '$lib/stores/window-transfer';
 import { concat } from './text';
 
 export type Phase = 'connecting' | 'connected' | 'disconnected' | 'failed';
@@ -35,6 +36,34 @@ function makeChannel<T>(onmessage: (m: T) => void): Channel<T> {
   } catch {
     return { onmessage } as unknown as Channel<T>;
   }
+}
+
+const pauseMarkers = new Map<string, () => void>();
+const pausedTerminals = new Set<string>();
+
+export async function pauseTerminal(id: SessionId) {
+  pausedTerminals.add(id);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const marker = new Promise<boolean>((resolve) => {
+    pauseMarkers.set(id, () => resolve(true));
+    timer = setTimeout(() => resolve(false), 2000);
+  });
+  try {
+    const result = await api.hostWindowPause(id, true);
+    return result.status === 'ok' && (await marker);
+  } finally {
+    clearTimeout(timer);
+    pauseMarkers.delete(id);
+  }
+}
+
+export async function resumeTerminal(id: SessionId) {
+  pausedTerminals.delete(id);
+  await api.hostWindowPause(id, false);
+}
+
+export function releaseTerminal(id: SessionId) {
+  pausedTerminals.delete(id);
 }
 
 const ACK_FLUSH = 64 * 1024;
@@ -69,7 +98,14 @@ export class Connection {
   #closed = false;
   #generation = 0;
 
-  constructor(tab: Tab, sink: (data: Uint8Array, done: () => void) => void) {
+  #restore: (screen: string, cwd: string | null) => void;
+
+  constructor(
+    tab: Tab,
+    sink: (data: Uint8Array, done: () => void) => void,
+    restore: (screen: string, cwd: string | null) => void
+  ) {
+    this.#restore = restore;
     this.#tab = tab;
     this.#sink = sink;
     openConnections.add(this);
@@ -95,6 +131,22 @@ export class Connection {
     this.prompt = null;
     this.log.reset();
     const gen = ++this.#generation;
+    const adopted = claimTerminal({
+      data: (bytes) => {
+        if (gen === this.#generation) this.#receive(bytes);
+      },
+      event: (event) => {
+        if (gen === this.#generation) this.#event(event);
+      }
+    });
+    if (adopted) {
+      this.#id = adopted.terminal;
+      this.phase = 'connected';
+      this.#restore(adopted.screen ?? '', adopted.cwd);
+      adopted.drain();
+      this.sendSize(true);
+      return;
+    }
     const onData = makeChannel<ArrayBuffer>((buf) => {
       if (gen === this.#generation) this.#receive(new Uint8Array(buf));
     });
@@ -122,6 +174,10 @@ export class Connection {
   }
 
   #receive(data: Uint8Array): void {
+    if (data.length === 0 && this.#id) {
+      pauseMarkers.get(this.#id)?.();
+      return;
+    }
     this.#sink(data, () => {
       this.#ackDue += data.length;
       if (this.#ackDue >= ACK_FLUSH) this.#flushAck();
@@ -230,7 +286,7 @@ export class Connection {
 
   /** Queue keystrokes; one `shell_write` per animation frame. */
   write(bytes: Uint8Array): void {
-    if (this.phase !== 'connected' || !this.#id) return;
+    if (this.phase !== 'connected' || !this.#id || pausedTerminals.has(this.#id)) return;
     this.#input.push(bytes);
     if (this.#raf) return;
     this.#raf = requestAnimationFrame(() => {
@@ -281,7 +337,7 @@ export class Connection {
     this.log.dispose();
     clearTimeout(this.#resizeTimer);
     if (this.#raf) cancelAnimationFrame(this.#raf);
-    if (this.#id) void api.sessionClose(this.#id);
+    if (this.#id && !releasedTabs.delete(this.#tab.id)) void api.sessionClose(this.#id);
     this.#id = null;
   }
 }

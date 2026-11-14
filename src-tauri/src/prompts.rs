@@ -7,7 +7,6 @@ use std::time::Duration;
 
 use ibc_shell_ssh::{ConnectStep, HostKeyDecision, HostKeyInfo, KbdInteractiveRequest, Prompter};
 use secrecy::SecretString;
-use tauri::ipc::Channel;
 use tokio::sync::oneshot;
 use uuid::Uuid;
 
@@ -124,7 +123,7 @@ pub struct EventPrompter {
     /// Owner id (session / sftp uuid) for cancellation.
     pub owner: Uuid,
     /// Event channel.
-    pub events: Channel<SessionEvent>,
+    pub(crate) events: crate::session_output::Relay<SessionEvent>,
     /// Shared registry.
     pub pending: Arc<PendingPrompts>,
 }

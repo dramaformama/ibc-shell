@@ -1,9 +1,11 @@
 <script lang="ts">
+  import { canOpenHostWindow, detachGroup, openHostWindow } from './host-window';
   import { ContextMenu } from 'bits-ui';
   import { ChevronRight } from '@lucide/svelte';
   import Flag from '$lib/flags/Flag.svelte';
   import * as m from '$lib/paraglide/messages.js';
   import { connectAnother, connectFolder, connectHost, hostsInFolder } from '$lib/stores/actions';
+  import { sessions } from '$lib/stores/sessions.svelte';
   import { settings } from '$lib/stores/settings.svelte';
   import { tree } from '$lib/stores/tree.svelte';
   import { ui } from '$lib/stores/ui.svelte';
@@ -55,6 +57,16 @@
 {:else}
   {#if only?.kind === 'host'}
     {@render item(m.menu_connect(), () => connectHost(only.id))}
+    {#if canOpenHostWindow}
+      {@render item(m.menu_open_host_window(), () => {
+        const current =
+          sessions.groups.find(
+            (g) => g.current.hostId === only.id && g.key === sessions.activeGroup
+          ) ?? sessions.groups.find((g) => g.current.hostId === only.id);
+        if (current) void detachGroup(current.key);
+        else void openHostWindow(only.id);
+      })}
+    {/if}
     {@render item(m.menu_connect_another(), () => connectAnother(only.id))}
     {@render item(m.menu_sftp(), () => connectHost(only.id, 'sftp'))}
     {@render item(m.menu_status(), () => connectHost(only.id, 'status'))}

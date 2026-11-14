@@ -61,7 +61,7 @@ pub(crate) fn is_eof(e: &CErr) -> bool {
     matches!(e, CErr::Status(s) if s.status_code == StatusCode::Eof)
 }
 
-fn kind_of(mode: u32) -> EntryKind {
+pub(crate) fn kind_of(mode: u32) -> EntryKind {
     match mode & 0o170_000 {
         0o040_000 => EntryKind::Dir,
         0o100_000 => EntryKind::File,

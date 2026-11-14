@@ -3,6 +3,8 @@ export const isApple =
   typeof navigator !== 'undefined' &&
   /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 
+export const isMac = isApple && navigator.maxTouchPoints < 2;
+
 const PHYSICAL: Record<string, string> = { Comma: ',', Period: '.', Slash: '/', BracketLeft: '[' };
 
 /**

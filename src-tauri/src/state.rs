@@ -6,11 +6,11 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 
+use crate::session_output::Relay;
 use ibc_shell_sftp::Sftp;
 use ibc_shell_ssh::Connection;
 use ibc_shell_store::{HostId, Store};
 use ibc_shell_vault::Vault;
-use tauri::ipc::Channel;
 use tokio::sync::{mpsc, Notify};
 
 use crate::api::dto::{QuickConnect, SessionEvent, SessionId, SftpId};
@@ -50,6 +50,23 @@ impl<K: Eq + Hash + Copy, V: Clone> Registry<K, V> {
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
             .remove(k)
+    }
+    /// Removes a single entry if it still belongs to the caller.
+    pub fn remove_if(&self, key: &K, matches: impl FnOnce(&V) -> bool) -> Option<V> {
+        let mut entries = self.0.lock().unwrap_or_else(PoisonError::into_inner);
+        if entries.get(key).is_some_and(matches) {
+            entries.remove(key)
+        } else {
+            None
+        }
+    }
+    /// Removes entries belonging to a closed window.
+    pub fn take_where(&self, mut matches: impl FnMut(&V) -> bool) -> Vec<(K, V)> {
+        self.0
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .extract_if(|_, value| matches(value))
+            .collect()
     }
     /// Number of entries.
     pub fn len(&self) -> usize {
@@ -173,9 +190,9 @@ pub struct SessionSpec {
     /// Target.
     pub target: SessionTarget,
     /// Terminal output channel.
-    pub on_data: Channel<RawBytes>,
+    pub(crate) on_data: Relay<RawBytes>,
     /// Event channel.
-    pub on_event: Channel<SessionEvent>,
+    pub(crate) on_event: Relay<SessionEvent>,
 }
 
 /// Live parts of a session, replaced on reconnect.
@@ -191,6 +208,8 @@ pub struct Live {
 
 /// One terminal session.
 pub struct SessionHandle {
+    /// Webview that owns the session channels.
+    pub owner: Mutex<String>,
     /// Id.
     pub id: SessionId,
     /// Parameters.
@@ -220,6 +239,10 @@ impl SessionHandle {
 
 /// Open SFTP session: keeps its connection alive.
 pub struct SftpHandle {
+    /// Host associated with this subsystem.
+    pub host: Option<HostId>,
+    /// Webview that opened the subsystem.
+    pub owner: Mutex<String>,
     /// SFTP client.
     pub sftp: Arc<Sftp>,
     /// Underlying connection.

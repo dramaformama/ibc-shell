@@ -1,14 +1,19 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Main window: event listening (drag-drop, vault://locked) and window dragging by the toolbar (overlay title bar). App commands need no permission; the file dialog is opened by the backend, never by JS.",
+  "description": "Main window: event listening (drag-drop, vault://locked) and window controls and dragging by the toolbar. App commands need no permission; the file dialog is opened by the backend, never by JS.",
   "windows": [
-    "main"
+    "main",
+    "host-*"
   ],
   "permissions": [
     "core:event:allow-listen",
     "core:event:allow-unlisten",
     "core:window:allow-start-dragging",
-    "core:window:allow-internal-toggle-maximize"
+    "core:window:allow-internal-toggle-maximize",
+    "core:window:allow-is-maximized",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-minimize",
+    "core:window:allow-close"
   ]
 }

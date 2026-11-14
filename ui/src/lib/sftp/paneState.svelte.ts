@@ -56,22 +56,23 @@ export class Pane {
   ops = $derived(fsOps(this.endpoint));
 
   /** Switches endpoint and lands in its home directory. */
-  async attach(ep: Endpoint): Promise<void> {
+  async attach(ep: Endpoint, path?: string | null): Promise<void> {
     this.endpoint = ep;
     this.back = [];
     this.forward = [];
     const home = await fsOps(ep).home();
+    if (path && (await this.load(path, false))) return;
     await this.load(home.status === 'ok' ? home.data : '/', false);
   }
 
-  async load(path: string, push = true): Promise<boolean> {
+  async load(path: string, push = true, showError = true): Promise<boolean> {
     const token = ++this.#token;
     this.loading = true;
     const r = await this.ops.list(path);
     if (token !== this.#token) return false;
     this.loading = false;
     if (r.status === 'error') {
-      this.error = r.error;
+      if (showError) this.error = r.error;
       return false;
     }
     this.error = null;
@@ -108,11 +109,6 @@ export class Pane {
   }
 
   pathOf = (name: string): string => joinPath(this.path, name);
-
-  /** Folders navigate; files are left to the caller (download/upload). */
-  async open(e: Entry): Promise<void> {
-    if (e.kind === 'dir' || (e.kind === 'symlink' && !e.size)) await this.load(this.pathOf(e.name));
-  }
 
   click(name: string, mods: { shift?: boolean; meta?: boolean }): void {
     this.selection = select(this.selection, this.order, name, mods);

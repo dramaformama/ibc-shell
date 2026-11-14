@@ -133,6 +133,21 @@ const BYTES_PER_TICK = 6_250_000; // 25 MB/s at 4 Hz
 
 const endpointFs = (e: Endpoint): MemFs | null => (e.kind === 'local' ? localFs : fsOf(e.sftp_id));
 
+export const fileOpen: Commands['fileOpen'] = async (endpoint, path) => {
+  await delay(200);
+  const fs = endpointFs(endpoint);
+  const entry = fs?.get(path);
+  const file = entry?.kind === 'symlink' && entry.link_target ? fs?.get(entry.link_target) : entry;
+  if (!file) return notFound();
+  if (
+    file.kind !== 'file' ||
+    !/\.(txt|md|conf|log|pdf|jpg|png)$/i.test(entry?.link_target ?? path) ||
+    (endpoint.kind === 'remote' && file.size > 256 * 1024 * 1024)
+  )
+    return err({ code: 'Unsupported' });
+  return ok(null);
+};
+
 function tick(t: Transfer): void {
   if (t.state !== 'running') return;
   t.done = Math.min(t.total, t.done + BYTES_PER_TICK);

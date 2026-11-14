@@ -13,6 +13,7 @@ pub mod connect;
 #[cfg(desktop)]
 pub mod local_shell;
 pub mod prompts;
+mod session_output;
 pub mod session_task;
 pub mod state;
 pub mod transfers;
@@ -57,7 +58,7 @@ pub fn run() {
     let typed = specta.invoke_handler();
     let raw: Box<dyn Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync> =
         Box::new(tauri::generate_handler![commands::session::shell_write]);
-    let result = tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .invoke_handler(move |invoke| {
@@ -75,19 +76,37 @@ pub fn run() {
                 typed(invoke)
             }
         })
+        .on_window_event(|window, event| {
+            if matches!(event, tauri::WindowEvent::Destroyed) {
+                window::cleanup(window);
+            }
+        })
         .setup(move |app| {
             specta.mount_events(app);
             let st = init_state(app.handle())?;
             autolock::apply_from_store(&st.store, &st.vault);
             autolock::spawn_sweeper(app.handle().clone(), st.vault.clone());
             app.manage(st);
+            app.manage(commands::host_window::Handoffs::default());
+            #[cfg(desktop)]
+            app.manage(commands::document::OpenDocuments::default());
             window::create_main(app)?;
             Ok(())
         })
-        .run(tauri::generate_context!());
-    if let Err(err) = result {
-        eprintln!("ibc-shell failed to start: {err}");
-        std::process::exit(1);
+        .build(tauri::generate_context!());
+    match app {
+        Ok(app) => app.run(|app, event| {
+            if matches!(event, tauri::RunEvent::Exit) {
+                #[cfg(desktop)]
+                app.state::<commands::document::OpenDocuments>().clear();
+                #[cfg(not(desktop))]
+                let _ = app;
+            }
+        }),
+        Err(err) => {
+            eprintln!("ibc-shell failed to start: {err}");
+            std::process::exit(1);
+        }
     }
 }
 

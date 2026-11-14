@@ -129,6 +129,17 @@ pub enum ApiError {
 `AuthMethod::{Password, Key{pem, passphrase, identity_label}, Agent, KeyboardInteractive}` (redacted Debug).
 `SshError::{HostKeyChanged, AuthFailed{methods_left}, Network, Timeout, Cancelled, Negotiation, InvalidChain, KnownHosts, Protocol}`.
 
+## Commands — host windows (ADR-019)
+| command | args | returns |
+|---|---|---|
+| `host_window_open` | `host_id: HostId, view: HostWindowView, transfer: HostWindowTransfer \| null` (desktop, unlocked vault, main window) | `string` (window label) |
+
+| `host_window_pause` | `id: SessionId, pause: bool` (owner only) | `null` |
+| `host_window_take` | `on_data: Channel<ArrayBuffer>, on_event: Channel<SessionEvent>` (host window) | `HostWindowTransfer \| null` |
+| `host_window_transferred` | `label: string, cancel: bool` (source window) | `boolean` |
+
+`HostWindowTransfer` carries the existing session IDs, terminal display snapshot and pane paths in memory. The source owns the sessions until the destination takes them.
+
 ## Commands — SFTP
 | command | args | returns |
 |---|---|---|
@@ -141,6 +152,7 @@ pub enum ApiError {
 | `sftp_remove` | `sftp_id, path, recursive: bool` | `null` |
 | `sftp_chmod` | `sftp_id, path, mode: u32` | `null` |
 | `sftp_realpath` | `sftp_id, path` (`"."` = home) | `string` |
+| `file_open` | `endpoint: Endpoint, path: string` (desktop, unlocked vault, ADR-018) | `null` |
 | `local_home` | — (registers home as allowed root; desktop only) | `string` |
 | `local_list` | `path` | `DirListing` |
 | `local_mkdir` | `path` | `null` |
@@ -152,14 +164,16 @@ pub enum ApiError {
 | `transfer_cancel` | `id: TransferId` | `null` |
 | `transfer_retry` | `id: TransferId` | `null` |
 | `transfer_conflict_reply` | `pending_id: ConflictId, choice: ConflictChoice, apply_to_all: bool` | `null` |
-| `transfers_subscribe` | `on_event: Channel<TransferEvent>` (replaces previous subscriber) | `null` |
+| `transfers_subscribe` | `on_event: Channel<TransferEvent>` (replaces previous subscriber for the calling window) | `null` |
 
 `Endpoint = {kind:"local"} | {kind:"remote", sftp_id}`. `ConflictPolicy = "Ask"|"Overwrite"|"Skip"|"Rename"|"ResumeIfSmaller"`, `ConflictChoice = "Overwrite"|"Skip"|"Rename"|"Resume"`.
 `TransferEvent` (tag `type`): `Queued{id, src_path, dst_path}`, `Started{id, total_bytes, files}`, `Progress{id, bytes_done, bytes_per_s}` (≤ 4 Hz),
 `Conflict{id, pending_id, info: ConflictInfo}`, `FileDone{id, path, skipped}`, `Done{id}`, `Failed{id, message}`, `Paused{id}`, `Cancelled{id}`.
 
+`file_open` opens a regular document or media file via the default OS application. It checks local roots after resolving links, or reads a temporary copy from an active SFTP session (≤ 256 MiB). Unsupported formats and oversized remote files return `Unsupported`.
+
 ### crates/sftp public API (`crates/sftp/src/lib.rs`)
-`Sftp::open(&Connection)`, `list/stat/mkdir/rename/remove(recursive)/chmod/realpath/close` (POSIX paths);
+`Sftp::open(&Connection)`, `list/stat/mkdir/rename/remove(recursive)/chmod/realpath/close`, `copy_document(path, dst, max_bytes)` (POSIX remote paths);
 `local::{home, list, mkdir, rename, remove}`; `sanitize::{sanitize_name, safe_join}`;
 `TransferEngine::new(TransferConfig{parallel_files: 3, pipeline_depth: 64, chunk_size: 32 KiB})` with `subscribe() -> mpsc::UnboundedReceiver<TransferEvent>`, `enqueue(TransferJob) -> Vec<TransferId>`, `pause/resume/cancel/retry(id)`, `conflict_reply(ConflictId, ConflictChoice, apply_to_all)`.
 `TransferJob { src: Endpoint::{Local, Remote(Arc<Sftp>)}, dst, items, dst_dir, conflict }` (engine-side Endpoint, mapped by the bridge).

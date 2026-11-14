@@ -5,7 +5,7 @@
  * `?vault=os` starts as a keychain vault (opens by itself).
  */
 import type { ApiEvents, Commands, EventPayloads, VaultMode, VaultState } from '../types';
-import { delay, err, ok } from './state';
+import { db, delay, err, ok } from './state';
 
 const MOCK_PASSWORD = 'ibc-shell';
 
@@ -134,3 +134,18 @@ export const appNotify: Commands['appNotify'] = async (title, body) => {
   (globalThis as { __ibcNotices?: string[] }).__ibcNotices?.push(`${title}: ${body}`);
   return ok(null);
 };
+
+export const hostWindowOpen: Commands['hostWindowOpen'] = async (hostId, view) => {
+  const url = new URL(location.href);
+  url.searchParams.set('vault', 'os');
+  const host = db.hosts.find((h) => h.id === hostId);
+  if (!host) return err({ code: 'NotFound' });
+  url.searchParams.set('host', hostId);
+  url.searchParams.set('demoHost', host.label);
+  url.searchParams.set('view', view);
+  return window.open(url, '_blank') ? ok('host-demo') : err({ code: 'Unsupported' });
+};
+
+export const hostWindowTake: Commands['hostWindowTake'] = async () => ok(null);
+export const hostWindowTransferred: Commands['hostWindowTransferred'] = async () => ok(true);
+export const hostWindowPause: Commands['hostWindowPause'] = async () => ok(null);

@@ -8,6 +8,11 @@ import * as __TAURI_EVENT from "@tauri-apps/api/event";
 
 /** Commands */
 export const commands = {
+	/**  Creates a guarded window with an independent connection. */
+	hostWindowOpen: (hostId: HostId, view: HostWindowView, transfer: HostWindowTransfer | null) => typedError<string, ApiError>(__TAURI_INVOKE("host_window_open", { hostId, view, transfer })),
+	hostWindowTake: (onData: Channel<ArrayBuffer>, onEvent: Channel<SessionEvent>) => typedError<HostWindowTransfer | null, ApiError>(__TAURI_INVOKE("host_window_take", { onData, onEvent })),
+	hostWindowPause: (id: SessionId, pause: boolean) => typedError<null, ApiError>(__TAURI_INVOKE("host_window_pause", { id, pause })),
+	hostWindowTransferred: (label: string, cancel: boolean) => typedError<boolean, ApiError>(__TAURI_INVOKE("host_window_transferred", { label, cancel })),
 	/**  Whole tree (flat, sorted). */
 	treeList: () => typedError<Tree, ApiError>(__TAURI_INVOKE("tree_list")),
 	/**  Creates a folder (last among siblings). */
@@ -135,6 +140,8 @@ export const commands = {
 	sftpClose: (sftpId: SftpId) => typedError<null, ApiError>(__TAURI_INVOKE("sftp_close", { sftpId })),
 	/**  Lists a remote directory. */
 	sftpList: (sftpId: SftpId, path: string) => typedError<DirListing, ApiError>(__TAURI_INVOKE("sftp_list", { sftpId, path })),
+	/**  Opens a regular local document or a temporary remote copy in the default app. */
+	fileOpen: (endpoint: Endpoint, path: string) => typedError<null, ApiError>(__TAURI_INVOKE("file_open", { endpoint, path })),
 	/**  `lstat`. */
 	sftpStat: (sftpId: SftpId, path: string) => typedError<Entry, ApiError>(__TAURI_INVOKE("sftp_stat", { sftpId, path })),
 	/**  `mkdir`. */
@@ -969,6 +976,21 @@ export type HostStats = {
 	 */
 	full: boolean,
 };
+
+export type HostWindowTransfer = {
+	terminal: SessionId | null,
+	files: SftpId | null,
+	screen: string | null,
+	cwd: string | null,
+	left: string | null,
+	right: string | null,
+	panel: boolean,
+	active_transfers: string,
+	panel_tab: string,
+};
+
+/**  Initial view of a saved host in a new window. */
+export type HostWindowView = "terminal" | "status" | "sftp";
 
 /**  Identity as seen by the UI: no secrets, no secret ids. */
 export type IdentityDto = {

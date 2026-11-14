@@ -9,6 +9,7 @@ export interface TermHandle {
   send(text: string): void;
   phase(): Phase;
   focus(): void;
+  snapshot(): Promise<string>;
 }
 
 const live = new Map<string, TermHandle>();

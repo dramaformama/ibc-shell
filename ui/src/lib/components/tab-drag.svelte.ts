@@ -32,36 +32,45 @@ export class TabDrag {
   #slots: Slot[] = [];
   #from = -1;
   #x0 = 0;
+  #y0 = 0;
+  #pointer: number | null = null;
+  #capture: HTMLElement | null = null;
   #pending: string | null = null;
   #swallow = false;
-  #items: () => HTMLElement[];
-  #commit: (key: string, to: number) => void;
-
-  constructor(items: () => HTMLElement[], commit: (key: string, to: number) => void) {
-    this.#items = items;
-    this.#commit = commit;
-  }
+  constructor(
+    private items: () => HTMLElement[],
+    private commit: (key: string, to: number) => void,
+    private bounds: () => DOMRect,
+    private detach: (key: string) => boolean
+  ) {}
 
   down(e: PointerEvent, key: string): void {
     this.#swallow = false;
-    if (e.button !== 0 || e.pointerType === 'touch') return;
-    this.#slots = this.#items().map((el) => {
+    if (this.#pointer !== null || e.button !== 0 || e.pointerType === 'touch') return;
+    this.#slots = this.items().map((el) => {
       const r = el.getBoundingClientRect();
       return { key: el.dataset.tabKey ?? '', left: r.left, width: r.width };
     });
     this.#from = this.#slots.findIndex((s) => s.key === key);
-    if (this.#from === -1 || this.#slots.length < 2) return;
+    if (this.#from === -1) return;
     this.#x0 = e.clientX;
+    this.#y0 = e.clientY;
+    this.#pointer = e.pointerId;
+    this.#capture = e.currentTarget instanceof HTMLElement ? e.currentTarget : null;
     this.#pending = key;
     window.addEventListener('pointermove', this.#move);
     window.addEventListener('pointerup', this.#up);
     window.addEventListener('pointercancel', this.#cancel);
+    window.addEventListener('lostpointercapture', this.#cancel);
+    window.addEventListener('keydown', this.#key);
   }
 
   #move = (e: PointerEvent): void => {
+    if (e.pointerId !== this.#pointer) return;
     const raw = e.clientX - this.#x0;
     if (this.key === null) {
-      if (Math.abs(raw) < THRESHOLD) return;
+      if (Math.hypot(raw, e.clientY - this.#y0) < THRESHOLD) return;
+      this.#capture?.setPointerCapture(e.pointerId);
       this.key = this.#pending;
     }
     const me = this.#slots[this.#from]!;
@@ -80,7 +89,14 @@ export class TabDrag {
     window.removeEventListener('pointermove', this.#move);
     window.removeEventListener('pointerup', this.#up);
     window.removeEventListener('pointercancel', this.#cancel);
+    window.removeEventListener('lostpointercapture', this.#cancel);
+    window.removeEventListener('keydown', this.#key);
+    if (this.#pointer !== null && this.#capture?.hasPointerCapture(this.#pointer)) {
+      this.#capture.releasePointerCapture(this.#pointer);
+    }
     this.#pending = null;
+    this.#pointer = null;
+    this.#capture = null;
   }
 
   #reset(): void {
@@ -90,18 +106,34 @@ export class TabDrag {
     requestAnimationFrame(() => requestAnimationFrame(() => (this.settling = false)));
   }
 
-  #up = (): void => {
+  #up = (e: PointerEvent): void => {
+    if (e.pointerId !== this.#pointer) return;
     const key = this.key;
     this.#stop();
     if (key === null) return;
     this.#swallow = true;
-    this.#commit(key, this.#to);
+    const r = this.bounds();
+    const outside =
+      e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
+    if (!outside || !this.detach(key)) this.commit(key, this.#to);
     this.#reset();
   };
 
-  #cancel = (): void => {
+  #cancel = (e: PointerEvent): void => {
+    if (e.pointerId === this.#pointer) this.#abort();
+  };
+
+  #key = (e: KeyboardEvent): void => {
+    if (e.key !== 'Escape') return;
+    e.preventDefault();
+    this.#abort();
+  };
+
+  #abort = (): void => {
     this.#stop();
-    if (this.key !== null) this.#reset();
+    if (this.key === null) return;
+    this.#swallow = true;
+    this.#reset();
   };
 
   /** CSS transform for a tab while dragging. */

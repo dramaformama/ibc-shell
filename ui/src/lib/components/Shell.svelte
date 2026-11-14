@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { isTauri } from '@tauri-apps/api/core';
   import { onMount, type Snippet } from 'svelte';
   import { api } from '$lib/api';
   import { closeServer, connectAnother } from '$lib/stores/actions';
@@ -8,8 +9,9 @@
   import { settings } from '$lib/stores/settings.svelte';
   import { ui } from '$lib/stores/ui.svelte';
   import { vault } from '$lib/stores/vault.svelte';
-  import { isApple, shortcutKey } from '$lib/util/platform';
+  import { isApple, isMac, shortcutKey } from '$lib/util/platform';
   import CloseServerDialog from './CloseServerDialog.svelte';
+  import { isHostWindow } from './host-window';
   import HotkeysDialog from '$lib/help/HotkeysDialog.svelte';
   import CommandPalette from './CommandPalette.svelte';
   import ConfirmDelete from './ConfirmDelete.svelte';
@@ -25,15 +27,16 @@
 
   $effect(() => () => reachability.clear());
 
-  let mac = $state(false);
+  const native = isTauri();
+  const mac = native && isMac;
+  const windowControls = native && !isApple && !/Android/.test(navigator.userAgent);
   let narrow = $state(false);
 
   onMount(() => {
     void api.appInfo().then((r) => {
       if (r.status !== 'ok') return;
-      mac = r.data.platform === 'macos';
       // The local terminal starts with the app and keeps running (desktop only).
-      if (['macos', 'windows', 'linux'].includes(r.data.platform))
+      if (!isHostWindow && ['macos', 'windows', 'linux'].includes(r.data.platform))
         sessions.ensureLocal(m.local_terminal());
     });
     const mq = matchMedia('(max-width: 720px)');
@@ -81,7 +84,7 @@
     }
     if (!(isApple ? e.metaKey : e.ctrlKey) || e.altKey) return;
     const k = shortcutKey(e);
-    if (e.shiftKey && k === 't') {
+    if (!isHostWindow && e.shiftKey && k === 't') {
       const id = sessions.active?.hostId;
       if (id) {
         e.preventDefault();
@@ -90,6 +93,7 @@
       return;
     }
     if (e.shiftKey && k !== 'tab') return;
+    if (isHostWindow && ['b', 'k', 't', 'w'].includes(k)) return;
     if (k === 'k') ui.paletteOpen = !ui.paletteOpen;
     else if (k === 'b') ui.sidebarOpen = !ui.sidebarOpen;
     else if (k === 'l') {
@@ -139,36 +143,42 @@
 
 <svelte:window onkeydown={onKeyDown} oncontextmenu={hideNativeMenu} />
 
-<div class="shell" class:narrow style:--sw="{ui.sidebarOpen && !narrow ? ui.sidebarWidth : 0}px">
-  <div
-    class="sidebar"
-    class:open={ui.sidebarOpen}
-    inert={!ui.sidebarOpen}
-    style:width="{ui.sidebarWidth}px"
-  >
-    <Sidebar {mac} />
-    {#if !narrow}
-      <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
-      <div
-        class="grip"
-        role="separator"
-        aria-orientation="vertical"
-        aria-label={m.sidebar_resize()}
-        aria-valuenow={ui.sidebarWidth}
-        aria-valuemin="200"
-        aria-valuemax="420"
-        tabindex="0"
-        onpointerdown={startResize}
-        onkeydown={resizeKey}
-      ></div>
+<div
+  class="shell"
+  class:narrow={narrow || isHostWindow}
+  style:--sw="{!isHostWindow && ui.sidebarOpen && !narrow ? ui.sidebarWidth : 0}px"
+>
+  {#if !isHostWindow}
+    <div
+      class="sidebar"
+      class:open={ui.sidebarOpen}
+      inert={!ui.sidebarOpen}
+      style:width="{ui.sidebarWidth}px"
+    >
+      <Sidebar {mac} />
+      {#if !narrow}
+        <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
+        <div
+          class="grip"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label={m.sidebar_resize()}
+          aria-valuenow={ui.sidebarWidth}
+          aria-valuemin="200"
+          aria-valuemax="420"
+          tabindex="0"
+          onpointerdown={startResize}
+          onkeydown={resizeKey}
+        ></div>
+      {/if}
+    </div>
+    {#if narrow && ui.sidebarOpen}
+      <button class="scrim" aria-label={m.action_close()} onclick={() => (ui.sidebarOpen = false)}
+      ></button>
     {/if}
-  </div>
-  {#if narrow && ui.sidebarOpen}
-    <button class="scrim" aria-label={m.action_close()} onclick={() => (ui.sidebarOpen = false)}
-    ></button>
   {/if}
   <div class="main">
-    <TabBar {mac} />
+    <TabBar mac={mac && (isHostWindow || !ui.sidebarOpen || narrow)} {windowControls} />
     <main class="content">{@render children()}</main>
   </div>
 </div>

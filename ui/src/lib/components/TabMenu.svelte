@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { canOpenHostWindow, detachGroup } from './host-window';
   import { ContextMenu } from 'bits-ui';
   import type { Snippet } from 'svelte';
   import * as m from '$lib/paraglide/messages.js';
@@ -33,6 +34,9 @@
         {@render item(m.tab_terminal(), () => show('terminal'))}
         {@render item(m.tab_files(), () => show('sftp'))}
         <div class="menu-sep"></div>
+        {#if canOpenHostWindow}
+          {@render item(m.menu_open_host_window(), () => void detachGroup(group.key))}
+        {/if}
         {@render item(m.menu_connect_another(), () => connectAnother(id))}
         {@render item(m.menu_edit(), () => ui.openHostEditor(id))}
         <div class="menu-sep"></div>

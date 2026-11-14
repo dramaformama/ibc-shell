@@ -1,8 +1,13 @@
 <script lang="ts">
+  import { isTauri } from '@tauri-apps/api/core';
+  import { isApple } from '$lib/util/platform';
+  import WindowControls from './WindowControls.svelte';
   import Logo from './Logo.svelte';
   import { Eye, EyeOff, KeyRound, Loader } from '@lucide/svelte';
   import * as m from '$lib/paraglide/messages.js';
   import { vault } from '$lib/stores/vault.svelte';
+
+  const windowControls = isTauri() && !isApple && !/Android/.test(navigator.userAgent);
 
   let password = $state('');
   let reveal = $state(false);
@@ -27,7 +32,9 @@
 </script>
 
 <main class="screen">
-  <div class="drag" data-tauri-drag-region></div>
+  <div class="drag" data-tauri-drag-region>
+    {#if windowControls}<WindowControls />{/if}
+  </div>
   <form class="panel" onsubmit={submit} aria-labelledby="vault-title">
     <div class="mark" aria-hidden="true">
       <Logo size={56} />
@@ -79,6 +86,10 @@
     position: fixed;
     inset: 0 0 auto;
     height: var(--toolbar-h);
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding-inline: 8px;
   }
   .screen {
     height: 100%;

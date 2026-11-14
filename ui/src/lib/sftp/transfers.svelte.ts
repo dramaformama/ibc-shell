@@ -53,6 +53,23 @@ class TransfersStore {
     return this.items.filter((t) => ['done', 'failed', 'cancelled'].includes(t.state)).length;
   }
 
+  snapshot(): string {
+    return JSON.stringify({
+      items: this.items.filter((t) => !['done', 'failed', 'cancelled'].includes(t.state)),
+      conflicts: this.conflicts
+    });
+  }
+
+  restore(snapshot: string): void {
+    const { items, conflicts } = JSON.parse(snapshot) as {
+      items: TransferItem[];
+      conflicts: PendingConflict[];
+    };
+    this.items = items;
+    this.conflicts = conflicts;
+    this.open = items.length > 0;
+  }
+
   async start(): Promise<void> {
     if (this.#started) return;
     this.#started = true;
