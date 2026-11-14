@@ -3,16 +3,81 @@
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 
+use futures_util::stream::{self, StreamExt, TryStreamExt};
 use russh_sftp::protocol::OpenFlags;
 use tokio::io::BufWriter;
 use tokio_util::sync::CancellationToken;
 
-use crate::copy::{copy, Plan};
+use crate::copy::{copy, read_range, Plan};
 use crate::remote::{kind_of, map_err};
 use crate::side::{Sink, Source};
 use crate::{EntryKind, Sftp, SftpError};
 
 impl Sftp {
+    /// Reads a bounded segment of a regular file into memory.
+    pub async fn read_document(
+        &self,
+        path: &str,
+        limit: u32,
+        tail: bool,
+    ) -> Result<(Vec<u8>, bool), SftpError> {
+        let (handle, size) = self.open_document(path).await?;
+        let len = u32::try_from(size).unwrap_or(limit).min(limit);
+        let start = if tail { size - u64::from(len) } else { 0 };
+        let chunk = self.rw_limits().0.unwrap_or(32_768).clamp(1, 32_768);
+        let offsets = (0..len).step_by(chunk as usize);
+        let result = stream::iter(offsets)
+            .map(|offset| {
+                let count = (len - offset).min(chunk);
+                let handle = &handle;
+                async move {
+                    let bytes = read_range(self, handle, start + u64::from(offset), count).await?;
+                    if bytes.len() != count as usize {
+                        return Err(SftpError::Protocol("source changed during preview".into()));
+                    }
+                    Ok(bytes)
+                }
+            })
+            .buffered(16)
+            .try_fold(
+                Vec::with_capacity(len as usize),
+                |mut output, bytes| async move {
+                    output.extend_from_slice(&bytes);
+                    Ok(output)
+                },
+            )
+            .await;
+        let _ = self.raw().close(handle).await;
+        result.map(|bytes| (bytes, size > u64::from(len)))
+    }
+
+    async fn open_document(&self, path: &str) -> Result<(String, u64), SftpError> {
+        let path = self.realpath(path).await?;
+        if self.stat(&path).await?.kind != EntryKind::File {
+            return Err(SftpError::Unimplemented);
+        }
+
+        let handle = self.open_file(&path, OpenFlags::READ).await?;
+        let size = self
+            .raw()
+            .fstat(handle.clone())
+            .await
+            .map_err(|err| map_err(&err))
+            .and_then(|a| {
+                a.attrs
+                    .size
+                    .filter(|_| kind_of(a.attrs.permissions.unwrap_or(0)) == EntryKind::File)
+                    .ok_or(SftpError::Unimplemented)
+            });
+        match size {
+            Ok(size) => Ok((handle, size)),
+            Err(err) => {
+                let _ = self.raw().close(handle).await;
+                Err(err)
+            }
+        }
+    }
+
     /// Copies one regular file into a caller-owned local file, up to `max_bytes`.
     /// Returns Unsupported for other entry types or an unknown or oversized length.
     pub async fn copy_document(
@@ -21,30 +86,12 @@ impl Sftp {
         dst: std::fs::File,
         max_bytes: u64,
     ) -> Result<(), SftpError> {
-        let path = self.realpath(path).await?;
-        if self.stat(&path).await?.kind != EntryKind::File {
+        let (handle, size) = self.open_document(path).await?;
+        let source = Source::Remote(self.clone(), handle);
+        if size > max_bytes {
+            source.close().await;
             return Err(SftpError::Unimplemented);
         }
-
-        let handle = self.open_file(&path, OpenFlags::READ).await?;
-        let attrs = self.raw().fstat(handle.clone()).await;
-        let source = Source::Remote(self.clone(), handle);
-        let size = attrs.map_err(|err| map_err(&err)).and_then(|a| {
-            a.attrs
-                .size
-                .filter(|&size| {
-                    size <= max_bytes
-                        && kind_of(a.attrs.permissions.unwrap_or(0)) == EntryKind::File
-                })
-                .ok_or(SftpError::Unimplemented)
-        });
-        let size = match size {
-            Ok(size) => size,
-            Err(err) => {
-                source.close().await;
-                return Err(err);
-            }
-        };
         let sink = Sink::Local(BufWriter::new(tokio::fs::File::from_std(dst)));
         let chunk = self.rw_limits().0.unwrap_or(32_768).clamp(1, 32_768);
         copy(
@@ -114,6 +161,18 @@ mod tests {
             sftp.copy_document(".", file(), 8).await,
             Err(SftpError::Unimplemented)
         ));
+        assert_eq!(
+            sftp.read_document("link.txt", 39_000, false).await.unwrap(),
+            (body.as_bytes()[..39_000].to_vec(), true)
+        );
+        assert_eq!(
+            sftp.read_document(original, 8, true).await.unwrap(),
+            (body.as_bytes()[body.len() - 8..].to_vec(), true)
+        );
+        assert_eq!(
+            sftp.read_document("empty.txt", 8, true).await.unwrap(),
+            (Vec::new(), false)
+        );
         sftp.close().await;
     }
 }

@@ -101,6 +101,7 @@ pub fn builder() -> Builder<tauri::Wry> {
         sftp::sftp_close,
         sftp::sftp_list,
         document::file_open,
+        document::file_preview,
         sftp::sftp_stat,
         sftp::sftp_mkdir,
         sftp::sftp_rename,

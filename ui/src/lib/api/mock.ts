@@ -99,6 +99,7 @@ export const mockApi: Api = {
   hostWindowPause: vault.hostWindowPause,
   sftpList: sftp.sftpList,
   fileOpen: sftp.fileOpen,
+  filePreview: sftp.filePreview,
   sftpStat: sftp.sftpStat,
   sftpMkdir: sftp.sftpMkdir,
   sftpRename: sftp.sftpRename,

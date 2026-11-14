@@ -125,7 +125,7 @@ export function remoteSeed(): MemFs {
   fs.add('/etc/hosts', file(221));
   fs.add('/etc/nginx/nginx.conf', file(2_412));
   fs.add('/var/log/syslog', file(5_242_880, 0o100640));
-  fs.add('/var/log/auth.log', file(1_048_576, 0o100640));
+  fs.add('/var/log/auth.log', file(17_825_792, 0o100640));
   fs.add('/srv/www/index.html', file(14_200));
   fs.add('/srv/current', {
     kind: 'symlink',

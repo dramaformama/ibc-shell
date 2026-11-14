@@ -73,6 +73,17 @@
     if (e.key === 'ArrowDown') move(1, e.shiftKey);
     else if (e.key === 'ArrowUp') move(-1, e.shiftKey);
     else if (e.key === 'Enter' && one) act.open(one);
+    else if (
+      e.code === 'Space' &&
+      !mod &&
+      !e.altKey &&
+      !e.shiftKey &&
+      !e.repeat &&
+      one &&
+      (one.kind === 'file' || one.kind === 'symlink') &&
+      !(e.target as HTMLElement).closest('button, a')
+    )
+      act.open(one);
     else if (e.key === 'F2' && one) act.rename(one);
     else if ((e.key === 'Delete' || (e.key === 'Backspace' && mod)) && pane.selected.length)
       act.remove();
@@ -184,7 +195,7 @@
         {@const one = pane.selected.length === 1 ? pane.selected[0] : null}
         {#if one}
           <ContextMenu.Item class="menu-item" onSelect={() => act.open(one)}
-            >{m.sftp_menu_open()}</ContextMenu.Item
+            >{one.kind === 'dir' ? m.sftp_menu_open() : m.sftp_preview()}</ContextMenu.Item
           >
         {/if}
         {#if pane.selected.length && act.canTransfer}

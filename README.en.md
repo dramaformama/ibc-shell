@@ -19,6 +19,8 @@ In Files, double-click a document to open its dialog. Remote documents open in t
 
 Open a saved host in a separate window from the tab or sidebar context menu. Drag a tab outside the tab strip to detach it. Detaching an open tab preserves its connection, terminal history, and SFTP directories.
 
+**File preview.** Press Space or double-click a file to read and search its text. Jump to the end of a large log to see recent entries.
+
 ## Download
 
 Click your system and the file starts downloading. It is always the latest version.

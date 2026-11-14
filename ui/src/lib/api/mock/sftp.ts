@@ -133,6 +133,21 @@ const BYTES_PER_TICK = 6_250_000; // 25 MB/s at 4 Hz
 
 const endpointFs = (e: Endpoint): MemFs | null => (e.kind === 'local' ? localFs : fsOf(e.sftp_id));
 
+export const filePreview: Commands['filePreview'] = async (endpoint, path, tail, blocks) => {
+  await delay(200);
+  const fs = endpointFs(endpoint);
+  const entry = fs?.get(path);
+  const file = entry?.kind === 'symlink' && entry.link_target ? fs?.get(entry.link_target) : entry;
+  if (!file) return notFound();
+  if (file.kind !== 'file' || /\.(pdf|jpe?g|png|gz|zip|bin)$/i.test(entry?.link_target ?? path))
+    return err({ code: 'Unsupported' });
+  const truncated = file.size > blocks * 5 * 1024 * 1024;
+  const text = file.size
+    ? `# ${basename(path)}\n${tail && truncated ? 'Last' : 'First'} lines of the mock file.\n`
+    : '';
+  return ok({ text, truncated });
+};
+
 export const fileOpen: Commands['fileOpen'] = async (endpoint, path) => {
   await delay(200);
   const fs = endpointFs(endpoint);

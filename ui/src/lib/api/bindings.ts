@@ -142,6 +142,8 @@ export const commands = {
 	sftpList: (sftpId: SftpId, path: string) => typedError<DirListing, ApiError>(__TAURI_INVOKE("sftp_list", { sftpId, path })),
 	/**  Opens a regular local document or a temporary remote copy in the default app. */
 	fileOpen: (endpoint: Endpoint, path: string) => typedError<null, ApiError>(__TAURI_INVOKE("file_open", { endpoint, path })),
+	/**  Reads the beginning or end of a selected text file without creating a copy. */
+	filePreview: (endpoint: Endpoint, path: string, tail: boolean, blocks: number) => typedError<FilePreview, ApiError>(__TAURI_INVOKE("file_preview", { endpoint, path, tail, blocks })),
 	/**  `lstat`. */
 	sftpStat: (sftpId: SftpId, path: string) => typedError<Entry, ApiError>(__TAURI_INVOKE("sftp_stat", { sftpId, path })),
 	/**  `mkdir`. */
@@ -590,6 +592,12 @@ export type EntryKind =
 "symlink" | 
 /**  Anything else (device, socket, fifo). */
 "other";
+
+/**  Plain-text preview and whether the file exceeded the read limit. */
+export type FilePreview = {
+	text: string,
+	truncated: boolean,
+};
 
 /**  A folder row. */
 export type Folder = {

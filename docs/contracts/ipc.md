@@ -152,6 +152,7 @@ pub enum ApiError {
 | `sftp_remove` | `sftp_id, path, recursive: bool` | `null` |
 | `sftp_chmod` | `sftp_id, path, mode: u32` | `null` |
 | `sftp_realpath` | `sftp_id, path` (`"."` = home) | `string` |
+| `file_preview` | `endpoint: Endpoint, path: string, tail: bool, blocks: u8` (unlocked vault, ADR-020) | `FilePreview { text: string, truncated: bool }` |
 | `file_open` | `endpoint: Endpoint, path: string` (desktop, unlocked vault, ADR-018) | `null` |
 | `local_home` | — (registers home as allowed root; desktop only) | `string` |
 | `local_list` | `path` | `DirListing` |
@@ -172,8 +173,10 @@ pub enum ApiError {
 
 `file_open` opens a regular document or media file via the default OS application. It checks local roots after resolving links, or reads a temporary copy from an active SFTP session (≤ 256 MiB). Unsupported formats and oversized remote files return `Unsupported`.
 
+`file_preview` reads one to four 5 MiB blocks of a regular file from its beginning or end. It checks resolved local roots or the active SFTP session and returns `Unsupported` for binary data or unsupported encodings. Preview content is rendered as plain text.
+
 ### crates/sftp public API (`crates/sftp/src/lib.rs`)
-`Sftp::open(&Connection)`, `list/stat/mkdir/rename/remove(recursive)/chmod/realpath/close`, `copy_document(path, dst, max_bytes)` (POSIX remote paths);
+`Sftp::open(&Connection)`, `list/stat/mkdir/rename/remove(recursive)/chmod/realpath/close`, `copy_document(path, dst, max_bytes)`, `read_document(path, limit, tail)` (POSIX remote paths);
 `local::{home, list, mkdir, rename, remove}`; `sanitize::{sanitize_name, safe_join}`;
 `TransferEngine::new(TransferConfig{parallel_files: 3, pipeline_depth: 64, chunk_size: 32 KiB})` with `subscribe() -> mpsc::UnboundedReceiver<TransferEvent>`, `enqueue(TransferJob) -> Vec<TransferId>`, `pause/resume/cancel/retry(id)`, `conflict_reply(ConflictId, ConflictChoice, apply_to_all)`.
 `TransferJob { src: Endpoint::{Local, Remote(Arc<Sftp>)}, dst, items, dst_dir, conflict }` (engine-side Endpoint, mapped by the bridge).
