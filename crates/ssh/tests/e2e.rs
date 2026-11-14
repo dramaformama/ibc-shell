@@ -147,12 +147,13 @@ async fn stats_report_names_the_server_configuration() {
     .expect("connect");
     let h = ibc_shell_ssh::sample_stats(&c, true).await.expect("stats");
     assert!(h.cores > 0 && h.mem_total > 0, "{h:?}");
-    // The container sees its host VM's disk: a real device with a size and a kind.
+    // The container sees its host VM's disk: a real device with a size. The kind is unknown
+    // (None) on a virtual rotational disk, as on CI runners, and never a guess.
     assert!(h.disk_dev_bytes > 0, "{h:?}");
-    assert!(matches!(
-        h.disk_kind.as_deref(),
-        Some("SSD" | "HDD" | "NVMe")
-    ));
+    assert!(
+        matches!(h.disk_kind.as_deref(), None | Some("SSD" | "HDD" | "NVMe")),
+        "{h:?}"
+    );
 }
 
 #[tokio::test]
