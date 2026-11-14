@@ -91,14 +91,14 @@ pub(crate) async fn host_window_open(
                     },
                 );
         }
-        let path = format!(
-            "index.html?host={}&view={view}&handoff={}",
-            host_id.0,
+        let path = host_window_path(
+            host_id,
+            view,
             handoffs
                 .0
                 .lock()
                 .unwrap_or_else(PoisonError::into_inner)
-                .contains_key(&label)
+                .contains_key(&label),
         );
         if let Err(error) =
             crate::window::create_host(window.app_handle(), label.clone(), path, host.label)
@@ -262,4 +262,29 @@ pub(crate) async fn host_window_transferred(
         }
     }
     Ok(transferred)
+}
+
+#[cfg(desktop)]
+fn host_window_path(host: HostId, view: &str, handoff: bool) -> String {
+    // The bundled index.html is the SPA entry point; the router matches only "/".
+    format!("/?host={}&view={view}&handoff={handoff}", host.0)
+}
+
+#[cfg(all(test, desktop))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn host_window_uses_the_root_route_and_preserves_launch_parameters() {
+        let host = HostId(uuid::Uuid::nil());
+        for (view, handoff) in [("terminal", true), ("status", false), ("sftp", true)] {
+            let base = tauri::Url::parse("tauri://localhost/").unwrap();
+            let url = base.join(&host_window_path(host, view, handoff)).unwrap();
+            assert_eq!(url.path(), "/");
+            assert_eq!(
+                url.query().unwrap(),
+                format!("host={}&view={view}&handoff={handoff}", host.0)
+            );
+        }
+    }
 }
