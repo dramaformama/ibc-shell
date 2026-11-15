@@ -12,7 +12,6 @@
     Trash2,
     Zap
   } from '@lucide/svelte';
-  import type { Snippet } from '$lib/api';
   import * as m from '$lib/paraglide/messages.js';
   import { getLocale } from '$lib/paraglide/runtime.js';
   import { pluralForm } from '$lib/stats/format';
@@ -30,10 +29,6 @@
   // A picked folder card narrows the list to that folder; search always looks everywhere.
   const secs = $derived(selected && !q ? all.filter((x) => x.group?.id === selected) : all);
   const top = $derived(q ? [] : frequent(snippets.items, snippets.layout));
-  let dragId = $state<string | null>(null);
-  let dragGroup = $state<string | null>(null);
-  let over = $state<string | null>(null);
-
   const firstLine = (b: string) => b.split('\n').find((l) => l.trim()) ?? '';
   const countOf = (id: string) =>
     snippets.items.filter((x) => snippets.layout.of[x.id] === id).length;
@@ -46,45 +41,92 @@
         : m.snip_count_many({ count });
   };
 
-  // ---- drag & drop: snippets onto rows / folder headers, folders onto folder headers ----
-  function dragSnippet(e: DragEvent, s: Snippet) {
-    dragId = s.id;
-    e.dataTransfer?.setData('text/plain', s.name);
-    if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+  // ---- drag & drop on pointer events: the webview's native HTML5 drag never reaches the page
+  // inside the app window (Tauri takes it for file drops), so it worked only in the browser. ----
+  interface Drag {
+    kind: 's' | 'f';
+    id: string;
+    label: string;
+    x: number;
+    y: number;
+    /** `s:<id>` row or `f:<id>` folder under the pointer. */
+    over: string | null;
+    /** Pointer in the lower half of the row: drop after it. */
+    after: boolean;
   }
-  function dragFolder(e: DragEvent, id: string) {
-    dragGroup = id;
-    e.dataTransfer?.setData('text/plain', id);
-    if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+  let drag = $state.raw<Drag | null>(null);
+  let suppressClick = false;
+
+  function down(e: PointerEvent, kind: 's' | 'f', id: string, label: string) {
+    if (e.button !== 0 || (e.target as HTMLElement).closest('.acts, .facts')) return;
+    const sx = e.clientX;
+    const sy = e.clientY;
+    const move = (ev: PointerEvent) => {
+      if (!drag && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 5) return;
+      if (!drag) window.getSelection()?.removeAllRanges();
+      const el = document.elementFromPoint(ev.clientX, ev.clientY);
+      const t = el instanceof HTMLElement ? el.closest<HTMLElement>('[data-drop]') : null;
+      let over = t?.dataset.drop ?? null;
+      if (kind === 'f' && !over?.startsWith('f:')) over = null;
+      let after = false;
+      if (t && over?.startsWith('s:')) {
+        const r = t.getBoundingClientRect();
+        after = ev.clientY > r.top + r.height / 2;
+      }
+      drag = { kind, id, label, x: ev.clientX, y: ev.clientY, over, after };
+    };
+    const finish = (commit: boolean) => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', cancel);
+      window.removeEventListener('keydown', esc, true);
+      const d = drag;
+      drag = null;
+      if (!d) return;
+      suppressClick = true;
+      setTimeout(() => (suppressClick = false), 0);
+      if (commit && d.over) drop(d);
+    };
+    const up = () => finish(true);
+    const cancel = () => finish(false);
+    const esc = (ev: KeyboardEvent) => {
+      if (ev.key !== 'Escape') return;
+      ev.stopPropagation();
+      finish(false);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', cancel);
+    window.addEventListener('keydown', esc, true);
   }
-  function allow(e: DragEvent, key: string) {
-    if (!dragId && !dragGroup) return;
-    e.preventDefault();
-    over = key;
-  }
-  function dropOnRow(e: DragEvent, group: string | null, before: string) {
-    e.preventDefault();
-    if (dragId) snippets.move(dragId, group, before);
-    end();
-  }
-  function dropOnFolder(e: DragEvent, group: string | null) {
-    e.preventDefault();
-    if (dragId) snippets.move(dragId, group, null);
-    else if (dragGroup && group && dragGroup !== group) {
+
+  function drop(d: Drag) {
+    const [kind, target] = [d.over!.slice(0, 1), d.over!.slice(2)];
+    if (d.kind === 's' && kind === 's') {
+      const sec = secs.find((x) => x.items.some((s) => s.id === target));
+      if (!sec) return;
+      const i = sec.items.findIndex((s) => s.id === target);
+      const before = d.after ? (sec.items[i + 1]?.id ?? null) : target;
+      if (before !== d.id) snippets.move(d.id, sec.group?.id ?? null, before);
+    } else if (d.kind === 's') {
+      snippets.move(d.id, target, null);
+    } else if (d.id !== target) {
       const gs = snippets.layout.groups;
-      const from = gs.findIndex((g) => g.id === dragGroup);
-      const to = gs.findIndex((g) => g.id === group);
-      for (let i = 0; i < Math.abs(to - from); i++)
-        snippets.moveGroup(dragGroup, to > from ? 1 : -1);
+      const from = gs.findIndex((g) => g.id === d.id);
+      const to = gs.findIndex((g) => g.id === target);
+      for (let i = 0; i < Math.abs(to - from); i++) snippets.moveGroup(d.id, to > from ? 1 : -1);
     }
-    end();
   }
-  function end() {
-    dragId = dragGroup = over = null;
+
+  /** A press that ended a drag is not also a click (run / filter). */
+  function swallow(e: MouseEvent) {
+    if (!suppressClick) return;
+    e.stopPropagation();
+    e.preventDefault();
   }
 </script>
 
-<div class="snips">
+<div class="snips" class:dragging={drag} onclickcapture={swallow}>
   <div class="toolbar">
     <label class="search"
       ><Search size={14} /><input
@@ -114,14 +156,11 @@
         <div
           class="fcard"
           class:on={selected === g.id}
-          class:over={over === 'f:' + g.id}
+          class:over={drag?.over === 'f:' + g.id && drag.id !== g.id}
+          class:lifted={drag?.id === g.id}
           role="group"
-          draggable="true"
-          ondragstart={(e) => dragFolder(e, g.id)}
-          ondragover={(e) => allow(e, 'f:' + g.id)}
-          ondragleave={() => (over = null)}
-          ondrop={(e) => dropOnFolder(e, g.id)}
-          ondragend={end}
+          data-drop={'f:' + g.id}
+          onpointerdown={(e) => down(e, 'f', g.id, g.name)}
         >
           <button
             class="fmain"
@@ -185,15 +224,12 @@
           {@const hasVars = parseVars(s.body).length > 0}
           <div
             class="row"
-            class:over={over === 's:' + s.id}
-            class:dragging={dragId === s.id}
+            class:over={drag?.kind === 's' && drag.over === 's:' + s.id && drag.id !== s.id}
+            class:after={drag?.after}
+            class:dragging={drag?.id === s.id}
             role="listitem"
-            draggable="true"
-            ondragstart={(e) => dragSnippet(e, s)}
-            ondragover={(e) => allow(e, 's:' + s.id)}
-            ondragleave={() => (over = null)}
-            ondrop={(e) => dropOnRow(e, gid, s.id)}
-            ondragend={end}
+            data-drop={'s:' + s.id}
+            onpointerdown={(e) => down(e, 's', s.id, s.name)}
           >
             <button class="main" onclick={() => snippets.run(s)} title={m.snip_run_hint()}>
               <span class="name"
@@ -228,10 +264,9 @@
           {#if gid && !q && selected}
             <div
               class="drop-hint"
-              class:over={over === 'f:' + gid}
+              class:over={drag?.kind === 's' && drag.over === 'f:' + gid}
               role="listitem"
-              ondragover={(e) => allow(e, 'f:' + gid)}
-              ondrop={(e) => dropOnFolder(e, gid)}
+              data-drop={'f:' + gid}
             >
               {m.snip_folder_empty()}
             </div>
@@ -244,3 +279,9 @@
     </div>
   {/if}
 </div>
+
+{#if drag}
+  <div class="snips-ghost" style:left="{drag.x + 12}px" style:top="{drag.y + 8}px">
+    {drag.label}
+  </div>
+{/if}

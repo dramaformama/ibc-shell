@@ -94,6 +94,10 @@ Demo mode: sample servers and metrics.
 
 ## What's new
 
+**Version 2.0.1:**
+
+- **Drag snippets in the app.** Snippets and folders on the Snippets tab now drag with the mouse in the app itself, not only in the browser demo: reorder, move into a folder, reorder folders. Esc cancels the drag.
+
 **Version 2.0.0:**
 
 - **New design.** A calmer macOS look: a floating translucent sidebar, one accent colour, colour only for states. Overview is now a dense server list: status, address, load, ping and actions on one line.

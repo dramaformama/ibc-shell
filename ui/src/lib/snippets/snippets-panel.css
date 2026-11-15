@@ -271,8 +271,14 @@
 .snips .row:hover {
   background: var(--hover);
 }
-.snips .row.dragging {
+.snips .row.dragging,
+.snips .fcard.lifted {
   opacity: 0.4;
+}
+.snips.dragging,
+.snips.dragging * {
+  cursor: grabbing !important;
+  user-select: none;
 }
 .snips .row.over::before,
 .snips .folder.over {
@@ -341,4 +347,24 @@
   margin: 10px;
   color: var(--muted);
   font-size: 12px;
+}
+.snips .row.over.after::before {
+  inset: auto 4px -1px;
+}
+.snips-ghost {
+  position: fixed;
+  z-index: 70;
+  max-width: 240px;
+  padding: 4px 10px;
+  border: 0.5px solid var(--glass-edge);
+  border-radius: var(--r-control);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow);
+  pointer-events: none;
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
