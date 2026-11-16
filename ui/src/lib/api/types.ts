@@ -5,6 +5,7 @@
 import type { commands } from './bindings';
 import type {
   ApiError,
+  HostWindowReturn,
   SessionId,
   TrayOpenHost,
   TreeChanged,
@@ -35,6 +36,7 @@ export interface EventPayloads {
   treeChanged: TreeChanged;
   updateAvailable: UpdateAvailable;
   trayOpenHost: TrayOpenHost;
+  hostWindowReturn: HostWindowReturn;
 }
 
 /** Global event subscription, identical for mock and real. Returns an unsubscribe function. */

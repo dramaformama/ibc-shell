@@ -136,7 +136,7 @@ export class Connection {
     this.prompt = null;
     this.log.reset();
     const gen = ++this.#generation;
-    const adopted = claimTerminal({
+    const adopted = claimTerminal(this.#tab, {
       data: (bytes) => {
         if (gen === this.#generation) this.#receive(bytes);
       },

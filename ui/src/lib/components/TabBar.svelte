@@ -9,6 +9,7 @@
     PanelLeftOpen,
     PanelRight,
     Plus,
+    SquareArrowOutUpLeft,
     SquareTerminal,
     X
   } from '@lucide/svelte';
@@ -19,9 +20,16 @@
   import { ui } from '$lib/stores/ui.svelte';
   import { mod } from '$lib/util/platform';
   import WindowControls from './WindowControls.svelte';
-  import { canOpenHostWindow, detachGroup, isHostWindow } from './host-window';
+  import {
+    canOpenHostWindow,
+    canReturnToMain,
+    detachGroup,
+    isHostWindow,
+    returnToMain
+  } from './host-window';
   import TabMenu from './TabMenu.svelte';
   import { TabDrag } from './tab-drag.svelte';
+  import { NativeGhost } from './tab-ghost';
 
   let { mac = false, windowControls = false }: { mac?: boolean; windowControls?: boolean } =
     $props();
@@ -31,17 +39,39 @@
   const hidden = $derived(sessions.groups.length - sessions.visibleGroups.length);
 
   let tabsEl: HTMLDivElement;
+  const native = new NativeGhost();
+  const canDrag = !isHostWindow || canReturnToMain;
   const drag = new TabDrag(
     () => [...tabsEl.querySelectorAll<HTMLElement>('[data-tab-key]')],
     (key, to) => sessions.moveGroup(key, to),
     () => tabsEl.getBoundingClientRect(),
-    (key) => {
-      if (!canOpenHostWindow || !sessions.groups.find((g) => g.key === key)?.current.hostId)
-        return false;
-      void detachGroup(key);
-      return true;
+    {
+      // Main window: a torn tab opens in its own window. Host window: it goes back to the main one.
+      allowed: (key) =>
+        isHostWindow
+          ? canReturnToMain
+          : canOpenHostWindow && !!sessions.groups.find((g) => g.key === key)?.current.hostId,
+      change: (key, torn) => {
+        const g = sessions.groups.find((item) => item.key === key);
+        if (torn && g) native.open(g.label, g.flag ?? null);
+      },
+      move: (e, outside) => native.move(e, outside),
+      drop: (key, e) => {
+        const outside =
+          e.clientX < 0 || e.clientY < 0 || e.clientX > innerWidth || e.clientY > innerHeight;
+        if (!isHostWindow) void detachGroup(key);
+        else if (outside) void returnToMain(key);
+      },
+      end: () => native.close()
     }
   );
+  const lifted = $derived(sessions.groups.find((g) => g.key === drag.key) ?? null);
+
+  /** Moves a node to <body>: the bar's container query makes it the box for fixed children. */
+  function portal(node: HTMLElement) {
+    document.body.append(node);
+    return { destroy: () => node.remove() };
+  }
 
   function onKey(e: KeyboardEvent, i: number) {
     const gs = sessions.visibleGroups;
@@ -119,10 +149,11 @@
       <TabMenu group={g}>
         {#snippet children(props)}
           <div
-            {...!isHostWindow ? props : {}}
+            {...props}
             class="tab"
             class:active={on}
             class:lifted={drag.key === g.key}
+            class:torn={drag.key === g.key && drag.torn}
             role="presentation"
             data-tab-key={g.key}
             style:transform={drag.offset(g.key)}
@@ -134,7 +165,7 @@
               role="tab"
               aria-selected={on}
               tabindex={on ? 0 : -1}
-              onpointerdown={(e) => !isHostWindow && drag.down(e, g.key)}
+              onpointerdown={(e) => canDrag && drag.down(e, g.key)}
               onclick={(e) => {
                 if (drag.swallowClick()) e.preventDefault();
                 else sessions.select(g.current.id);
@@ -180,6 +211,22 @@
     {/if}
   </div>
 
+  {#if drag.ghost && lifted}
+    <div
+      class="ghost"
+      use:portal
+      aria-hidden="true"
+      style:transform="translate({drag.ghost.x - 28}px, {drag.ghost.y - 17}px)"
+    >
+      <span class="dot" data-phase={sessions.groupPhase(lifted)}></span>
+      <Flag code={lifted.flag} size={14} />
+      <span class="name">{lifted.label}</span>
+      <span class="ghost-hint"
+        >{isHostWindow ? m.tab_drop_return_hint() : m.tab_drop_new_window()}</span
+      >
+    </div>
+  {/if}
+
   {#if active}
     <div class="tools">
       {#if active.hostId}
@@ -212,6 +259,15 @@
           aria-label={m.menu_connect_another()}
           title="{m.menu_connect_another()} ({mod('⇧T').replace('Ctrl+⇧', 'Ctrl+Shift+')})"
           ><CopyPlus size={16} /></button
+        >
+      {/if}
+      {#if canReturnToMain && sessions.activeGroup}
+        {@const key = sessions.activeGroup}
+        <button
+          class="icon-btn"
+          onclick={() => void returnToMain(key)}
+          aria-label={m.menu_return_to_main()}
+          title={m.menu_return_to_main()}><SquareArrowOutUpLeft size={16} /></button
         >
       {/if}
       {#if active.kind === 'terminal' && !active.local}
@@ -323,6 +379,55 @@
   }
   .tabs.settling .tab {
     transition: none;
+  }
+  /* Torn off: the slot stays as a faint outline of where the tab came from. */
+  .tabs.dragging .tab.torn {
+    background: transparent;
+    box-shadow: inset 0 0 0 1px var(--border);
+    color: transparent;
+  }
+  .tab.torn :global(*) {
+    visibility: hidden;
+  }
+  .ghost {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    max-width: 260px;
+    height: var(--control-h);
+    padding: 0 12px 0 11px;
+    border-radius: 999px;
+    background: var(--surface);
+    box-shadow:
+      var(--shadow),
+      0 0 0 0.5px var(--border);
+    color: var(--text);
+    font-size: var(--fs-body);
+    font-weight: 500;
+    pointer-events: none;
+    will-change: transform;
+    animation: ghost-in 140ms var(--ease);
+  }
+  .ghost-hint {
+    flex: none;
+    color: var(--muted);
+    font-size: var(--fs-cap);
+    font-weight: 400;
+  }
+  @keyframes ghost-in {
+    from {
+      opacity: 0;
+      scale: 0.96;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ghost {
+      animation: none;
+    }
   }
   .unseen {
     flex: none;

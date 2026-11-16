@@ -5,7 +5,7 @@
   import { transfers } from '$lib/sftp/transfers.svelte';
   import { receiveWindowTransfer } from '$lib/stores/window-transfer';
   import { ui } from '$lib/stores/ui.svelte';
-  import { hostWindowTarget, isHostWindow } from '$lib/components/host-window';
+  import { hostWindowTarget, isHostWindow, listenWindowReturns } from '$lib/components/host-window';
   import Shell from '$lib/components/Shell.svelte';
   import VaultScreen from '$lib/components/VaultScreen.svelte';
   import { tree } from '$lib/stores/tree.svelte';
@@ -35,7 +35,11 @@
     const off = onTrayOpen((id) => {
       if (vault.state === 'Unlocked') connectHost(id, 'status');
     });
-    return () => void off.then((f) => f());
+    const offReturns = listenWindowReturns();
+    return () => {
+      void off.then((f) => f());
+      void offReturns.then((f) => f());
+    };
   });
 
   // Menu-bar icon: keep open servers sampled and send their lines (ADR-013).
@@ -79,7 +83,7 @@
         if (isHostWindow) {
           const target = hostWindowTarget();
           if (!target) return;
-          const received = await receiveWindowTransfer();
+          const received = await receiveWindowTransfer(target.hostId);
           if (received.status !== 'ok') {
             ui.toast(m.err_generic(), 'error');
             return;

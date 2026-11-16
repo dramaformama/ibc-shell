@@ -835,5 +835,8 @@
   "dash_col_load": "CPU · RAM · disk",
   "dash_col_latency": "Ping",
   "dash_col_state": "Status",
-  "dash_more": "More"
+  "dash_more": "More",
+  "menu_return_to_main": "Move to main window",
+  "tab_drop_new_window": "New window",
+  "tab_drop_return_hint": "Drop outside to return it to the tabs"
 }

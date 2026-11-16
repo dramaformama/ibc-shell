@@ -11,5 +11,6 @@ pub mod services;
 pub mod session;
 pub mod sftp;
 pub mod stats;
+pub mod tab_ghost;
 pub mod tree;
 pub mod vault;

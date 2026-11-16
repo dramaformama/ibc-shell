@@ -835,5 +835,8 @@
   "dash_col_load": "CPU · RAM · диск",
   "dash_col_latency": "Отклик",
   "dash_col_state": "Состояние",
-  "dash_more": "Ещё"
+  "dash_more": "Ещё",
+  "menu_return_to_main": "Вернуть в главное окно",
+  "tab_drop_new_window": "Новое окно",
+  "tab_drop_return_hint": "Отпустите за окном — вернётся во вкладки"
 }

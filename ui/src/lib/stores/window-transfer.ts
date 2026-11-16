@@ -1,5 +1,6 @@
 import { Channel } from '@tauri-apps/api/core';
-import { api, type HostWindowTransfer, type SessionEvent } from '$lib/api';
+import { api, type HostWindowTransfer, type Result, type SessionEvent } from '$lib/api';
+import { groupKey, type Tab } from './sessions.svelte';
 
 export const releasedTabs = new Set<string>();
 export const fileViews = new Map<
@@ -13,37 +14,80 @@ export const fileViews = new Map<
 >();
 
 type Receiver = { data: (bytes: Uint8Array) => void; event: (event: SessionEvent) => void };
-let receiver: Receiver | undefined;
-let queued: Array<(target: Receiver) => void> = [];
-let pending: HostWindowTransfer | null = null;
 
-export async function receiveWindowTransfer() {
+/** Sessions handed over by another window, waiting for the tabs of one group to claim them. */
+interface Inbox {
+  payload: HostWindowTransfer | null;
+  receiver?: Receiver;
+  queued: Array<(target: Receiver) => void>;
+}
+
+/** Keyed by tab group (`groupKey`), so a returned host never lands in another host's tab. */
+const inboxes = new Map<string, Inbox>();
+
+async function receive(
+  key: string,
+  take: (
+    data: Channel<ArrayBuffer>,
+    events: Channel<SessionEvent>
+  ) => Promise<Result<HostWindowTransfer | null>>
+) {
+  const inbox: Inbox = { payload: null, queued: [] };
+  inboxes.set(key, inbox);
   const data = new Channel<ArrayBuffer>();
   const events = new Channel<SessionEvent>();
   const deliver = (fn: (target: Receiver) => void) => {
-    if (receiver) fn(receiver);
-    else queued.push(fn);
+    if (inbox.receiver) fn(inbox.receiver);
+    else inbox.queued.push(fn);
   };
   data.onmessage = (bytes) => deliver((target) => target.data(new Uint8Array(bytes)));
   events.onmessage = (event) => deliver((target) => target.event(event));
-  const result = await api.hostWindowTake(data, events);
-  if (result.status === 'ok') pending = result.data;
+  const result = await take(data, events);
+  if (result.status === 'ok' && result.data) inbox.payload = result.data;
+  else if (inboxes.get(key) === inbox) inboxes.delete(key);
   return result;
 }
 
-export function claimTerminal(target: Receiver) {
-  if (!pending?.terminal) return null;
-  const { terminal, screen, cwd } = pending;
-  pending = { ...pending, terminal: null, screen: null, cwd: null };
-  receiver = target;
-  const output = queued;
-  queued = [];
+/** Host window start-up: takes what the main window handed over (first instance of the host). */
+export function receiveWindowTransfer(hostId: string) {
+  return receive(`h:${hostId}`, (data, events) => api.hostWindowTake(data, events));
+}
+
+/** Main window: takes the sessions a host window returned, for the group `key`. */
+export function adoptWindowReturn(label: string, key: string) {
+  return receive(key, (data, events) => api.hostWindowAdopt(label, data, events));
+}
+
+function inboxFor(tab: Tab) {
+  const key = groupKey(tab);
+  const inbox = inboxes.get(key);
+  return inbox?.payload ? { key, inbox, payload: inbox.payload } : null;
+}
+
+/** Everything claimed: later tabs of the group connect on their own (output keeps flowing). */
+function settle(key: string, inbox: Inbox) {
+  if (!inbox.payload?.terminal && !inbox.payload?.files) inboxes.delete(key);
+}
+
+export function claimTerminal(tab: Tab, target: Receiver) {
+  const found = inboxFor(tab);
+  if (!found?.payload.terminal) return null;
+  const { key, inbox, payload } = found;
+  const { terminal, screen, cwd } = payload;
+  inbox.payload = { ...payload, terminal: null, screen: null, cwd: null };
+  inbox.receiver = target;
+  const output = inbox.queued;
+  inbox.queued = [];
+  settle(key, inbox);
   return { terminal, screen, cwd, drain: () => output.forEach((fn) => fn(target)) };
 }
 
-export function claimFiles() {
-  if (!pending?.files) return null;
-  const { files, left, right } = pending;
-  pending = { ...pending, files: null };
+export function claimFiles(tab: Tab) {
+  const found = inboxFor(tab);
+  if (!found?.payload.files) return null;
+  const { key, inbox, payload } = found;
+  const { files, left, right } = payload;
+  inbox.payload = { ...payload, files: null };
+  settle(key, inbox);
   return { files, left, right };
 }

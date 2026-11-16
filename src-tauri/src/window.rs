@@ -52,6 +52,33 @@ pub(crate) fn create_host(
         .map_err(|_| crate::api::ApiError::Internal("could not open host window".into()))
 }
 
+/// Borderless, unfocusable, click-through window for a tab dragged outside its window.
+#[cfg(desktop)]
+pub(crate) fn create_ghost(
+    app: &AppHandle,
+    label: &str,
+    path: String,
+    width: f64,
+    height: f64,
+) -> tauri::Result<()> {
+    let ghost = WebviewWindowBuilder::new(app, label, tauri::WebviewUrl::App(path.into()))
+        .on_navigation(is_app_page)
+        .on_new_window(|_, _| tauri::webview::NewWindowResponse::Deny)
+        .title("")
+        .inner_size(width, height)
+        .resizable(false)
+        .decorations(false)
+        .shadow(true)
+        .always_on_top(true)
+        .skip_taskbar(true)
+        .focused(false)
+        .focusable(false)
+        .visible(false)
+        .build()?;
+    ghost.set_ignore_cursor_events(true)?;
+    Ok(())
+}
+
 fn build(app: &AppHandle, cfg: &WindowConfig) -> tauri::Result<()> {
     let builder = WebviewWindowBuilder::from_config(app, cfg)?.on_navigation(is_app_page);
     #[cfg(any(target_os = "windows", target_os = "linux"))]

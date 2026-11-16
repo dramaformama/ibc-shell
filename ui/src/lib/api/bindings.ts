@@ -13,6 +13,16 @@ export const commands = {
 	hostWindowTake: (onData: Channel<ArrayBuffer>, onEvent: Channel<SessionEvent>) => typedError<HostWindowTransfer | null, ApiError>(__TAURI_INVOKE("host_window_take", { onData, onEvent })),
 	hostWindowPause: (id: SessionId, pause: boolean) => typedError<null, ApiError>(__TAURI_INVOKE("host_window_pause", { id, pause })),
 	hostWindowTransferred: (label: string, cancel: boolean) => typedError<boolean, ApiError>(__TAURI_INVOKE("host_window_transferred", { label, cancel })),
+	/**  A host window hands its sessions back to the main window (tab returns to the tab bar). */
+	hostWindowReturn: (hostId: HostId, view: HostWindowView, transfer: HostWindowTransfer) => typedError<string, ApiError>(__TAURI_INVOKE("host_window_return", { hostId, view, transfer })),
+	/**  The main window takes sessions a host window returned (`host-window://return`). */
+	hostWindowAdopt: (label: string, onData: Channel<ArrayBuffer>, onEvent: Channel<SessionEvent>) => typedError<HostWindowTransfer | null, ApiError>(__TAURI_INVOKE("host_window_adopt", { label, onData, onEvent })),
+	/**  Creates the hidden ghost for the tab being dragged (replaces a previous one). */
+	tabGhostOpen: (title: string, flag: string | null, dark: boolean) => typedError<null, ApiError>(__TAURI_INVOKE("tab_ghost_open", { title, flag, dark })),
+	/**  Moves the ghost to the pointer (screen coordinates, logical pixels) and shows or hides it. */
+	tabGhostMove: (x: number | null, y: number | null, visible: boolean) => typedError<null, ApiError>(__TAURI_INVOKE("tab_ghost_move", { x, y, visible })),
+	/**  Removes the ghost (drop, cancel). */
+	tabGhostClose: () => typedError<null, ApiError>(__TAURI_INVOKE("tab_ghost_close")),
 	/**  Whole tree (flat, sorted). */
 	treeList: () => typedError<Tree, ApiError>(__TAURI_INVOKE("tree_list")),
 	/**  Creates a folder (last among siblings). */
@@ -254,6 +264,7 @@ export const commands = {
 
 /** Events */
 export const events = {
+	hostWindowReturn: makeEvent<HostWindowReturn, HostWindowReturn>("host-window://return"),
 	trayOpenHost: makeEvent<TrayOpenHost, TrayOpenHost>("tray://open-host"),
 	treeChanged: makeEvent<TreeChanged, TreeChanged>("tree://changed"),
 	updateAvailable: makeEvent<UpdateAvailable, UpdateAvailable>("update://available"),
@@ -1018,6 +1029,19 @@ export type HostStats = {
 	full: boolean,
 };
 
+/**
+ *  A host window handed its sessions back; the main window adopts them into a tab
+ *  (`host_window_adopt`). Sent to the main window only (ADR-027).
+ */
+export type HostWindowReturn = {
+	/**  Handoff label for `host_window_adopt`. */
+	label: string,
+	/**  Host the sessions belong to. */
+	host_id: HostId,
+	/**  View the tab was showing. */
+	view: HostWindowView,
+};
+
 export type HostWindowTransfer = {
 	terminal: SessionId | null,
 	files: SftpId | null,
@@ -1031,7 +1055,13 @@ export type HostWindowTransfer = {
 };
 
 /**  Initial view of a saved host in a new window. */
-export type HostWindowView = "terminal" | "status" | "sftp";
+export type HostWindowView = 
+/**  Terminal tab. */
+"terminal" | 
+/**  Status (monitoring) tab. */
+"status" | 
+/**  Files tab. */
+"sftp";
 
 /**  Identity as seen by the UI: no secrets, no secret ids. */
 export type IdentityDto = {

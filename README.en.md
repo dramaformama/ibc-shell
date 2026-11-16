@@ -17,7 +17,7 @@ Nested folders, country flags, a terminal that stays out of your way, and secret
 In Files, double-click a document to open its dialog. Remote documents open in the default app as temporary copies. Choose Download to save a file to the selected folder through the transfer queue. Window controls sit in the top toolbar.
 > Installers are built automatically from a tag, see [Download](#download).
 
-Open a saved host in a separate window from the tab or sidebar context menu. Drag a tab outside the tab strip to detach it. Detaching an open tab preserves its connection, terminal history, and SFTP directories.
+Open a saved host in a separate window from the tab or sidebar context menu. Drag a tab outside the tab strip to detach it; bring it back from the tab menu, the toolbar button, or by dragging it out of the separate window. Detaching an open tab preserves its connection, terminal history, and SFTP directories.
 
 **File preview.** Press Space or double-click a file to read and search its text. Jump to the end of a large log to see recent entries.
 
@@ -93,6 +93,10 @@ SSL certificate expiry for the domains on every server.
 Demo mode: sample servers and metrics.
 
 ## What's new
+
+**Version 2.0.2:**
+
+- **Tab follows the pointer, and comes back.** A tab torn off the strip follows the pointer, even past the window edge, leaving an outline in its place. A host in a separate window returns to the main window's tabs from the tab menu, the toolbar button, or by dragging it out of the window. The connection, terminal history and SFTP folders are kept.
 
 **Version 2.0.1:**
 

@@ -8,11 +8,14 @@ use crate::api::{ApiError, ApiResult};
 use crate::state::AppState;
 
 /// Initial view of a saved host in a new window.
-#[derive(Clone, Copy, Deserialize, specta::Type)]
+#[derive(Clone, Copy, Deserialize, serde::Serialize, Debug, specta::Type)]
 #[serde(rename_all = "lowercase")]
-pub(crate) enum HostWindowView {
+pub enum HostWindowView {
+    /// Terminal tab.
     Terminal,
+    /// Status (monitoring) tab.
     Status,
+    /// Files tab.
     Sftp,
 }
 
@@ -45,39 +48,7 @@ pub(crate) async fn host_window_open(
         };
         let label = format!("host-{}", uuid::Uuid::now_v7());
         if let Some(payload) = transfer {
-            if payload
-                .screen
-                .as_ref()
-                .is_some_and(|screen| screen.len() > 16 * 1024 * 1024)
-            {
-                return Err(ApiError::Validation("terminal snapshot too large".into()));
-            }
-            if let Some(id) = payload.terminal {
-                let session = state.sessions.get(&id).ok_or(ApiError::NotFound)?;
-                if !matches!(session.spec.target, SessionTarget::Host(id) if id == host_id)
-                    || session
-                        .owner
-                        .lock()
-                        .unwrap_or_else(PoisonError::into_inner)
-                        .as_str()
-                        != window.label()
-                {
-                    return Err(ApiError::NotFound);
-                }
-            }
-            if let Some(id) = payload.files {
-                let files = state.sftps.get(&id).ok_or(ApiError::NotFound)?;
-                if files.host != Some(host_id)
-                    || files
-                        .owner
-                        .lock()
-                        .unwrap_or_else(PoisonError::into_inner)
-                        .as_str()
-                        != window.label()
-                {
-                    return Err(ApiError::NotFound);
-                }
-            }
+            check_owned(&state, &payload, host_id, window.label())?;
             handoffs
                 .0
                 .lock()
@@ -209,32 +180,7 @@ pub(crate) async fn host_window_take(
         }
         return Ok(None);
     };
-    if handoff.cancelled {
-        return Err(ApiError::Cancelled);
-    }
-    let Some(payload) = handoff.payload.as_ref() else {
-        return Ok(None);
-    };
-    let terminal = payload
-        .terminal
-        .map(|id| state.sessions.get(&id).ok_or(ApiError::NotFound))
-        .transpose()?;
-    let files = payload
-        .files
-        .map(|id| state.sftps.get(&id).ok_or(ApiError::NotFound))
-        .transpose()?;
-    if let Some(terminal) = terminal {
-        *terminal
-            .owner
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner) = window.label().into();
-        terminal.spec.on_data.resume(Some(on_data));
-        terminal.spec.on_event.resume(Some(on_event));
-    }
-    if let Some(files) = files {
-        *files.owner.lock().unwrap_or_else(PoisonError::into_inner) = window.label().into();
-    }
-    Ok(handoff.payload.take())
+    adopt(&state, handoff, window.label(), on_data, on_event)
 }
 
 #[tauri::command]
@@ -262,6 +208,164 @@ pub(crate) async fn host_window_transferred(
         }
     }
     Ok(transferred)
+}
+
+/// Moves the handed-off sessions to `owner` and returns the payload once.
+fn adopt(
+    state: &AppState,
+    handoff: &mut Handoff,
+    owner: &str,
+    on_data: Channel<RawBytes>,
+    on_event: Channel<SessionEvent>,
+) -> ApiResult<Option<HostWindowTransfer>> {
+    if handoff.cancelled {
+        return Err(ApiError::Cancelled);
+    }
+    let Some(payload) = handoff.payload.as_ref() else {
+        return Ok(None);
+    };
+    let terminal = payload
+        .terminal
+        .map(|id| state.sessions.get(&id).ok_or(ApiError::NotFound))
+        .transpose()?;
+    let files = payload
+        .files
+        .map(|id| state.sftps.get(&id).ok_or(ApiError::NotFound))
+        .transpose()?;
+    if let Some(terminal) = terminal {
+        *terminal
+            .owner
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner) = owner.into();
+        terminal.spec.on_data.resume(Some(on_data));
+        terminal.spec.on_event.resume(Some(on_event));
+    }
+    if let Some(files) = files {
+        *files.owner.lock().unwrap_or_else(PoisonError::into_inner) = owner.into();
+    }
+    Ok(handoff.payload.take())
+}
+
+/// The payload's sessions must belong to `host_id` and be owned by the calling window.
+fn check_owned(
+    state: &AppState,
+    payload: &HostWindowTransfer,
+    host_id: HostId,
+    owner: &str,
+) -> ApiResult<()> {
+    if payload
+        .screen
+        .as_ref()
+        .is_some_and(|screen| screen.len() > 16 * 1024 * 1024)
+    {
+        return Err(ApiError::Validation("terminal snapshot too large".into()));
+    }
+    if let Some(id) = payload.terminal {
+        let session = state.sessions.get(&id).ok_or(ApiError::NotFound)?;
+        if !matches!(session.spec.target, SessionTarget::Host(id) if id == host_id)
+            || session
+                .owner
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .as_str()
+                != owner
+        {
+            return Err(ApiError::NotFound);
+        }
+    }
+    if let Some(id) = payload.files {
+        let files = state.sftps.get(&id).ok_or(ApiError::NotFound)?;
+        if files.host != Some(host_id)
+            || files
+                .owner
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .as_str()
+                != owner
+        {
+            return Err(ApiError::NotFound);
+        }
+    }
+    Ok(())
+}
+
+/// A host window hands its sessions back to the main window (tab returns to the tab bar).
+#[tauri::command]
+#[specta::specta]
+pub(crate) async fn host_window_return(
+    window: WebviewWindow,
+    state: State<'_, AppState>,
+    handoffs: State<'_, Handoffs>,
+    host_id: HostId,
+    view: HostWindowView,
+    transfer: HostWindowTransfer,
+) -> ApiResult<String> {
+    use tauri::Manager;
+    use tauri_specta::Event;
+    if !window.label().starts_with("host-") {
+        return Err(ApiError::Unsupported);
+    }
+    if state.vault.state()? != ibc_shell_vault::VaultState::Unlocked {
+        return Err(ApiError::VaultLocked);
+    }
+    check_owned(&state, &transfer, host_id, window.label())?;
+    let main = window
+        .app_handle()
+        .get_webview_window("main")
+        .ok_or(ApiError::NotFound)?;
+    let label = format!("return-{}", uuid::Uuid::now_v7());
+    handoffs
+        .0
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .insert(
+            label.clone(),
+            Handoff {
+                cancelled: false,
+                source: window.label().into(),
+                payload: Some(transfer),
+            },
+        );
+    let event = crate::api::events::HostWindowReturn {
+        label: label.clone(),
+        host_id,
+        view,
+    };
+    if event.emit_to(window.app_handle(), "main").is_err() {
+        handoffs.close(&label, &state);
+        return Err(ApiError::Internal("main window is not listening".into()));
+    }
+    #[cfg(desktop)]
+    {
+        let _ = main.unminimize();
+        let _ = main.show();
+        let _ = main.set_focus();
+    }
+    #[cfg(not(desktop))]
+    let _ = main;
+    Ok(label)
+}
+
+/// The main window takes sessions a host window returned (`host-window://return`).
+#[tauri::command]
+#[specta::specta]
+pub(crate) async fn host_window_adopt(
+    window: WebviewWindow,
+    state: State<'_, AppState>,
+    handoffs: State<'_, Handoffs>,
+    label: String,
+    on_data: Channel<RawBytes>,
+    on_event: Channel<SessionEvent>,
+) -> ApiResult<Option<HostWindowTransfer>> {
+    if window.label() != "main" || !label.starts_with("return-") {
+        return Err(ApiError::Unsupported);
+    }
+    if state.vault.state()? != ibc_shell_vault::VaultState::Unlocked {
+        return Err(ApiError::VaultLocked);
+    }
+    let mut entries = handoffs.0.lock().unwrap_or_else(PoisonError::into_inner);
+    let handoff = entries.get_mut(&label).ok_or(ApiError::NotFound)?;
+    adopt(&state, handoff, window.label(), on_data, on_event)
 }
 
 #[cfg(desktop)]

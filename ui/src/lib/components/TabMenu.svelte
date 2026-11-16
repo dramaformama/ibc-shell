@@ -1,5 +1,11 @@
 <script lang="ts">
-  import { canOpenHostWindow, detachGroup } from './host-window';
+  import {
+    canOpenHostWindow,
+    canReturnToMain,
+    detachGroup,
+    isHostWindow,
+    returnToMain
+  } from './host-window';
   import { ContextMenu } from 'bits-ui';
   import type { Snippet } from 'svelte';
   import * as m from '$lib/paraglide/messages.js';
@@ -33,15 +39,24 @@
         {@render item(m.tab_status(), () => show('status'))}
         {@render item(m.tab_terminal(), () => show('terminal'))}
         {@render item(m.tab_files(), () => show('sftp'))}
-        <div class="menu-sep"></div>
-        {#if canOpenHostWindow}
-          {@render item(m.menu_open_host_window(), () => void detachGroup(group.key))}
+        {#if isHostWindow}
+          {#if canReturnToMain}
+            <div class="menu-sep"></div>
+            {@render item(m.menu_return_to_main(), () => void returnToMain(group.key))}
+          {/if}
+        {:else}
+          <div class="menu-sep"></div>
+          {#if canOpenHostWindow}
+            {@render item(m.menu_open_host_window(), () => void detachGroup(group.key))}
+          {/if}
+          {@render item(m.menu_connect_another(), () => connectAnother(id))}
+          {@render item(m.menu_edit(), () => ui.openHostEditor(id))}
+          <div class="menu-sep"></div>
         {/if}
-        {@render item(m.menu_connect_another(), () => connectAnother(id))}
-        {@render item(m.menu_edit(), () => ui.openHostEditor(id))}
-        <div class="menu-sep"></div>
       {/if}
-      {@render item(m.tab_disconnect(), () => closeServer(group.key), true)}
+      {#if !isHostWindow}
+        {@render item(m.tab_disconnect(), () => closeServer(group.key), true)}
+      {/if}
     </ContextMenu.Content>
   </ContextMenu.Portal>
 </ContextMenu.Root>

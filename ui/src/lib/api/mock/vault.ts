@@ -149,3 +149,11 @@ export const hostWindowOpen: Commands['hostWindowOpen'] = async (hostId, view) =
 export const hostWindowTake: Commands['hostWindowTake'] = async () => ok(null);
 export const hostWindowTransferred: Commands['hostWindowTransferred'] = async () => ok(true);
 export const hostWindowPause: Commands['hostWindowPause'] = async () => ok(null);
+/** The browser preview has no second window to return to. */
+export const hostWindowReturn: Commands['hostWindowReturn'] = async () =>
+  err({ code: 'Unsupported' });
+export const hostWindowAdopt: Commands['hostWindowAdopt'] = async () => ok(null);
+/** Outside Tauri the dragged tab is drawn inside the page only. */
+export const tabGhostOpen: Commands['tabGhostOpen'] = async () => err({ code: 'Unsupported' });
+export const tabGhostMove: Commands['tabGhostMove'] = async () => ok(null);
+export const tabGhostClose: Commands['tabGhostClose'] = async () => ok(null);

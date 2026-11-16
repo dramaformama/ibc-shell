@@ -111,7 +111,7 @@
   onMount(() => {
     closed = false;
     void transfers.start();
-    const inherited = claimFiles();
+    const inherited = claimFiles(tab);
     if (inherited) {
       id = sftpId = inherited.files;
       status = 'ready';

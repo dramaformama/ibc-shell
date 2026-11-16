@@ -145,6 +145,11 @@ pub enum ApiError {
 | `host_window_pause` | `id: SessionId, pause: bool` (owner only) | `null` |
 | `host_window_take` | `on_data: Channel<ArrayBuffer>, on_event: Channel<SessionEvent>` (host window) | `HostWindowTransfer \| null` |
 | `host_window_transferred` | `label: string, cancel: bool` (source window) | `boolean` |
+| `host_window_return` | `host_id: HostId, view: HostWindowView, transfer: HostWindowTransfer` (host window, unlocked vault; emits `host-window://return` to `main`, ADR-027) | `string` (handoff label) |
+| `host_window_adopt` | `label: string, on_data: Channel<ArrayBuffer>, on_event: Channel<SessionEvent>` (main window, `return-*` label, ADR-027) | `HostWindowTransfer \| null` |
+| `tab_ghost_open` | `title: string, flag: string \| null, dark: bool` (desktop, main/host window; hidden floating tab, ADR-027) | `null` |
+| `tab_ghost_move` | `x: f64, y: f64, visible: bool` (screen, logical px) | `null` |
+| `tab_ghost_close` | — | `null` |
 
 `HostWindowTransfer` carries the existing session IDs, terminal display snapshot and pane paths in memory. The source owns the sessions until the destination takes them.
 
@@ -227,6 +232,7 @@ pub enum ApiError {
 | `tree://changed` | `TreeChanged` | `null` | `treeChanged` |
 | `update://available` | `UpdateAvailable` | `{ version, notes: string\|null }` | `updateAvailable` |
 | `tray://open-host` | `TrayOpenHost` | `{ host_id }` | `trayOpenHost` |
+| `host-window://return` | `HostWindowReturn` | `{ label, host_id, view }` (to `main` only, ADR-027) | `hostWindowReturn` |
 
 ## Rules
 - No command returns secret material, except `identity_reveal_password` on an explicit user click (ADR-021).
