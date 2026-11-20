@@ -16,6 +16,9 @@ ignore = [
   { id = "RUSTSEC-2026-0370", reason = "zvariant: Linux notification D-Bus only" },
   { id = "RUSTSEC-2026-0371", reason = "zbus_names: Linux notification D-Bus only" },
   { id = "RUSTSEC-2026-0372", reason = "zvariant_derive: Linux notification D-Bus only" },
+  # chrono via russh-sftp only (file mtime conversion). Unmaintained notice, no known
+  # vulnerability and no safe upgrade. Revisit when russh-sftp drops or replaces it.
+  { id = "RUSTSEC-2026-0543", reason = "chrono: russh-sftp file times only, unmaintained notice" },
 ]
 
 [licenses]
