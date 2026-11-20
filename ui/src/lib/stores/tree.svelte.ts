@@ -24,14 +24,25 @@ import {
   type NodeKey,
   type Row
 } from '$lib/util/tree-model';
+import { getLocale } from '$lib/paraglide/runtime.js';
+import { loadSort, saveSort, type HostSort } from '$lib/util/host-sort';
 import { ui } from './ui.svelte';
+
+const SORT_KEY = 'ibc.tree.sort';
 
 class TreeStore {
   data = $state.raw<Tree>({ folders: [], hosts: [] });
   loaded = $state(false);
   selected = $state.raw<Set<NodeKey>>(new Set());
   cursor = $state<NodeKey | null>(null);
-  rows = $derived<Row[]>(buildRows(this.data));
+  /** Display order of the sidebar; `manual` = drag-and-drop order. */
+  sort = $state<HostSort>(loadSort(SORT_KEY));
+  rows = $derived<Row[]>(buildRows(this.data, this.sort, getLocale()));
+
+  setSort(sort: HostSort): void {
+    this.sort = sort;
+    saveSort(SORT_KEY, sort);
+  }
 
   host(id: HostId): Host | undefined {
     return this.data.hosts.find((h) => h.id === id);

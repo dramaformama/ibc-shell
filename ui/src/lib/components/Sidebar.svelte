@@ -28,6 +28,7 @@
   import { vault } from '$lib/stores/vault.svelte';
   import { mod } from '$lib/util/platform';
   import Logo from './Logo.svelte';
+  import SortMenu from './SortMenu.svelte';
   import Tree from './Tree.svelte';
 
   let { mac = false }: { mac?: boolean } = $props();
@@ -136,6 +137,7 @@
   </nav>
   <div class="section-heading">
     <h2 class="sect">{m.sidebar_hosts_section()}</h2>
+    <SortMenu compact value={tree.sort} onchange={(v) => tree.setSort(v)} />
     <button
       class="icon-btn"
       onclick={() => ui.openHostEditor(null)}

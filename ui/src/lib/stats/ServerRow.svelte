@@ -44,6 +44,24 @@
   );
   const hot = (v: number | null) => (v == null ? '' : v >= 90 ? 'hot' : v >= 70 ? 'warm' : '');
 
+  // The bare host (no port) is what gets pasted into other tools.
+  const ip = $derived(server.host?.hostname ?? server.group?.current.adhoc?.hostname ?? '');
+  let copied = $state(false);
+  let copiedTimer: ReturnType<typeof setTimeout> | undefined;
+  async function copyAddress() {
+    if (!ip) return;
+    try {
+      await navigator.clipboard.writeText(ip);
+    } catch {
+      ui.toast(m.sftp_preview_copy_failed(), 'error');
+      return;
+    }
+    ui.toast(m.dash_address_copied({ address: ip }));
+    copied = true;
+    clearTimeout(copiedTimer);
+    copiedTimer = setTimeout(() => (copied = false), 1200);
+  }
+
   function open(kind: 'terminal' | 'sftp' | 'status') {
     if (server.host) connectHost(server.host.id, kind);
     else if (server.group) sessions.select(server.group.current.id);
@@ -64,7 +82,16 @@
       >{/if}
     <b>{server.label}</b>
   </span>
-  <span class="c-addr tnum" role="cell">{server.address}</span>
+  <span class="c-addr tnum" role="cell"
+    >{#if ip}<button
+        type="button"
+        class="addr"
+        class:copied
+        onclick={copyAddress}
+        title={m.dash_copy_address()}
+        aria-label="{m.dash_copy_address()}: {ip}">{server.address}</button
+      >{:else}{server.address}{/if}</span
+  >
   <span class="c-folder" role="cell">{server.folder}</span>
   <span
     class="c-load tnum"
@@ -179,6 +206,35 @@
   }
   .c-ping {
     text-align: right;
+  }
+  .addr {
+    pointer-events: auto;
+    position: relative;
+    max-width: 100%;
+    margin: 0 -5px;
+    padding: 2px 5px;
+    overflow: hidden;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: copy;
+    transition:
+      background 120ms var(--ease),
+      color 120ms var(--ease);
+  }
+  .addr:hover {
+    background: var(--fill-2);
+    color: var(--text);
+  }
+  .addr:focus-visible {
+    outline: 2px solid color-mix(in oklab, var(--accent) 55%, transparent);
+  }
+  .addr.copied {
+    color: var(--ok);
   }
   .c-load {
     display: grid;

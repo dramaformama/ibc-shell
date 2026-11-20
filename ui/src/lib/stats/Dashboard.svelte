@@ -12,6 +12,9 @@
   import WorldMap from '$lib/map/WorldMap.svelte';
   import { tree } from '$lib/stores/tree.svelte';
   import { ui } from '$lib/stores/ui.svelte';
+  import SortMenu from '$lib/components/SortMenu.svelte';
+  import { getLocale } from '$lib/paraglide/runtime.js';
+  import { hostComparator, loadSort, saveSort, type HostSort } from '$lib/util/host-sort';
   import ServerList from './ServerList.svelte';
   import './dashboard.css';
 
@@ -35,10 +38,20 @@
   let filter = $state<'all' | Availability>('all');
   let scroller = $state<HTMLElement | null>(null);
   const servers = $derived(fleet.servers);
-  // Connected servers lead; otherwise the catalogue order (folders, then name) is kept.
-  const shown = $derived(
-    filterFleet(servers, query, filter).sort((x, y) => Number(!!y.group) - Number(!!x.group))
-  );
+  const SORT_KEY = 'ibc.overview.sort';
+  let sort = $state<HostSort>(loadSort(SORT_KEY));
+  function setSort(v: HostSort) {
+    sort = v;
+    saveSort(SORT_KEY, v);
+  }
+  // Manual: connected servers lead, otherwise the catalogue order (folders, then name) is kept.
+  const shown = $derived.by(() => {
+    const list = filterFleet(servers, query, filter);
+    const compare = hostComparator(sort, getLocale());
+    if (!compare) return list.sort((x, y) => Number(!!y.group) - Number(!!x.group));
+    const last = (x: (typeof list)[number]) => x.host?.last_connected_at ?? null;
+    return list.sort((x, y) => compare({ ...x, last: last(x) }, { ...y, last: last(y) }));
+  });
   const online = $derived(servers.filter((s) => s.availability === 'online').length);
   const offline = $derived(servers.filter((s) => s.availability === 'offline').length);
   const connected = $derived(servers.filter((s) => s.phase === 'connected').length);
@@ -121,6 +134,8 @@
           >
         </button>
       {/each}
+      <span class="filters-sp"></span>
+      <SortMenu value={sort} onchange={setSort} manualLabel={m.sort_overview_default()} />
     </div>
 
     {#if view === 'map'}

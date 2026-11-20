@@ -838,5 +838,13 @@
   "dash_more": "Ещё",
   "menu_return_to_main": "Вернуть в главное окно",
   "tab_drop_new_window": "Новое окно",
-  "tab_drop_return_hint": "Отпустите за окном — вернётся во вкладки"
+  "tab_drop_return_hint": "Отпустите за окном — вернётся во вкладки",
+  "sort_title": "Сортировка",
+  "sort_manual": "Вручную",
+  "sort_overview_default": "Сначала открытые",
+  "sort_name": "По имени",
+  "sort_last": "По последнему входу",
+  "sort_country": "По стране",
+  "dash_copy_address": "Скопировать адрес",
+  "dash_address_copied": "Адрес {address} скопирован"
 }

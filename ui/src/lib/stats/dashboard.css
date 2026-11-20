@@ -85,6 +85,9 @@
     background-color 120ms var(--ease),
     color 120ms var(--ease);
 }
+.dashboard .filters-sp {
+  flex: 1;
+}
 .dashboard .filters button:hover {
   background: var(--hover);
   color: var(--text);
@@ -93,7 +96,7 @@
   background: var(--sel);
   color: var(--text);
 }
-.dashboard .filters span {
+.dashboard .filters .tnum {
   color: var(--muted);
   font-weight: 400;
 }

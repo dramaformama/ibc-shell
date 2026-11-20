@@ -1,5 +1,7 @@
 /** Pure tree model: visible rows, drop targets, optimistic moves, inheritance lookup. */
 import type { Folder, FolderDefaults, FolderId, Host, NodeRef, Tree } from '$lib/api';
+import type { FlagLocale } from '$lib/flags/flags';
+import { hostComparator, type HostSort } from './host-sort';
 
 export type NodeKey = string; // `f:<id>` | `h:<id>`
 export const fkey = (id: string): NodeKey => `f:${id}`;
@@ -58,9 +60,34 @@ export function indexTree(tree: Tree): Index {
   return { children, folders, hosts };
 }
 
-/** Rows currently visible (collapsed folders hide their subtree). */
-export function buildRows(tree: Tree): Row[] {
+/**
+ * Rows currently visible (collapsed folders hide their subtree). A non-manual `sort` puts
+ * folders first (by name) and orders hosts inside each folder; the stored order is untouched.
+ */
+export function buildRows(tree: Tree, sort: HostSort = 'manual', locale: FlagLocale = 'en'): Row[] {
   const ix = indexTree(tree);
+  const compare = hostComparator(sort, locale);
+  const byName = hostComparator('name', locale);
+  const ordered = (refs: NodeRef[], inherited: string | null): NodeRef[] => {
+    if (!compare || !byName) return refs;
+    const folders = refs
+      .filter((r) => r.kind === 'folder')
+      .map((r) => ({ r, label: ix.folders.get(r.id)?.name ?? '', flag: null, last: null }))
+      .sort(byName);
+    const hosts = refs
+      .filter((r) => r.kind === 'host')
+      .map((r) => {
+        const h = ix.hosts.get(r.id);
+        return {
+          r,
+          label: h?.label || h?.hostname || '',
+          flag: h?.country_code ?? inherited,
+          last: h?.last_connected_at ?? null
+        };
+      })
+      .sort(compare);
+    return [...folders, ...hosts].map((e) => e.r);
+  };
   const counts = new Map<FolderId, number>();
   const countOf = (id: FolderId): number => {
     const known = counts.get(id);
@@ -72,7 +99,7 @@ export function buildRows(tree: Tree): Row[] {
   };
   const rows: Row[] = [];
   const walk = (parent: FolderId | null, depth: number, inherited: string | null) => {
-    for (const ref of ix.children.get(parent) ?? []) {
+    for (const ref of ordered(ix.children.get(parent) ?? [], inherited)) {
       if (ref.kind === 'host') {
         const host = ix.hosts.get(ref.id);
         if (!host) continue;

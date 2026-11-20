@@ -838,5 +838,13 @@
   "dash_more": "More",
   "menu_return_to_main": "Move to main window",
   "tab_drop_new_window": "New window",
-  "tab_drop_return_hint": "Drop outside to return it to the tabs"
+  "tab_drop_return_hint": "Drop outside to return it to the tabs",
+  "sort_title": "Sort",
+  "sort_manual": "Manual",
+  "sort_overview_default": "Open first",
+  "sort_name": "By name",
+  "sort_last": "By last login",
+  "sort_country": "By country",
+  "dash_copy_address": "Copy address",
+  "dash_address_copied": "Copied {address}"
 }

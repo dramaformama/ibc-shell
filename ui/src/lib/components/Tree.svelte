@@ -248,17 +248,28 @@
         tail = true;
       } else {
         const frac = (y - idx * ROW) / ROW;
+        // A sorted list has no slots between rows: a drop only changes the folder.
+        const sorted = tree.sort !== 'manual';
+        const parentRow =
+          sorted && row.kind === 'host' && row.parentId
+            ? rows.findIndex((r) => r.kind === 'folder' && r.id === row.parentId)
+            : -1;
         const zone =
-          row.kind === 'folder'
-            ? frac < 0.25
-              ? 'before'
-              : frac > 0.75
-                ? 'after'
-                : 'inside'
-            : frac < 0.5
-              ? 'before'
-              : 'after';
-        drop = resolveDrop(tree.data, rows, idx, zone, keys);
+          sorted && row.kind === 'folder'
+            ? 'inside'
+            : row.kind === 'folder'
+              ? frac < 0.25
+                ? 'before'
+                : frac > 0.75
+                  ? 'after'
+                  : 'inside'
+              : frac < 0.5
+                ? 'before'
+                : 'after';
+        drop =
+          parentRow >= 0
+            ? resolveDrop(tree.data, rows, parentRow, 'inside', keys)
+            : resolveDrop(tree.data, rows, idx, zone, keys);
       }
     }
     drag = { ...drag, x: ev.clientX, y: ev.clientY, drop, tail };
