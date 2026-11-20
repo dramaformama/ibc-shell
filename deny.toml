@@ -4,21 +4,13 @@ all-features = false
 [advisories]
 version = 2
 yanked = "deny"
+# "Unmaintained" notices fail CI only for our direct dependencies; for transitive ones there is no
+# replacement we could switch to, so they are reported but not blocking. Vulnerabilities always fail.
+unmaintained = "workspace"
 ignore = [
   # rsa Marvin timing attack: no upstream fix. We only sign locally with the user's own RSA key
   # (no remote party can time a decryption oracle). Revisit when russh moves to a fixed rsa.
   { id = "RUSTSEC-2023-0071", reason = "client-side signing only, no decryption oracle exposed" },
-  # Unmaintained proc-macros pulled by specta (build time only, no runtime code).
-  { id = "RUSTSEC-2024-0436", reason = "paste: build-time proc macro via specta" },
-  { id = "RUSTSEC-2024-0370", reason = "proc-macro-error: build-time proc macro" },
-  # zbus helpers (Linux D-Bus, via tauri-plugin-notification → notify-rust; ADR-017). Unmaintained
-  # notices only, no known vulnerability; only used to post a notification on the session bus.
-  { id = "RUSTSEC-2026-0370", reason = "zvariant: Linux notification D-Bus only" },
-  { id = "RUSTSEC-2026-0371", reason = "zbus_names: Linux notification D-Bus only" },
-  { id = "RUSTSEC-2026-0372", reason = "zvariant_derive: Linux notification D-Bus only" },
-  # chrono via russh-sftp only (file mtime conversion). Unmaintained notice, no known
-  # vulnerability and no safe upgrade. Revisit when russh-sftp drops or replaces it.
-  { id = "RUSTSEC-2026-0543", reason = "chrono: russh-sftp file times only, unmaintained notice" },
 ]
 
 [licenses]
