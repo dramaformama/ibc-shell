@@ -120,8 +120,7 @@ fn include(home: &Path, pattern: &str) -> Vec<String> {
     let path = expand(home, pattern);
     let name = path
         .file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_default();
+        .map_or_default(|n| n.to_string_lossy().into_owned());
     let files: Vec<PathBuf> = if name.contains('*') {
         let Some(dir) = path.parent() else {
             return Vec::new();
@@ -226,7 +225,7 @@ pub(crate) fn preview(store: &Store) -> SshImportPreview {
             entries: Vec::new(),
         };
     };
-    let saved = store.tree_list().map(|t| t.hosts).unwrap_or_default();
+    let saved = store.tree_list().map_or_default(|t| t.hosts);
     let entries = entries
         .into_iter()
         .map(|e| {
