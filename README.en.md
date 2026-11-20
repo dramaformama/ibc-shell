@@ -60,7 +60,7 @@ A release is made by a tag: `git tag v1.0.0 && git push origin v1.0.0`. The [wor
   <img src="docs/brand/screenshots/overview-light.png" alt="iBC Shell — Overview" width="1440">
 </picture>
 
-Overview: folders, server availability, search.
+Overview: folders, server availability, search, sorting.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/brand/screenshots/status-dark.png">
@@ -93,6 +93,11 @@ SSL certificate expiry for the domains on every server.
 Demo mode: sample servers and metrics.
 
 ## What's new
+
+**Version 2.0.3:**
+
+- **Host sorting.** The sidebar list and the Overview can be ordered by name, last login or country; the choice is remembered. In the sidebar, folders come first and hosts are sorted inside each folder.
+- **Click to copy an address.** In the Overview, clicking a server's address copies it to the clipboard.
 
 **Version 2.0.2:**
 
