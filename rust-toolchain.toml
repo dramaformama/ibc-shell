@@ -1,3 +1,5 @@
+# Pinned: a new stable release brings new clippy lints and would turn CI red on its own.
+# Bump on purpose (and fix new lints in the same commit).
 [toolchain]
-channel = "stable"
+channel = "1.100.0"
 components = ["rustfmt", "clippy"]
